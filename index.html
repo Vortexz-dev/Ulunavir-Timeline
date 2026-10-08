@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Horaghfus Evreni — Tam Zaman Çizelgesi</title>
+<meta name="description" content="Horaghfus evreninin en yeniden en eskiye uzanan tam zaman çizelgesi.">
+<meta property="og:title" content="Horaghfus Evreni — Tam Zaman Çizelgesi">
+<meta property="og:description" content="Aşağı kaydırdıkça zamanda geriye in: 166 olay, en yeniden en eskiye.">
+<meta name="theme-color" content="#0b0810">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpolygon points='32,3 50,10 61,27 58,46 44,59 20,59 6,46 3,27 14,10' fill='%23120c18' stroke='%23e2b45a' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%23ff9a3c'/%3E%3C/svg%3E">
+<link rel="preload" href="assets/fonts/cinzel-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<canvas id="particles" aria-hidden="true"></canvas>
+<div class="bg-layer bg-far" aria-hidden="true"></div>
+<div class="bg-layer bg-fog" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<header class="hero" id="top">
+  <div class="hero-ring" aria-hidden="true">
+    <svg viewBox="0 0 400 400"><defs><radialGradient id="rg" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffb35c" stop-opacity=".35"/><stop offset="100%" stop-color="#ffb35c" stop-opacity="0"/></radialGradient></defs>
+      <circle cx="200" cy="200" r="190" fill="url(#rg)"/>
+      <g class="ring-a" fill="none" stroke="#e2b45a" stroke-opacity=".55"><circle cx="200" cy="200" r="170" stroke-width="1.2"/><circle cx="200" cy="200" r="160" stroke-dasharray="2 9" stroke-width="2"/>
+        <polygon points="200,40 303,78 357,172 338,280 263,355 137,355 62,280 43,172 97,78" stroke-width="1.4"/></g>
+      <g class="ring-b" fill="none" stroke="#9f7bff" stroke-opacity=".45"><circle cx="200" cy="200" r="120" stroke-dasharray="30 8 4 8" stroke-width="1.5"/><polygon points="200,90 295,255 105,255" stroke-width="1"/><polygon points="200,310 105,145 295,145" stroke-width="1"/></g>
+    </svg>
+  </div>
+  <div class="hero-inner">
+    <p class="eyebrow">Ulunavir Arşivi</p>
+    <h1 class="hero-title"><span class="t1">Horaghfus Evreni</span><span class="t2">Tam Zaman Çizelgesi</span></h1>
+    <p class="hero-sub" id="heroSub">En yeniden en eskiye — aşağı kaydırdıkça zamanda geriye inersin.</p>
+    <div class="legend"><span><i class="lg-major"></i>Büyük olay</span><span><i class="lg-minor"></i>Küçük olay</span><span><i class="lg-unc">≈</i>Tarihi belirsiz</span></div>
+  </div>
+  <a class="scroll-cue" href="#timeline" aria-label="Zaman çizelgesine in"><span>Geçmişe in</span><i></i></a>
+</header>
+
+<aside class="hud" id="hud" aria-live="polite"><span class="hud-era" id="hudEra">Bugün</span><span class="hud-year" id="hudYear">—</span><div class="hud-bar"><i id="hudBar"></i></div></aside>
+
+<main id="timeline" class="timeline">
+  <div class="line" aria-hidden="true"><div class="line-core"></div><div class="line-fill" id="lineFill"></div><div class="line-spark" id="lineSpark"></div></div>
+  <div class="items" id="items"></div>
+</main>
+
+<footer class="end">
+  <div class="end-sigil" aria-hidden="true">✦</div>
+  <p class="end-title">Zamanın Şafağı</p>
+  <p class="end-sub">Kayıtların başladığı yer: 1949 — Kadim Tanrılar Tarikatı Ayini</p>
+  <a class="back-top" href="#top">Bugüne dön ↑</a>
+</footer>
+
+<noscript><p class="noscript">Bu zaman çizelgesini görmek için JavaScript gerekli.</p></noscript>
+<script src="data.js"></script>
+<script src="assets/vendor/gsap.min.js"></script>
+<script src="assets/vendor/ScrollTrigger.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
