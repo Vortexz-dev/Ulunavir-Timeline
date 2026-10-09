@@ -55,9 +55,5 @@ Synthesised fallbacks (wind/fire/rain/sea/forest/drone pads, the soft chime) are
 | `sfx-forge-1.mp3` | OpenGameArt — “100-cc0-sfx-2” by rubberduck (file `sfx100v2_metal_hit_01.ogg`) — **CC0** — https://opengameart.org/content/100-cc0-sfx-2 |
 | `sfx-forge-2.mp3` | OpenGameArt — “80-cc0-rpg-sfx” by rubberduck (file `metal_01.ogg`) — **CC0** — https://opengameart.org/content/80-cc0-rpg-sfx |
 | `sfx-holy-1.mp3` | Wikimedia Commons — “Church bells - Leverkusen, 2007.oga” by natalie — **Public domain** — https://commons.wikimedia.org/wiki/File:Church_bells_-_Leverkusen,_2007.oga |
-| `sfx-magic-1.mp3` | OpenGameArt — “magic-spell-sfx” by jaggedstone (file `magical_1_0.ogg`) — **CC0** — https://opengameart.org/content/magic-spell-sfx |
-| `sfx-magic-2.mp3` | OpenGameArt — “magic-spell-sfx” by jaggedstone (file `magical_4.ogg`) — **CC0** — https://opengameart.org/content/magic-spell-sfx |
-| `sfx-magic-3.mp3` | OpenGameArt — “magic-spell-sfx” by jaggedstone (file `magical_7_0.ogg`) — **CC0** — https://opengameart.org/content/magic-spell-sfx |
 | `sfx-sea-1.mp3` | Wikimedia Commons — “Ocean Waves on a Tropical Beach.ogg” by Jarrod stanley — **CC0** — https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg |
-| `sfx-sea-2.mp3` | Wikimedia Commons — “Humpback whale wheezeblow.ogg” by "The recordings available here were made by the National Park Service, using a hydrophone that is anchored near the mouth of Glacier Bay, Alaska for the purpose of monitoring ambient noise." — **Public domain** — https://commons.wikimedia.org/wiki/File:Humpback_whale_wheezeblow.ogg |
 | `sfx-storm-1.mp3` | OpenGameArt — “100-cc0-sfx-2” by rubberduck (file `sfx100v2_thunder_01.ogg`) — **CC0** — https://opengameart.org/content/100-cc0-sfx-2 |

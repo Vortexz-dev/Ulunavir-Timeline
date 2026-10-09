@@ -865,22 +865,31 @@ var Ambience = (function(){
   function playSfx(kind){
     if (!running()) return;
     var list = SFXV[kind];
-    if (!list || !list.length){ chime(); return; }
+    if (!list || !list.length){ chime(kind); return; }
     rr[kind] = ((rr[kind] || 0) + 1) % list.length;
     var id = 'sfx-' + list[rr[kind]], t0 = performance.now();
     load(id, function(buf){
-      if (!buf || !running() || performance.now() - t0 > 1500){ if (!buf) chime(); return; }   // too late = skip (don't fire long after scrolling past)
+      if (!buf || !running() || performance.now() - t0 > 1500){ if (!buf) chime(kind); return; }   // too late = skip (don't fire long after scrolling past)
       var s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = buf; g.gain.value = kind === 'battle' ? 1.1 : .9;
       s.connect(g); g.connect(sfxBus); s.start(ctx.currentTime + .02);
       // duck the bed a little under the effect
       bedBus.gain.cancelScheduledValues(ctx.currentTime); bedBus.gain.setTargetAtTime(1.3, ctx.currentTime, .15); bedBus.gain.setTargetAtTime(2.2, ctx.currentTime + Math.min(3, buf.duration), .8);
     });
   }
-  function chime(){
+  // atmospheric, non-melodic fallback (no notes/tones): a soft gust of air with a low distant swell.
+  // 'magic' gets a slightly brighter airy shimmer-whoosh. Replaces the old sine chime (felt like piano tiles).
+  function chime(kind){
     if (!running()) return;
-    var t = ctx.currentTime + .03, f0 = 523.25;
-    [[1, .08, 2.2], [2.01, .035, 1.6], [3, .02, 1.1]].forEach(function(p){ var o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f0*p[0];
-      env(g, t, .01, p[1], p[2]); chain(o, g, sfxBus); o.start(t); o.stop(t+p[2]+.05); });
+    var t = ctx.currentTime + .03, magic = kind === 'magic', dur = magic ? 2.6 : 3.2;
+    var src = ctx.createBufferSource(); src.buffer = magic ? white : brown; src.loop = true;
+    var f = ctx.createBiquadFilter(); f.type = magic ? 'bandpass' : 'lowpass'; f.Q.value = magic ? 1.2 : .5;
+    var f0 = magic ? 900 : 180, f1 = magic ? 3200 : 700;
+    f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur*.45); f.frequency.exponentialRampToValueAtTime(f0, t + dur);
+    var g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(magic ? .11 : .22, t + dur*.4); g.gain.linearRampToValueAtTime(0, t + dur);
+    chain(src, f, g, sfxBus); src.start(t, Math.random()*2); src.stop(t + dur + .05);
+    if (!magic){ var o = ctx.createOscillator(), og = ctx.createGain(), lp = ctx.createBiquadFilter(); o.type = 'sine'; o.frequency.setValueAtTime(52, t); o.frequency.exponentialRampToValueAtTime(41, t + 2.4);
+      lp.type = 'lowpass'; lp.frequency.value = 120; og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(.09, t + .6); og.gain.exponentialRampToValueAtTime(.0005, t + 2.8);
+      chain(o, lp, og, sfxBus); o.start(t); o.stop(t + 2.9); }
   }
   // targets: {y (px from line top), kind, fired}
   var targets = [], lastY = null, lastFire = 0, fired = [];

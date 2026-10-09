@@ -54,8 +54,8 @@ window.MUSIC = {
     },
     // önemli olay sesleri (çizgideki kıvılcım büyük bir olaya ulaşınca): tür -> dosyalar (sırayla değişir)
     sfx: {
-      dragon:['dragon-1','dragon-2'], battle:['battle-1','battle-2'], magic:['magic-1','magic-2','magic-3'],
-      death:['death-1','death-2'], sea:['sea-1','sea-2'], holy:['holy-1'], forge:['forge-1','forge-2'],
+      dragon:['dragon-1','dragon-2'], battle:['battle-1','battle-2'], 
+      death:['death-1','death-2'], sea:['sea-1'], holy:['holy-1'], forge:['forge-1','forge-2'],
       storm:['storm-1'], beast:['beast-1']
     }
   }
