@@ -170,11 +170,57 @@ var lineEl = document.querySelector('.line'), bgEra = document.getElementById('b
     agePaper = document.getElementById('agePaper'), ageGrain = document.getElementById('ageGrain'), ageCracks = document.getElementById('ageCracks'),
     ageTint = document.getElementById('ageTint'), vignette = document.querySelector('.vignette'), hud = document.getElementById('hud'),
     mpEl = document.getElementById('mp'), sparkEl = document.getElementById('lineSpark');
+// Non-repeating aging textures: the paper noise and crack network are painted
+// once on a viewport-sized canvas (no tile => no visible repetition in the
+// oldest eras). CSS keeps a stretched SVG fallback until this is ready.
+(function(){
+  function paint(){
+    try {
+      var W = Math.min(1920, Math.max(800, innerWidth)), H = Math.min(1400, Math.max(600, innerHeight));
+      var c = document.createElement('canvas'); c.width = W; c.height = H; var g = c.getContext('2d');
+      // paper: 6 octaves of smoothly up-scaled random value noise in sepia
+      var oct = [5, 9, 17, 33, 65, 129], amp = [.5, .34, .24, .16, .1, .07];
+      oct.forEach(function(n, i){
+        var m = Math.max(2, Math.round(n*H/W)), s = document.createElement('canvas'); s.width = n; s.height = m; var sg = s.getContext('2d'), id = sg.createImageData(n, m);
+        for (var p = 0; p < n*m; p++){ id.data[p*4] = 140; id.data[p*4+1] = 97; id.data[p*4+2] = 41; id.data[p*4+3] = Math.random()*255*amp[i]; }
+        sg.putImageData(id, 0, 0);
+        g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+        if ('filter' in g) g.filter = 'blur(' + Math.max(1, Math.round(W/n/3)) + 'px)';
+        g.drawImage(s, -W/n, -H/m, W + 2*W/n, H + 2*H/m);
+      });
+      if ('filter' in g) g.filter = 'none';
+      var paper = c.toDataURL('image/webp', .82);
+      // cracks: random branching walks spread over the whole viewport
+      var k = document.createElement('canvas'); k.width = W; k.height = H; var kg = k.getContext('2d');
+      function walk(x, y, a, len, w, depth, segs){
+        segs.push([x, y, w, true]);
+        for (var i = 0; i < len; i++){
+          a += (Math.random()-.5)*.9; var st = 7 + Math.random()*16; x += Math.cos(a)*st; y += Math.sin(a)*st; segs.push([x, y, w, false]);
+          if (depth < 2 && Math.random() < .13) walk(x, y, a + (Math.random() < .5 ? -1 : 1)*(.6 + Math.random()*.8), (len*.45)|0, w*.7, depth+1, segs);
+        }
+      }
+      var n = Math.round(W*H/90000), all = [];
+      for (var j = 0; j < n; j++){ var segs = []; walk(Math.random()*W, Math.random()*H, Math.random()*6.283, 14 + (Math.random()*26|0), 1.25, 0, segs); all.push(segs); }
+      [['#1a0f05', .55, 0], ['#f3dcb0', .18, 1]].forEach(function(L){
+        kg.strokeStyle = L[0]; kg.globalAlpha = L[1]; kg.lineJoin = 'round'; kg.lineCap = 'round';
+        all.forEach(function(segs){ kg.beginPath(); segs.forEach(function(s){ if (s[3]) kg.moveTo(s[0]+L[2], s[1]+L[2]); else kg.lineTo(s[0]+L[2], s[1]+L[2]); }); kg.lineWidth = L[2] ? .8 : 1.2; kg.stroke(); });
+      });
+      var cracks = k.toDataURL('image/png');
+      agePaper.style.backgroundImage = 'radial-gradient(ellipse at 50% 45%,#c8a46a22 0%,#6a4a2266 55%,#2a1708cc 100%),url(' + paper + ')';
+      agePaper.style.backgroundSize = '100% 100%,100% 100%';
+      ageCracks.style.backgroundImage = 'url(' + cracks + ')'; ageCracks.style.backgroundSize = '100% 100%';
+      document.documentElement.classList.add('tex-ok');
+    } catch(e){}
+  }
+  var ric = window.requestIdleCallback || function(f){ return setTimeout(f, 300); };
+  if (document.readyState === 'complete') ric(paint, {timeout:2500}); else window.addEventListener('load', function(){ ric(paint, {timeout:2500}); });
+})();
 var anchors = [], sparkGeo = {top:0, x:0, h:0, p:0}; // cached so scroll sparks never force a layout
 function computeAnchors(){
   var sy = window.scrollY;
   if (lineEl){ var lr = lineEl.getBoundingClientRect(), tl = document.getElementById('timeline'); sparkGeo.top = lr.top + sy; sparkGeo.x = lr.left + lr.width/2; sparkGeo.h = tl ? tl.offsetHeight : lr.height; }
   anchors = EV_ELS.map(function(el){ var r = el.getBoundingClientRect(); return r.top + sy + Math.min(r.height, 400)/2; });
+  if (window.Ambience_targets) window.Ambience_targets(sy);
 }
 var ATM = null, lastKey = '';
 function atmosphereAt(y){
@@ -392,6 +438,7 @@ function setCurrent(el){
   root.style.setProperty('--accent', rgbStr(v.line));
   root.style.setProperty('--accent2', rgbStr(v.glow));
   Music.onEvent(evByO[o], THEME_OF[o]);
+  Ambience.onTheme(THEME_OF[o]);
 }
 
 // =====================================================================
@@ -493,38 +540,24 @@ var Lightbox = (function(){
 })();
 
 // =====================================================================
-// MUSIC (YouTube IFrame API, one hidden player, fixed looping playlist)
-// config: assets/music.js — tracks play 1..N then wrap to 1, forever.
-// Era/scroll does NOT change the music (era colours are handled elsewhere).
+// MUSIC (local MP3s via one HTML5 <audio>, fixed looping playlist 1..N -> 1)
+// config: assets/music.js. Autoplay is attempted on load; if the browser
+// refuses (no user gesture yet) playback starts on the first click / touch /
+// key / scroll. Default ON unless the visitor switched it off before.
 // =====================================================================
 var Music = (function(){
-  var KEY = 'ulv-music', st = {on:false, vol:(MU.volume!=null?MU.volume:35), muted:false, idx:0};
-  try { var sv = JSON.parse(localStorage.getItem(KEY)||'null'); if (sv) { st.on = !!sv.on; st.vol = sv.vol!=null ? (+sv.vol||0) : st.vol; st.muted = !!sv.muted; st.idx = +sv.idx||0; } } catch(e){}
+  var KEY = 'ulv-music', st = {on:true, vol:(MU.volume!=null?MU.volume:35), muted:false, idx:0};
+  try { var sv = JSON.parse(localStorage.getItem(KEY)||'null'); if (sv) { st.on = sv.on !== false; st.vol = sv.vol!=null ? (+sv.vol||0) : st.vol; st.muted = !!sv.muted; st.idx = +sv.idx||0; } } catch(e){}
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} }
   var btn = mpEl.querySelector('.mp-btn'), playB = mpEl.querySelector('.mp-play'), prevB = mpEl.querySelector('.mp-prev'), nextB = mpEl.querySelector('.mp-next'),
       muteB = mpEl.querySelector('.mp-mute'), vol = mpEl.querySelector('.mp-vol'), now = mpEl.querySelector('.mp-now');
-
-  function parse(u){
-    if (!u || typeof u !== 'string') return null; u = u.trim(); if (!u) return null;
-    if (/^[\w-]{11}$/.test(u)) return u;
-    var id = null, m;
-    try {
-      var url = new URL(u, location.href), h = url.hostname.replace(/^www\.|^m\.|^music\./,'');
-      if (h === 'youtu.be') id = url.pathname.slice(1).split('/')[0];
-      else if (/youtube(-nocookie)?\.com$/.test(h)){
-        id = url.searchParams.get('v');
-        if (!id && (m = url.pathname.match(/\/(embed|shorts|live|v)\/([\w-]{6,})/))) id = m[2];
-      }
-    } catch(e){}
-    return (id && /^[\w-]{6,}$/.test(id)) ? id : null;
-  }
-  var tracks = (MU.playlist||[]).map(function(t){ t = typeof t === 'string' ? {url:t} : (t||{}); var ids = [t.url].concat(t.alt||[]).map(parse).filter(Boolean); return {ids:ids, id:ids[0], name:t.name||''}; })
-                                .filter(function(t){ return t.id; });
+  var tracks = (MU.playlist||[]).map(function(t){ t = typeof t === 'string' ? {src:t} : (t||{}); return {src:t.src||'', name:t.name||''}; }).filter(function(t){ return t.src; });
   var N = tracks.length;
   if (!(st.idx >= 0 && st.idx < N)) st.idx = 0;
-  var player = null, ready = false, apiState = 0, apiQ = [], fadeT = 0, isPlaying = false, loadedIdx = -1, altI = 0, errStreak = 0, lastErr = null, skipT = 0, titles = {};
+  var au = new Audio(); au.preload = 'none'; au.loop = false; au.volume = 0;
+  var isPlaying = false, blocked = false, pending = false, errStreak = 0, fadeR = 0, loadedIdx = -1, gain = 0;
 
-  function title(i){ return titles[tracks[i].id] || tracks[i].name || 'Parça'; }
+  function title(i){ return tracks[i].name || 'Parça'; }
   function ui(){
     mpEl.classList.toggle('playing', st.on && isPlaying);
     mpEl.classList.toggle('on', st.on);
@@ -534,123 +567,210 @@ var Music = (function(){
     var txt;
     if (!N) txt = 'Henüz müzik eklenmedi';
     else if (st.on && errStreak >= N) txt = 'Parçalar oynatılamadı';
-    else if (st.on && lastErr != null && !isPlaying) txt = (st.idx+1)+'/'+N+' · oynatılamadı, geçiliyor…';
+    else if (st.on && blocked && !isPlaying) txt = (st.idx+1)+'/'+N+' · '+title(st.idx)+' — başlatmak için sayfaya dokun';
     else txt = (st.idx+1)+'/'+N+' · '+title(st.idx);
     now.textContent = txt; now.title = N ? (st.idx+1)+'/'+N+' — '+title(st.idx) : '';
   }
-  function loadApi(cb){
-    if (window.YT && window.YT.Player) return cb();
-    apiQ.push(cb); if (apiState) return; apiState = 1;
-    var prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = function(){ if (prev) try{prev();}catch(e){} apiState = 2; var q = apiQ; apiQ = []; q.forEach(function(f){ f(); }); };
-    var s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; s.async = true;
-    s.onerror = function(){ apiState = 0; apiQ = []; now.textContent = 'YouTube yüklenemedi'; };
-    document.head.appendChild(s);
-  }
-  var readyQ = [];
-  function ensurePlayer(cb){
-    if (ready) return cb && cb();
-    if (cb) readyQ.push(cb);
-    if (player) return;
-    loadApi(function(){
-      if (player) return;
-      var d = document.createElement('div'); d.id = 'mpP0'; document.getElementById('mpHost').appendChild(d);
-      player = new YT.Player(d.id, { width:200, height:200, host:(MU.host||'https://www.youtube.com'),
-        playerVars:{autoplay:0, controls:0, disablekb:1, playsinline:1, rel:0, iv_load_policy:3, fs:0, modestbranding:1, enablejsapi:1, vq:'tiny', origin:location.origin},
-        events:{
-          onReady:function(){ ready = true; try { player.setVolume(0); } catch(e){} var q = readyQ; readyQ = []; q.forEach(function(f){ f(); }); },
-          onStateChange:function(ev){
-            var S = YT.PlayerState;
-            // we only need the audio: ask for the smallest video stream (less to download + decode).
-            // Never seek/replay on BUFFERING: let YouTube refill its buffer on its own.
-            if (ev.data === S.PLAYING || ev.data === S.BUFFERING) lowQ();
-            if (ev.data === S.ENDED){ if (st.on) go(st.idx+1, true); return; }
-            isPlaying = ev.data === S.PLAYING || ev.data === S.BUFFERING;
-            if (ev.data === S.PLAYING){
-              errStreak = 0; lastErr = null;
-              try { var vd = player.getVideoData(); if (vd && vd.title && vd.video_id === tracks[st.idx].ids[altI]) titles[tracks[st.idx].id] = vd.title; } catch(e){}
-              if (!st.on){ try { player.pauseVideo(); } catch(e){} }
-            }
-            ui();
-          },
-          onError:function(ev){
-            lastErr = ev.data; isPlaying = false; clearTimeout(skipT);
-            // same song, other upload (e.g. label "Topic" tracks that refuse embedding: 101/150)
-            if (st.on && altI + 1 < tracks[st.idx].ids.length){ altI++; try { player.loadVideoById({videoId:tracks[st.idx].ids[altI], startSeconds:0, suggestedQuality:'tiny'}); } catch(e){} return; }
-            errStreak++; ui();
-            if (st.on && errStreak < N) skipT = setTimeout(function(){ go(st.idx+1, true); }, 900);
-          }
-        }});
-    });
-  }
-  var qAsked = '';
-  function lowQ(){ try { var id = (player.getVideoData()||{}).video_id; if (id && id !== qAsked){ qAsked = id; player.setPlaybackQuality('tiny'); } } catch(e){} }
+  function target(){ return st.muted ? 0 : st.vol/100; }
+  function setG(g){ gain = g; au.volume = Math.max(0, Math.min(1, g)); }
   function fadeTo(to, ms, done){
-    clearInterval(fadeT); if (!player || !player.getVolume){ done && done(); return; }
-    var from = player.getVolume() || 0, t0 = performance.now();
-    fadeT = setInterval(function(){
-      var k = Math.min(1, (performance.now()-t0)/ms), v = from + (to-from)*smooth(k);
-      try{ player.setVolume(v); }catch(e){}
-      if (k >= 1){ clearInterval(fadeT); done && done(); }
-    }, 50);
+    cancelAnimationFrame(fadeR); var from = gain, t0 = performance.now();
+    (function f(){ var k = Math.min(1, (performance.now()-t0)/Math.max(1,ms)); setG(from + (to-from)*smooth(k)); if (k < 1) fadeR = requestAnimationFrame(f); else if (done) done(); })();
   }
-  function applyMute(){ try { if (st.muted) player.mute(); else player.unMute(); } catch(e){} }
-  // load + play track i (wraps); fade=false keeps current volume (track-to-track)
+  function load(i){ if (loadedIdx === i) return; loadedIdx = i; au.src = tracks[i].src; au.preload = 'auto'; }
+  // returns the play() promise result via callbacks
+  function play(fade){
+    if (!N || !st.on) return;
+    load(st.idx); au.muted = false;
+    if (fade) setG(0);
+    pending = true;
+    var p; try { p = au.play(); } catch(e){ p = null; }
+    var ok = function(){ pending = false; blocked = false; errStreak = 0; if (fade) fadeTo(target(), MU.fadeMs||1200); else setG(target()); ui(); },
+        bad = function(err){ pending = false; if (err && err.name === 'NotAllowedError'){ blocked = true; armGesture(); } ui(); };
+    if (p && p.then) p.then(ok, bad); else ok();
+  }
   function go(i, keepVol){
     if (!N) return;
-    st.idx = ((i % N) + N) % N; save(); lastErr = null; ui();
-    if (!st.on) { loadedIdx = -1; return; }
-    ensurePlayer(function(){
-      if (!st.on) return;
-      applyMute();
-      if (!keepVol){ try { player.setVolume(0); } catch(e){} }
-      altI = 0; try { player.loadVideoById({videoId:tracks[st.idx].id, startSeconds:0, suggestedQuality:'tiny'}); } catch(e){}
-      loadedIdx = st.idx;
-      if (keepVol){ clearInterval(fadeT); try { player.setVolume(st.vol); } catch(e){} } else fadeTo(st.vol, MU.fadeMs||1200);
-    });
+    st.idx = ((i % N) + N) % N; save(); ui();
+    loadedIdx = -1;
+    if (!st.on) return;
+    load(st.idx); play(!keepVol);
   }
-  function start(){
-    if (!N) return;
-    ensurePlayer(function(){
-      if (!st.on) return;
-      if (loadedIdx === st.idx && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PAUSED){
-        applyMute(); try { player.setVolume(0); player.playVideo(); } catch(e){} fadeTo(st.vol, MU.fadeMs||1200);
-      } else go(st.idx, false);
-    });
-  }
-  function stop(){
-    clearTimeout(skipT);
-    if (player && ready) fadeTo(0, 700, function(){ try{ player.pauseVideo(); }catch(e){} });
-    isPlaying = false; ui();
-  }
-  function setOn(on){
-    st.on = on; save(); errStreak = 0;
-    if (on) start(); else stop();
-    ui();
-  }
+  au.addEventListener('playing', function(){ isPlaying = true; errStreak = 0; ui(); });
+  au.addEventListener('pause', function(){ isPlaying = false; ui(); });
+  au.addEventListener('ended', function(){ isPlaying = false; if (st.on) go(st.idx+1, true); });
+  au.addEventListener('error', function(){ if (loadedIdx < 0) return; isPlaying = false; errStreak++; ui(); if (st.on && errStreak < N) setTimeout(function(){ go(st.idx+1, true); }, 700); });
+  function stop(){ fadeTo(0, 700, function(){ au.pause(); }); isPlaying = false; ui(); }
+  function setOn(on){ st.on = on; save(); errStreak = 0; if (on) play(true); else stop(); ui(); }
+  // first real interaction unlocks audio when autoplay was refused
+  var armed = false, EVS = ['pointerdown','keydown','touchstart','touchend','click','wheel','scroll'];
+  function onGesture(){ if (!st.on || isPlaying){ disarm(); return; } if (!pending) play(true); }
+  function armGesture(){ if (armed) return; armed = true; EVS.forEach(function(t){ window.addEventListener(t, onGesture, {capture:true, passive:true}); }); }
+  function disarm(){ if (!armed) return; armed = false; EVS.forEach(function(t){ window.removeEventListener(t, onGesture, {capture:true, passive:true}); }); }
+  au.addEventListener('playing', disarm);
   function setOpen(o){ mpEl.classList.toggle('open', o); btn.setAttribute('aria-expanded', o); document.body.classList.toggle('mp-open', o); }
-  function step(d){ errStreak = 0; clearTimeout(skipT); if (st.on) go(st.idx+d, true); else { st.idx = ((st.idx+d) % N + N) % N; save(); loadedIdx = -1; ui(); } }
-  // warm up the API/player when the user heads for the player, so the actual click can start playback inside the gesture
-  var warm = function(){ if (N) ensurePlayer(); };
-  btn.addEventListener('pointerenter', warm); btn.addEventListener('focus', warm);
-  btn.addEventListener('click', function(){ warm(); setOpen(!mpEl.classList.contains('open')); });
-  playB.addEventListener('click', function(){ setOn(!st.on); });
+  function step(d){ errStreak = 0; if (st.on) go(st.idx+d, true); else { st.idx = ((st.idx+d) % N + N) % N; save(); loadedIdx = -1; ui(); } }
+  btn.addEventListener('click', function(){ setOpen(!mpEl.classList.contains('open')); });
+  playB.addEventListener('click', function(ev){ ev.stopPropagation(); setOn(!(st.on && (isPlaying || !blocked))); });
   if (prevB) prevB.addEventListener('click', function(){ step(-1); });
   if (nextB) nextB.addEventListener('click', function(){ step(1); });
-  muteB.addEventListener('click', function(){ st.muted = !st.muted; if (!st.muted && st.vol === 0) st.vol = 30; save(); if (player && ready){ applyMute(); if (!st.muted) player.setVolume(st.vol); } ui(); });
-  vol.addEventListener('input', function(){ st.vol = +vol.value; st.muted = st.vol === 0; save(); if (player && ready){ clearInterval(fadeT); player.setVolume(st.vol); applyMute(); } ui(); });
+  muteB.addEventListener('click', function(){ st.muted = !st.muted; if (!st.muted && st.vol === 0) st.vol = 30; save(); cancelAnimationFrame(fadeR); setG(target()); ui(); });
+  vol.addEventListener('input', function(){ st.vol = +vol.value; st.muted = st.vol === 0; save(); cancelAnimationFrame(fadeR); setG(target()); ui(); });
   document.addEventListener('click', function(ev){ if (!mpEl.contains(ev.target) && mpEl.classList.contains('open')) setOpen(false); });
   document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && mpEl.classList.contains('open')) { setOpen(false); btn.focus(); } });
-  // browsers block autoplay with sound: if music was on last visit, resume on the first real interaction
-  if (st.on && N){
-    var resume = function(){ document.removeEventListener('pointerdown', resume, true); document.removeEventListener('keydown', resume, true); if (st.on && !isPlaying) start(); };
-    document.addEventListener('pointerdown', resume, true); document.addEventListener('keydown', resume, true);
-    ensurePlayer(); // preload so the first interaction can start immediately
-  }
   if (!N) mpEl.classList.add('empty');
   ui();
-  return {onEvent:function(){ /* music no longer follows eras */ }, parse:parse, next:function(){ step(1); }, prev:function(){ step(-1); },
-    state:function(){ var ps = null; try { ps = player && player.getPlayerState ? {s:player.getPlayerState(), v:Math.round(player.getVolume()), t:Math.round(player.getCurrentTime()), id:(player.getVideoData()||{}).video_id, alt:altI} : null; } catch(e){} return {st:st, idx:st.idx, n:N, title:N?title(st.idx):null, playing:isPlaying, player:ps, err:lastErr, errStreak:errStreak}; }};
+  if (st.on && N) play(true); // try autoplay right away; falls back to first gesture
+  return {onEvent:function(){ /* music does not follow eras; ambience does */ }, next:function(){ step(1); }, prev:function(){ step(-1); },
+    state:function(){ return {st:st, idx:st.idx, n:N, title:N?title(st.idx):null, playing:isPlaying, blocked:blocked, t:Math.round(au.currentTime||0), vol:Math.round(au.volume*100), src:au.currentSrc, errStreak:errStreak}; }};
+})();
+
+// =====================================================================
+// AMBIENCE (procedural WebAudio, no audio files): one quiet loop per era
+// theme family (wind / fire / rain / sea / forest / drone), crossfaded on
+// era change, plus light one-shot SFX (war horn / anvil) when the moving
+// timeline spark reaches a major battle / dwarf-forge event. Own on/off +
+// volume (saved in localStorage 'ulv-amb'); off = silent, SFX included.
+// =====================================================================
+var Ambience = (function(){
+  var KEY = 'ulv-amb', cfg = MU.ambience || {}, st = {on: cfg.on !== false, vol: cfg.volume != null ? cfg.volume : 30};
+  try { var sv = JSON.parse(localStorage.getItem(KEY)||'null'); if (sv){ st.on = sv.on !== false; if (sv.vol != null) st.vol = +sv.vol||0; } } catch(e){}
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} }
+  var ambB = mpEl.querySelector('.mp-amb'), avol = mpEl.querySelector('.mp-avol');
+  var AC = window.AudioContext || window.webkitAudioContext;
+  var TYPE = {ice:'wind', snowcity:'wind', sky:'wind', ancient:'wind', calm:'wind', memory:'wind', grief:'wind', night:'wind', death:'wind', sand:'wind', modern:'wind',
+              fire:'fire', war:'fire', forge:'fire', industrial:'fire', blood:'fire',
+              rain:'rain', sea:'sea',
+              elven:'forest', light:'forest', festival:'forest', witch:'forest', crown:'forest',
+              occult:'drone', girift:'drone', sterile:'drone', timestop:'drone', quake:'drone'};
+  var ctx = null, master = null, sfxBus = null, white = null, brown = null, layers = {}, curType = null, wantType = null, spawnT = 0;
+  function ui(){
+    if (ambB){ ambB.classList.toggle('is-off', !st.on); ambB.setAttribute('aria-pressed', st.on ? 'true' : 'false'); }
+    if (avol){ avol.value = st.vol; avol.style.setProperty('--v', st.vol+'%'); }
+  }
+  function level(){ return st.on ? Math.pow(st.vol/100, 1.5) * 0.5 : 0; }
+  function noiseBuf(kind, sec){
+    var n = Math.floor(ctx.sampleRate*sec), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0), last = 0;
+    for (var i = 0; i < n; i++){ var w = Math.random()*2-1; if (kind === 'brown'){ last = (last + 0.02*w)/1.02; d[i] = last*3.5; } else d[i] = w; }
+    // crossfade the loop seam so it never clicks
+    var f = Math.min(2048, n>>3); for (var j = 0; j < f; j++){ var k = j/f; d[n-f+j] = d[n-f+j]*(1-k) + d[j]*k; }
+    return b;
+  }
+  function ensure(){
+    if (ctx || !AC) return ctx;
+    try { ctx = new AC(); } catch(e){ return null; }
+    master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 1.6; sfxBus.connect(master);
+    white = noiseBuf('white', 3); brown = noiseBuf('brown', 6);
+    return ctx;
+  }
+  function src(buf){ var s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.loopStart = 0; s.start(ctx.currentTime, Math.random()*buf.duration*0.9); return s; }
+  function filt(type, f, q){ var b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q != null) b.Q.value = q; return b; }
+  function lfo(freq, depth, param){ var o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = freq; g.gain.value = depth; o.connect(g); g.connect(param); o.start(); return o; }
+  function chain(){ for (var i = 0; i < arguments.length-1; i++) arguments[i].connect(arguments[i+1]); }
+  function makeLayer(type){
+    var g = ctx.createGain(); g.gain.value = 0; g.connect(master);
+    var L = {g:g, stop:[], spawn:null, type:type};
+    if (type === 'wind'){
+      var s = src(brown), bp = filt('bandpass', 420, .6), v = ctx.createGain(); v.gain.value = .9;
+      chain(s, bp, v, g); L.stop.push(s, lfo(.06, 220, bp.frequency), lfo(.11, .35, v.gain));
+    } else if (type === 'fire'){
+      var s2 = src(brown), lp = filt('lowpass', 260), v2 = ctx.createGain(); v2.gain.value = .7;
+      chain(s2, lp, v2, g); L.stop.push(s2, lfo(.17, .2, v2.gain));
+      L.spawn = function(t){ var n = 1 + (Math.random()*3|0); for (var i = 0; i < n; i++) crackle(g, t + Math.random()*.25); };
+    } else if (type === 'rain'){
+      var s3 = src(white), hp = filt('highpass', 1100), lp3 = filt('lowpass', 6500), v3 = ctx.createGain(); v3.gain.value = .22;
+      chain(s3, hp, lp3, v3, g); L.stop.push(s3, lfo(.09, .05, v3.gain));
+      L.spawn = function(t){ if (Math.random() < .5) drip(g, t + Math.random()*.2); };
+    } else if (type === 'sea'){
+      var s4 = src(brown), lp4 = filt('lowpass', 520), v4 = ctx.createGain(); v4.gain.value = .55;
+      chain(s4, lp4, v4, g); L.stop.push(s4, lfo(.085, .45, v4.gain), lfo(.085, 260, lp4.frequency));
+    } else if (type === 'forest'){
+      var s5 = src(brown), bp5 = filt('bandpass', 700, .5), v5 = ctx.createGain(); v5.gain.value = .45;
+      chain(s5, bp5, v5, g); L.stop.push(s5, lfo(.05, 160, bp5.frequency));
+      L.spawn = function(t){ if (Math.random() < .045) chirp(g, t); };
+    } else { // drone
+      [55, 82.4, 110.3].forEach(function(f, i){ var o = ctx.createOscillator(), og = ctx.createGain(); o.type = i === 2 ? 'triangle' : 'sine'; o.frequency.value = f; og.gain.value = [.22, .14, .05][i];
+        chain(o, og, g); o.start(); L.stop.push(o, lfo(.03 + i*.02, .9, o.detune)); });
+      var s6 = src(brown), lp6 = filt('lowpass', 180), v6 = ctx.createGain(); v6.gain.value = .25; chain(s6, lp6, v6, g); L.stop.push(s6);
+    }
+    return L;
+  }
+  function env(g, t, a, peak, dur){ g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t+a); g.gain.exponentialRampToValueAtTime(.0005, t+dur); }
+  function crackle(out, t){ var b = ctx.createBufferSource(); b.buffer = white; var hp = filt('highpass', 1800 + Math.random()*2500), g = ctx.createGain();
+    env(g, t, .002, .05 + Math.random()*.25, .012 + Math.random()*.03); chain(b, hp, g, out); b.start(t, Math.random()*2); b.stop(t+.08); }
+  function drip(out, t){ var o = ctx.createOscillator(), g = ctx.createGain(), f = 1400 + Math.random()*2200; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f*1.6, t+.04);
+    env(g, t, .002, .04 + Math.random()*.05, .06); chain(o, g, out); o.start(t); o.stop(t+.08); }
+  function chirp(out, t){ var reps = 2 + (Math.random()*3|0), base = 2600 + Math.random()*1400;
+    for (var i = 0; i < reps; i++){ var o = ctx.createOscillator(), g = ctx.createGain(), s = t + i*.13; o.frequency.setValueAtTime(base, s); o.frequency.exponentialRampToValueAtTime(base*1.45, s+.07);
+      env(g, s, .01, .05, .1); chain(o, g, out); o.start(s); o.stop(s+.12); } }
+  function setType(type){
+    wantType = type;
+    if (!ctx || ctx.state !== 'running' || !st.on || type === curType) return;
+    var t = ctx.currentTime, old = curType && layers[curType];
+    if (old){ old.g.gain.cancelScheduledValues(t); old.g.gain.setTargetAtTime(0, t, 1.0); var oo = old, ot = curType;
+      setTimeout(function(){ if (curType !== ot && layers[ot] === oo){ oo.stop.forEach(function(n){ try{ n.stop(); }catch(e){} }); try { oo.g.disconnect(); } catch(e){} delete layers[ot]; } }, 7000); }
+    curType = type; if (!type) return;
+    var L = layers[type] || (layers[type] = makeLayer(type));
+    L.g.gain.cancelScheduledValues(t); L.g.gain.setTargetAtTime(1, t, 1.3);
+  }
+  function applyLevel(){ if (!ctx) return; var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(level(), t, .4); }
+  function loop(){ // sparse one-shot texture (crackles / drips / chirps) for the active layer only
+    if (!ctx || ctx.state !== 'running' || !st.on || document.hidden) return;
+    var L = curType && layers[curType]; if (L && L.spawn) L.spawn(ctx.currentTime + .05);
+  }
+  function unlock(){
+    if (!st.on || !ensure()) return;
+    if (ctx.state === 'suspended') ctx.resume().then(function(){ disarm(); applyLevel(); var w = wantType; curType = null; setType(w); }, function(){});
+    else if (ctx.state === 'running'){ disarm(); applyLevel(); if (wantType !== curType){ var w2 = wantType; setType(w2); } }
+  }
+  var armed = false, EVS = ['pointerdown','keydown','touchend','click'];
+  function arm(){ if (armed) return; armed = true; EVS.forEach(function(e){ window.addEventListener(e, unlock, {capture:true, passive:true}); }); }
+  function disarm(){ if (!armed) return; armed = false; EVS.forEach(function(e){ window.removeEventListener(e, unlock, {capture:true, passive:true}); }); }
+  function setOn(on){
+    st.on = on; save(); ui();
+    if (on){ unlock(); if (ctx && ctx.state !== 'running') arm(); if (!spawnT) spawnT = setInterval(loop, 180); }
+    else { applyLevel(); clearInterval(spawnT); spawnT = 0; if (ctx) setTimeout(function(){ if (!st.on && ctx.state === 'running') ctx.suspend(); }, 900); }
+  }
+  // ---- one-shot SFX ----
+  function horn(){
+    if (!ctx || ctx.state !== 'running' || !st.on) return;
+    var t = ctx.currentTime + .03, lp = filt('lowpass', 300, 2), g = ctx.createGain(); chain(lp, g, sfxBus);
+    lp.frequency.setValueAtTime(300, t); lp.frequency.linearRampToValueAtTime(1300, t+.45); lp.frequency.linearRampToValueAtTime(700, t+1.6);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.16, t+.4); g.gain.setValueAtTime(.16, t+1.2); g.gain.exponentialRampToValueAtTime(.0005, t+2.2);
+    [[98, 0], [98.7, 0], [147, .55]].forEach(function(p){ var o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(p[0]*.94, t); o.frequency.linearRampToValueAtTime(p[0], t+.25);
+      og.gain.value = p[1] ? .35 : .5; chain(o, og, lp); o.start(t); o.stop(t+2.3); });
+  }
+  function anvil(){
+    if (!ctx || ctx.state !== 'running' || !st.on) return;
+    var t = ctx.currentTime + .03, f0 = 610;
+    [[1, .2, 1.4], [2.76, .12, .9], [5.4, .07, .6], [8.93, .04, .35]].forEach(function(p){ var o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f0*p[0];
+      env(g, t, .002, p[1], p[2]); chain(o, g, sfxBus); o.start(t); o.stop(t+p[2]+.05); });
+    var b = ctx.createBufferSource(); b.buffer = white; var hp = filt('highpass', 3000), g2 = ctx.createGain(); env(g2, t, .001, .25, .03); chain(b, hp, g2, sfxBus); b.start(t); b.stop(t+.05);
+  }
+  // targets: {y (px from line top), kind, fired}
+  var targets = [], lastY = null, lastFire = 0, fired = [];
+  function setTargets(list){ targets = list; lastY = null; }
+  function spark(y){
+    if (lastY === null){ lastY = y; return; }
+    var y0 = lastY; lastY = y; if (Math.abs(y - y0) > 2500) return; // jumps (links, reload) don't fire
+    var now = performance.now();
+    for (var i = 0; i < targets.length; i++){
+      var tg = targets[i];
+      if (tg.fired){ if (Math.abs(y - tg.y) > 320) tg.fired = false; continue; }
+      if ((y0 < tg.y && y >= tg.y) || (y0 > tg.y && y <= tg.y)){
+        tg.fired = true;
+        if (now - lastFire > 1200){ lastFire = now; fired.push(tg.kind); if (fired.length > 20) fired.shift(); if (tg.kind === 'horn') horn(); else anvil(); }
+      }
+    }
+  }
+  if (ambB) ambB.addEventListener('click', function(ev){ setOn(!st.on); });
+  if (avol) avol.addEventListener('input', function(){ st.vol = +avol.value; if (st.vol > 0 && !st.on){ st.on = true; setOn(true); } save(); ui(); applyLevel(); });
+  document.addEventListener('visibilitychange', function(){ if (!ctx) return; if (document.hidden) ctx.suspend(); else if (st.on) ctx.resume(); });
+  ui();
+  if (AC && st.on){ arm(); spawnT = setInterval(loop, 180); }
+  return {onTheme:function(theme){ setType(TYPE[theme] || 'wind'); }, setTargets:setTargets, spark:spark, horn:function(){ unlock(); horn(); }, anvil:function(){ unlock(); anvil(); },
+    state:function(){ return {st:st, ctx:ctx && ctx.state, type:curType, want:wantType, layers:Object.keys(layers), targets:targets.length, fired:fired.slice()}; }};
 })();
 
 // =====================================================================
@@ -667,6 +787,7 @@ function buildAnimations(){
   ScrollTrigger.create({trigger:tlEl, start:'top 60%', end:'bottom 60%', scrub:true, onUpdate:function(self){
     var p = self.progress; sparkGeo.p = p;
     gsap.set('#lineFill', {scaleY:p}); gsap.set('#lineSpark', {y: p*tlEl.offsetHeight});
+    Ambience.spark(p*sparkGeo.h);
     hudBar.style.width = (p*100).toFixed(1)+'%';
   }});
   ScrollTrigger.create({trigger:tlEl, start:'top 70%', end:'bottom 30%', onToggle:function(self){ hud.classList.toggle('on', self.isActive); }});
@@ -732,5 +853,12 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(function()
 window.addEventListener('load', function(){ relayout(); });
 window.addEventListener('resize', function(){ relayout(); });
 mqMobile.addEventListener && mqMobile.addEventListener('change', function(){ if (mqMobile.matches!==MOBILE){ location.reload(); } });
-window.__ulv = {Music:Music, FX:FX, Effects:Effects, Lightbox:Lightbox, theme:THEME_OF, atm:function(){return ATM;}};
+// SFX targets: major battles -> war horn, dwarf / forge events -> anvil (dot centre, px from line top)
+var SFX_EVS = EV_ELS.map(function(el){ var e = evByO[+el.dataset.o]; if (!e || !e.major) return null;
+  var k = /Savaş/.test(e.title) ? 'horn' : (/[Cc]üce|Crownforge|demirci|Forge/.test(e.title) ? 'anvil' : null);
+  return k ? {el:el, kind:k} : null; }).filter(Boolean);
+window.Ambience_targets = function(sy){ if (!lineEl) return;
+  Ambience.setTargets(SFX_EVS.map(function(t){ var d = t.el.querySelector('.dot') || t.el, r = d.getBoundingClientRect(); return {y: r.top + sy + r.height/2 - sparkGeo.top - 13, kind:t.kind, fired:false}; })); };
+window.Ambience_targets(window.scrollY);
+window.__ulv = {Music:Music, Ambience:Ambience, FX:FX, Effects:Effects, Lightbox:Lightbox, theme:THEME_OF, atm:function(){return ATM;}};
 })();
