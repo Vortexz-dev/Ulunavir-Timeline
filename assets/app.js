@@ -606,7 +606,7 @@ var Music = (function(){
     var txt;
     if (!N) txt = 'Henüz müzik eklenmedi';
     else if (st.on && errStreak >= N) txt = 'Parçalar oynatılamadı';
-    else if (st.on && blocked && !isPlaying) txt = (st.idx+1)+'/'+N+' · '+title(st.idx)+' — başlatmak için sayfaya dokun';
+    else if (st.on && blocked && !isPlaying) txt = (st.idx+1)+'/'+N+' · '+title(st.idx)+' — başlatmak için kaydır ya da tıkla';
     else txt = (st.idx+1)+'/'+N+' · '+title(st.idx);
     now.textContent = txt; now.title = N ? (st.idx+1)+'/'+N+' — '+title(st.idx) : '';
   }
@@ -642,8 +642,10 @@ var Music = (function(){
   function stop(){ fadeTo(0, 700, function(){ au.pause(); }); isPlaying = false; ui(); }
   function setOn(on){ st.on = on; save(); errStreak = 0; if (on) play(true); else stop(); ui(); }
   // first real interaction unlocks audio when autoplay was refused
-  var armed = false, EVS = ['pointerdown','keydown','touchstart','touchend','click','wheel','scroll'];
-  function onGesture(){ if (!st.on || isPlaying){ disarm(); return; } if (!pending) play(true); }
+  // only real activation events can unlock audio (wheel/scroll cannot, and a failed
+  // attempt from them used to swallow the next click while 'pending')
+  var armed = false, EVS = ['pointerdown','pointerup','keydown','touchstart','touchend','click','wheel','scroll'];
+  function onGesture(){ if (!st.on || isPlaying){ disarm(); return; } play(true); }
   function armGesture(){ if (armed) return; armed = true; EVS.forEach(function(t){ window.addEventListener(t, onGesture, {capture:true, passive:true}); }); }
   function disarm(){ if (!armed) return; armed = false; EVS.forEach(function(t){ window.removeEventListener(t, onGesture, {capture:true, passive:true}); }); }
   au.addEventListener('playing', disarm);
@@ -659,7 +661,14 @@ var Music = (function(){
   document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && mpEl.classList.contains('open')) { setOpen(false); btn.focus(); } });
   if (!N) mpEl.classList.add('empty');
   ui();
-  if (st.on && N) play(true); // try autoplay right away; falls back to first gesture
+  // sound hint: shown only while the browser blocks autoplay
+  var hint = document.createElement('div'); hint.className = 'snd-hint'; hint.setAttribute('role','status');
+  hint.innerHTML = '<span class="snd-ic">\u266A</span> Müzik ve ambiyans için kaydır ya da herhangi bir yere tıkla';
+  document.body.appendChild(hint);
+  function hintUi(){ hint.classList.toggle('show', !!(st.on && N && blocked && !isPlaying)); }
+  au.addEventListener('playing', hintUi); au.addEventListener('pause', hintUi);
+  var _ui = ui; ui = function(){ _ui(); hintUi(); };
+  if (st.on && N) { play(true); window.addEventListener('load', function(){ if (!isPlaying) play(true); }); } // try autoplay right away; falls back to first gesture
   return {onEvent:function(){ /* music does not follow eras; ambience does */ }, next:function(){ step(1); }, prev:function(){ step(-1); },
     state:function(){ return {st:st, idx:st.idx, n:N, title:N?title(st.idx):null, playing:isPlaying, blocked:blocked, t:Math.round(au.currentTime||0), vol:Math.round(au.volume*100), src:au.currentSrc, errStreak:errStreak}; }};
 })();
@@ -843,7 +852,7 @@ var Ambience = (function(){
     if (ctx.state === 'suspended') ctx.resume().then(go, function(){});
     else if (ctx.state === 'running') go();
   }
-  var armed = false, EVS = ['pointerdown','keydown','touchend','click'];
+  var armed = false, EVS = ['pointerdown','keydown','touchstart','touchend','click','wheel','scroll'];
   function arm(){ if (armed) return; armed = true; EVS.forEach(function(e){ window.addEventListener(e, unlock, {capture:true, passive:true}); }); }
   function disarm(){ if (!armed) return; armed = false; EVS.forEach(function(e){ window.removeEventListener(e, unlock, {capture:true, passive:true}); }); }
   function setOn(on){
