@@ -323,15 +323,15 @@ var FX = (function(){
     if (reduce) return;
     n = Math.round(n * (lite ? 0.35 : 1) * (MOBILE ? 0.6 : 1));
     var sy = window.scrollY, per = 2*(r.width + r.height);
-    for (var i=0;i<n && bursts.length<260;i++){
+    for (var i=0;i<n && bursts.length<420;i++){
       var d = R()*per, x, y, nx, ny;
       if (d < r.width){ x = r.left + d; y = r.top; nx = 0; ny = -1; }
       else if ((d -= r.width) < r.height){ x = r.right; y = r.top + d; nx = 1; ny = 0; }
       else if ((d -= r.height) < r.width){ x = r.right - d; y = r.bottom; nx = 0; ny = 1; }
       else { d -= r.width; x = r.left; y = r.bottom - d; nx = -1; ny = 0; }
-      var sp = (mode === 'smoke' ? .35 + R()*.6 : .6 + R()*1.8), tang = (R()-.5)*1.2;
+      var sp = (mode === 'smoke' ? .25 + R()*.45 : .25 + R()*.9), tang = (R()-.5)*.8;
       bursts.push({x:x*dpr, y:(y+sy)*dpr, vx:(nx*sp + (ny ? tang : 0) + (R()-.5)*.3)*dpr, vy:(ny*sp + (nx ? tang : 0) - (mode === 'smoke' ? .25 : .1))*dpr,
-        life:-R()*18, max:(mode === 'smoke' ? 70 : 45) + R()*40, r:(mode === 'smoke' ? 6 + R()*10 : 1 + R()*1.8)*dpr, c:rgb, m:mode});
+        life:-R()*40, max:(mode === 'smoke' ? 70 : 70) + R()*70, r:(mode === 'smoke' ? 4 + R()*6 : .35 + R()*.65)*dpr, c:rgb, m:mode, ph:R()*6.28});
     }
   }
   function drawBursts(dt){
@@ -339,7 +339,7 @@ var FX = (function(){
     var off = window.scrollY*dpr;
     for (var b=bursts.length-1; b>=0; b--){
       var p = bursts[b]; p.life += dt; if (p.life < 0) continue;
-      p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.975; p.vy = p.vy*0.975 - (p.m === 'smoke' ? 0.004 : 0.012)*dpr*dt;
+      p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.975; p.vy = p.vy*0.975 - (p.m === 'smoke' ? 0.004 : 0.02)*dpr*dt; if (p.m !== 'smoke') p.vx += Math.sin((p.life + p.ph*20)*.08)*.012*dpr*dt;
       var f = 1 - p.life/p.max; if (f <= 0){ bursts.splice(b,1); continue; }
       var sx = p.x, sy = p.y - off; if (sy < -40 || sy > H + 40) continue;
       if (p.m === 'smoke'){
@@ -347,8 +347,9 @@ var FX = (function(){
         ctx.drawImage(smokeSpr, sx-rr, sy-rr, rr*2, rr*2);
       } else {
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = f*0.5; ctx.fillStyle = 'rgb('+p.c+')'; ctx.beginPath(); ctx.arc(sx, sy, p.r*2.4, 0, 6.283); ctx.fill();
-        ctx.globalAlpha = f; ctx.fillStyle = p.m === 'gold' ? '#fffbe8' : 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(sx, sy, p.r*0.7, 0, 6.283); ctx.fill();
+        var fl = .65 + .35*Math.sin(p.life*.5 + p.ph); // ember flicker
+        ctx.globalAlpha = f*0.4*fl; ctx.fillStyle = 'rgb('+p.c+')'; ctx.beginPath(); ctx.arc(sx, sy, p.r*2.2, 0, 6.283); ctx.fill();
+        ctx.globalAlpha = f*fl; ctx.fillStyle = p.m === 'gold' ? '#fffbe8' : 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(sx, sy, p.r*0.7, 0, 6.283); ctx.fill();
       }
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -948,9 +949,9 @@ function burstCard(el){
   var e = evByO[+el.dataset.o]; if (!e) return;
   var card = el.querySelector('.card'); if (!card) return;
   var r = card.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
-  var b = BURST[KIND_OF[e.o]], n = 64;
+  var b = BURST[KIND_OF[e.o]], n = 110;
   if (!b){ var L = (VEC[EV_ELS.indexOf(el)] || VEC[0]).line; b = [Math.round(L[0])+','+Math.round(L[1])+','+Math.round(L[2]), 'gold']; }
-  if (b[1] === 'smoke'){ FX.burst(r, b[0], 'smoke', n*0.7); FX.burst(r, '205,205,220', 'spark', n*0.25); }
+  if (b[1] === 'smoke'){ FX.burst(r, b[0], 'smoke', n*0.35); FX.burst(r, '205,205,220', 'spark', n*0.6); }
   else FX.burst(r, b[0], b[1], n);
 }
 (function(){ // once per entry: fire when a major card is ~45% visible, re-arm when it has left the screen
@@ -963,7 +964,9 @@ function burstCard(el){
       if (en.intersectionRatio >= .45 && armedB.get(el) !== false){ armedB.set(el, false); setTimeout(function(){ burstCard(el); }, 380); }
     });
   }, {threshold:[0, .45]});
-  EV_ELS.forEach(function(el){ if (el.classList.contains('major')){ armedB.set(el, true); io.observe(el.querySelector('.card') ? el : el); } });
+  // only the truly epic events (great wars, great victories, deaths that matter) get the ember burst
+  var EPIC = {2:1,3:1,13:1,20:1,22:1,42:1,43:1,50:1,51:1,63:1,79:1,83:1,92:1,94:1,101:1,103:1,107:1,120:1,122:1,126:1,161:1,186:1,187:1,193:1,199:1,203:1,218:1};
+  EV_ELS.forEach(function(el){ if (EPIC[+el.dataset.o]){ armedB.set(el, true); io.observe(el.querySelector('.card') ? el : el); } });
 })();
 
 // =====================================================================
