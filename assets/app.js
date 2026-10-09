@@ -719,7 +719,7 @@ var Ambience = (function(){
     comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4; comp.attack.value = .01; comp.release.value = .3;
     master.connect(comp); comp.connect(ctx.destination);
     bedBus = ctx.createGain(); bedBus.gain.value = 2.2; bedBus.connect(master);
-    sfxBus = ctx.createGain(); sfxBus.gain.value = 1.5; sfxBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.32; sfxBus.connect(master);
     white = noiseBuf('white', 3); brown = noiseBuf('brown', 6);
     return ctx;
   }
@@ -870,10 +870,10 @@ var Ambience = (function(){
     var id = 'sfx-' + list[rr[kind]], t0 = performance.now();
     load(id, function(buf){
       if (!buf || !running() || performance.now() - t0 > 1500){ if (!buf) chime(kind); return; }   // too late = skip (don't fire long after scrolling past)
-      var s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = buf; g.gain.value = kind === 'battle' ? 1.1 : .9;
-      s.connect(g); g.connect(sfxBus); s.start(ctx.currentTime + .02);
+      var s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = buf; g.gain.value = .8; var lpf = ctx.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 2600;
+      s.connect(lpf); lpf.connect(g); g.connect(sfxBus); s.start(ctx.currentTime + .02);
       // duck the bed a little under the effect
-      bedBus.gain.cancelScheduledValues(ctx.currentTime); bedBus.gain.setTargetAtTime(1.3, ctx.currentTime, .15); bedBus.gain.setTargetAtTime(2.2, ctx.currentTime + Math.min(3, buf.duration), .8);
+      bedBus.gain.cancelScheduledValues(ctx.currentTime); bedBus.gain.setTargetAtTime(2.0, ctx.currentTime, .3); bedBus.gain.setTargetAtTime(2.2, ctx.currentTime + Math.min(3, buf.duration), .8);
     });
   }
   // atmospheric, non-melodic fallback (no notes/tones): a soft gust of air with a low distant swell.
@@ -903,7 +903,7 @@ var Ambience = (function(){
       if (tg.fired){ if (Math.abs(y - tg.y) > 320) tg.fired = false; continue; }
       if ((y0 < tg.y && y >= tg.y) || (y0 > tg.y && y <= tg.y)){
         tg.fired = true;
-        if (now - lastFire > 2200){ lastFire = now; fired.push(tg.kind); if (fired.length > 20) fired.shift(); playSfx(tg.kind); }
+        if (now - lastFire > 7000 && Math.abs(y - y0) < 140){ lastFire = now; fired.push(tg.kind); if (fired.length > 20) fired.shift(); playSfx(tg.kind); }
       }
     }
   }
