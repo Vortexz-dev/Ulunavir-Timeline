@@ -316,6 +316,43 @@ var FX = (function(){
       sparks.push({x:x+(R()-.5)*6*dpr, y:y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, life:0, max:26+R()*26, r:(0.9+R()*1.4)*dpr, c:rgb});
     }
   }
+  // card-edge bursts (major events): particles start on the card's border and drift outward, then fade.
+  // Stored in page coordinates (y + scrollY) so they stay attached to the card while scrolling.
+  var bursts = [], smokeSpr = sprite('18,14,20', false);
+  function burst(r, rgb, mode, n){
+    if (reduce) return;
+    n = Math.round(n * (lite ? 0.35 : 1) * (MOBILE ? 0.6 : 1));
+    var sy = window.scrollY, per = 2*(r.width + r.height);
+    for (var i=0;i<n && bursts.length<260;i++){
+      var d = R()*per, x, y, nx, ny;
+      if (d < r.width){ x = r.left + d; y = r.top; nx = 0; ny = -1; }
+      else if ((d -= r.width) < r.height){ x = r.right; y = r.top + d; nx = 1; ny = 0; }
+      else if ((d -= r.height) < r.width){ x = r.right - d; y = r.bottom; nx = 0; ny = 1; }
+      else { d -= r.width; x = r.left; y = r.bottom - d; nx = -1; ny = 0; }
+      var sp = (mode === 'smoke' ? .35 + R()*.6 : .6 + R()*1.8), tang = (R()-.5)*1.2;
+      bursts.push({x:x*dpr, y:(y+sy)*dpr, vx:(nx*sp + (ny ? tang : 0) + (R()-.5)*.3)*dpr, vy:(ny*sp + (nx ? tang : 0) - (mode === 'smoke' ? .25 : .1))*dpr,
+        life:-R()*18, max:(mode === 'smoke' ? 70 : 45) + R()*40, r:(mode === 'smoke' ? 6 + R()*10 : 1 + R()*1.8)*dpr, c:rgb, m:mode});
+    }
+  }
+  function drawBursts(dt){
+    if (!bursts.length) return;
+    var off = window.scrollY*dpr;
+    for (var b=bursts.length-1; b>=0; b--){
+      var p = bursts[b]; p.life += dt; if (p.life < 0) continue;
+      p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.975; p.vy = p.vy*0.975 - (p.m === 'smoke' ? 0.004 : 0.012)*dpr*dt;
+      var f = 1 - p.life/p.max; if (f <= 0){ bursts.splice(b,1); continue; }
+      var sx = p.x, sy = p.y - off; if (sy < -40 || sy > H + 40) continue;
+      if (p.m === 'smoke'){
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = f*0.45; var rr = p.r*(1.6 - f*0.6);
+        ctx.drawImage(smokeSpr, sx-rr, sy-rr, rr*2, rr*2);
+      } else {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = f*0.5; ctx.fillStyle = 'rgb('+p.c+')'; ctx.beginPath(); ctx.arc(sx, sy, p.r*2.4, 0, 6.283); ctx.fill();
+        ctx.globalAlpha = f; ctx.fillStyle = p.m === 'gold' ? '#fffbe8' : 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(sx, sy, p.r*0.7, 0, 6.283); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
   function frame(t){
     if (!running) return;
     measure(t);
@@ -362,6 +399,7 @@ var FX = (function(){
       }
       ctx.globalAlpha = 1;
     }
+    drawBursts(dt);
     ctx.globalCompositeOperation = 'source-over';
     tick();
     requestAnimationFrame(frame);
@@ -371,7 +409,7 @@ var FX = (function(){
     requestAnimationFrame(frame);
     document.addEventListener('visibilitychange', function(){ running = !document.hidden; lastT = 0; lastDraw = 0; probe.t0 = 0; probe.slow = 0; if (running) requestAnimationFrame(frame); });
   }
-  return { setTargets:setTargets, emitSparks:emitSparks, setLite:setLite, lite:function(){return lite;}, onFps:function(cb){ probe.cb = cb; probe.t0 = 0; probe.slow = 0; }, dpr:function(){return dpr;}, active:function(){ var o={}; PTYPES.forEach(function(k){ if (weight[k]>0.02) o[k]=+weight[k].toFixed(2); }); return o; } };
+  return { setTargets:setTargets, emitSparks:emitSparks, burst:burst, bursts:function(){return bursts.length;}, setLite:setLite, lite:function(){return lite;}, onFps:function(cb){ probe.cb = cb; probe.t0 = 0; probe.slow = 0; }, dpr:function(){return dpr;}, active:function(){ var o={}; PTYPES.forEach(function(k){ if (weight[k]>0.02) o[k]=+weight[k].toFixed(2); }); return o; } };
 })();
 
 // per-frame work driven from FX loop (or scroll in reduced-motion mode)
@@ -439,6 +477,7 @@ function setCurrent(el){
   root.style.setProperty('--accent2', rgbStr(v.glow));
   Music.onEvent(evByO[o], THEME_OF[o]);
   Ambience.onTheme(THEME_OF[o]);
+  if (MiniMap && hud.classList.contains('mm-open')) MiniMap.mark();
 }
 
 // =====================================================================
@@ -626,11 +665,16 @@ var Music = (function(){
 })();
 
 // =====================================================================
-// AMBIENCE (procedural WebAudio, no audio files): one quiet loop per era
-// theme family (wind / fire / rain / sea / forest / drone), crossfaded on
-// era change, plus light one-shot SFX (war horn / anvil) when the moving
-// timeline spark reaches a major battle / dwarf-forge event. Own on/off +
-// volume (saved in localStorage 'ulv-amb'); off = silent, SFX included.
+// AMBIENCE: real recorded loops (assets/sfx/amb-*.mp3, CC0 / public domain /
+// CC BY, see assets/sfx/CREDITS.md) chosen per era theme from a pool with a
+// no-repeat window, dwell-time hysteresis while scrolling, long crossfades
+// and slow in-place rotation. The old procedural WebAudio layers stay as a
+// fallback (file:// or failed downloads) and for the drone pad.
+// One-shot event sounds: when the moving timeline spark reaches a major
+// event, a sound matching its content plays (dragon roar, sword clashes
+// with distant shouting, magic shimmer, low toll, waves, bells, anvil,
+// thunder, howl); events with no match get a soft synthesized chime.
+// Own on/off + volume (localStorage 'ulv-amb'); off = silent, SFX included.
 // =====================================================================
 var Ambience = (function(){
   var KEY = 'ulv-amb', cfg = MU.ambience || {}, st = {on: cfg.on !== false, vol: cfg.volume != null ? cfg.volume : 30};
@@ -638,12 +682,16 @@ var Ambience = (function(){
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} }
   var ambB = mpEl.querySelector('.mp-amb'), avol = mpEl.querySelector('.mp-avol');
   var AC = window.AudioContext || window.webkitAudioContext;
-  var TYPE = {ice:'wind', snowcity:'wind', sky:'wind', ancient:'wind', calm:'wind', memory:'wind', grief:'wind', night:'wind', death:'wind', sand:'wind', modern:'wind',
-              fire:'fire', war:'fire', forge:'fire', industrial:'fire', blood:'fire',
-              rain:'rain', sea:'sea',
-              elven:'forest', light:'forest', festival:'forest', witch:'forest', crown:'forest',
-              occult:'drone', girift:'drone', sterile:'drone', timestop:'drone', quake:'drone'};
-  var ctx = null, master = null, sfxBus = null, white = null, brown = null, layers = {}, curType = null, wantType = null, spawnT = 0;
+  var BEDS = cfg.beds || {}, POOLS = cfg.pools || {}, SFXV = cfg.sfx || {};
+  var FADE = cfg.fadeSec || 4.5, DWELL = (cfg.dwellSec != null ? cfg.dwellSec : 2.2) * 1000, ROT = cfg.rotateSec || [80, 130], NOREP = cfg.noRepeat || 5;
+  var SYN = {ice:'wind', snowcity:'wind', sky:'wind', ancient:'wind', calm:'wind', memory:'wind', grief:'wind', night:'wind', death:'wind', sand:'wind', modern:'wind',
+             fire:'fire', war:'fire', forge:'fire', industrial:'fire', blood:'fire', rain:'rain', sea:'sea',
+             elven:'forest', light:'forest', festival:'forest', witch:'forest', crown:'forest',
+             occult:'drone', girift:'drone', sterile:'drone', timestop:'drone', quake:'drone'};
+  var PAD = {girift:.55, timestop:.4, occult:.3, sterile:.3, death:.25}; // quiet synth drone under these themes
+  var ctx = null, master = null, sfxBus = null, bedBus = null, white = null, brown = null, comp = null;
+  var curTheme = null, wantTheme = null, dwellT = 0, rotT = 0, hist = [], cur = null, synth = {}, curSyn = null, padL = null, spawnT = 0;
+  var bufs = {}, lru = [], loading = {}, failed = {}, noFiles = location.protocol === 'file:';
   function ui(){
     if (ambB){ ambB.classList.toggle('is-off', !st.on); ambB.setAttribute('aria-pressed', st.on ? 'true' : 'false'); }
     if (avol){ avol.value = st.vol; avol.style.setProperty('--v', st.vol+'%'); }
@@ -652,19 +700,91 @@ var Ambience = (function(){
   function noiseBuf(kind, sec){
     var n = Math.floor(ctx.sampleRate*sec), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0), last = 0;
     for (var i = 0; i < n; i++){ var w = Math.random()*2-1; if (kind === 'brown'){ last = (last + 0.02*w)/1.02; d[i] = last*3.5; } else d[i] = w; }
-    // crossfade the loop seam so it never clicks
     var f = Math.min(2048, n>>3); for (var j = 0; j < f; j++){ var k = j/f; d[n-f+j] = d[n-f+j]*(1-k) + d[j]*k; }
     return b;
   }
   function ensure(){
     if (ctx || !AC) return ctx;
     try { ctx = new AC(); } catch(e){ return null; }
-    master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
-    sfxBus = ctx.createGain(); sfxBus.gain.value = 1.6; sfxBus.connect(master);
+    master = ctx.createGain(); master.gain.value = 0;
+    comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4; comp.attack.value = .01; comp.release.value = .3;
+    master.connect(comp); comp.connect(ctx.destination);
+    bedBus = ctx.createGain(); bedBus.gain.value = 2.2; bedBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 1.5; sfxBus.connect(master);
     white = noiseBuf('white', 3); brown = noiseBuf('brown', 6);
     return ctx;
   }
-  function src(buf){ var s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.loopStart = 0; s.start(ctx.currentTime, Math.random()*buf.duration*0.9); return s; }
+  function running(){ return ctx && ctx.state === 'running' && st.on; }
+  // ---------- file loading (decoded buffers, small LRU so memory stays low) ----------
+  function url(id){ return 'assets/sfx/' + id + '.mp3'; }
+  function load(id, cb){
+    if (bufs[id]){ touch(id); return cb && cb(bufs[id]); }
+    if (failed[id] || noFiles || !window.fetch) return cb && cb(null);
+    if (loading[id]){ if (cb) loading[id].push(cb); return; }
+    loading[id] = cb ? [cb] : [];
+    fetch(url(id)).then(function(r){ if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(function(ab){ return new Promise(function(res, rej){ var p = ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); }); })
+      .then(function(b){ bufs[id] = b; touch(id); var l = loading[id]; delete loading[id]; l.forEach(function(f){ f(b); }); },
+            function(){ failed[id] = true; var l = loading[id]; delete loading[id]; l.forEach(function(f){ f(null); }); });
+  }
+  function touch(id){
+    var i = lru.indexOf(id); if (i >= 0) lru.splice(i, 1); lru.push(id);
+    while (lru.length > 5){ var old = lru.shift(); if (cur && cur.id === 'amb-' + old) { lru.push(old); break; } if (/^amb-/.test(old)) delete bufs[old]; }
+  }
+  // ---------- beds ----------
+  function pickBed(theme, avoid){
+    var pool = (POOLS[theme] || POOLS.modern || []).filter(function(b){ return !failed['amb-' + b]; });
+    if (!pool.length) return null;
+    var fresh = pool.filter(function(b){ return b !== avoid && hist.indexOf(b) < 0; });
+    if (!fresh.length) fresh = pool.filter(function(b){ return b !== avoid; });
+    if (!fresh.length) fresh = pool;
+    // least recently used among the candidates, random tie-break
+    fresh.sort(function(a, b){ return (hist.lastIndexOf(a) - hist.lastIndexOf(b)) || (Math.random() - .5); });
+    return fresh[0];
+  }
+  function startBed(bed){
+    var id = 'amb-' + bed;
+    load(id, function(buf){
+      if (!buf){ synthFallback(curTheme); return; }
+      if (!running() || !curTheme) return;
+      var t = ctx.currentTime, s = ctx.createBufferSource(), g = ctx.createGain(), gain = (BEDS[bed] && BEDS[bed].g) || 1;
+      s.buffer = buf; s.loop = true; s.loopStart = .03; s.loopEnd = buf.duration - .03;
+      g.gain.value = 0; s.connect(g); g.connect(bedBus);
+      s.start(t, .03 + Math.random() * (buf.duration - 1));
+      g.gain.setTargetAtTime(gain, t + .05, FADE / 3);
+      fadeOutCur(); cur = {id:id, bed:bed, s:s, g:g};
+      hist.push(bed); if (hist.length > NOREP) hist.shift();
+      synthFallback(null);
+      scheduleRotate();
+    });
+  }
+  function fadeOutCur(){
+    if (!cur) return; var o = cur; cur = null; var t = ctx.currentTime;
+    o.g.gain.cancelScheduledValues(t); o.g.gain.setTargetAtTime(0, t, FADE / 3);
+    setTimeout(function(){ try { o.s.stop(); } catch(e){} try { o.g.disconnect(); } catch(e){} }, FADE * 1000 + 2500);
+  }
+  function scheduleRotate(){
+    clearTimeout(rotT);
+    rotT = setTimeout(function(){ if (running() && curTheme && !document.hidden){ var b = pickBed(curTheme, cur && cur.bed); if (b && (!cur || b !== cur.bed)) startBed(b); else scheduleRotate(); } }, (ROT[0] + Math.random() * (ROT[1] - ROT[0])) * 1000);
+  }
+  function applyTheme(theme){
+    if (!running()) return;
+    var changed = theme !== curTheme; curTheme = theme;
+    setPad(PAD[theme] || 0);
+    var pool = POOLS[theme] || [];
+    if (cur && pool.indexOf(cur.bed) >= 0) return;          // current loop also fits the new theme: keep it
+    if (!changed && cur) return;
+    var b = pickBed(theme, cur && cur.bed);
+    if (b) startBed(b); else synthFallback(theme);
+  }
+  function setTheme(theme){
+    wantTheme = theme; clearTimeout(dwellT);
+    if (!running()) return;
+    if (!curTheme){ applyTheme(theme); return; }
+    dwellT = setTimeout(function(){ if (wantTheme === theme) applyTheme(theme); }, DWELL);
+  }
+  // ---------- procedural fallback layers (used when the files can't load) ----------
+  function src(buf){ var s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.start(ctx.currentTime, Math.random()*buf.duration*0.9); return s; }
   function filt(type, f, q){ var b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q != null) b.Q.value = q; return b; }
   function lfo(freq, depth, param){ var o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = freq; g.gain.value = depth; o.connect(g); g.connect(param); o.start(); return o; }
   function chain(){ for (var i = 0; i < arguments.length-1; i++) arguments[i].connect(arguments[i+1]); }
@@ -681,96 +801,334 @@ var Ambience = (function(){
     } else if (type === 'rain'){
       var s3 = src(white), hp = filt('highpass', 1100), lp3 = filt('lowpass', 6500), v3 = ctx.createGain(); v3.gain.value = .22;
       chain(s3, hp, lp3, v3, g); L.stop.push(s3, lfo(.09, .05, v3.gain));
-      L.spawn = function(t){ if (Math.random() < .5) drip(g, t + Math.random()*.2); };
     } else if (type === 'sea'){
       var s4 = src(brown), lp4 = filt('lowpass', 520), v4 = ctx.createGain(); v4.gain.value = .55;
       chain(s4, lp4, v4, g); L.stop.push(s4, lfo(.085, .45, v4.gain), lfo(.085, 260, lp4.frequency));
     } else if (type === 'forest'){
       var s5 = src(brown), bp5 = filt('bandpass', 700, .5), v5 = ctx.createGain(); v5.gain.value = .45;
       chain(s5, bp5, v5, g); L.stop.push(s5, lfo(.05, 160, bp5.frequency));
-      L.spawn = function(t){ if (Math.random() < .045) chirp(g, t); };
-    } else { // drone
+    } else { // drone pad
       [55, 82.4, 110.3].forEach(function(f, i){ var o = ctx.createOscillator(), og = ctx.createGain(); o.type = i === 2 ? 'triangle' : 'sine'; o.frequency.value = f; og.gain.value = [.22, .14, .05][i];
         chain(o, og, g); o.start(); L.stop.push(o, lfo(.03 + i*.02, .9, o.detune)); });
       var s6 = src(brown), lp6 = filt('lowpass', 180), v6 = ctx.createGain(); v6.gain.value = .25; chain(s6, lp6, v6, g); L.stop.push(s6);
     }
     return L;
   }
+  function killLayer(L){ var t = ctx.currentTime; L.g.gain.cancelScheduledValues(t); L.g.gain.setTargetAtTime(0, t, 1.2);
+    setTimeout(function(){ L.stop.forEach(function(n){ try{ n.stop(); }catch(e){} }); try { L.g.disconnect(); } catch(e){} }, 7000); }
+  function synthFallback(theme){
+    var type = theme ? (SYN[theme] || 'wind') : null;
+    if (type === curSyn) return;
+    if (curSyn && synth[curSyn]){ killLayer(synth[curSyn]); delete synth[curSyn]; }
+    curSyn = type; if (!type) return;
+    var L = synth[type] = makeLayer(type); L.g.gain.setTargetAtTime(1, ctx.currentTime, 1.3);
+  }
+  function setPad(v){
+    if (!ctx) return;
+    if (!padL && v > 0){ padL = makeLayer('drone'); }
+    if (padL) padL.g.gain.setTargetAtTime(v * .9, ctx.currentTime, 2.5);
+  }
   function env(g, t, a, peak, dur){ g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t+a); g.gain.exponentialRampToValueAtTime(.0005, t+dur); }
   function crackle(out, t){ var b = ctx.createBufferSource(); b.buffer = white; var hp = filt('highpass', 1800 + Math.random()*2500), g = ctx.createGain();
     env(g, t, .002, .05 + Math.random()*.25, .012 + Math.random()*.03); chain(b, hp, g, out); b.start(t, Math.random()*2); b.stop(t+.08); }
-  function drip(out, t){ var o = ctx.createOscillator(), g = ctx.createGain(), f = 1400 + Math.random()*2200; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f*1.6, t+.04);
-    env(g, t, .002, .04 + Math.random()*.05, .06); chain(o, g, out); o.start(t); o.stop(t+.08); }
-  function chirp(out, t){ var reps = 2 + (Math.random()*3|0), base = 2600 + Math.random()*1400;
-    for (var i = 0; i < reps; i++){ var o = ctx.createOscillator(), g = ctx.createGain(), s = t + i*.13; o.frequency.setValueAtTime(base, s); o.frequency.exponentialRampToValueAtTime(base*1.45, s+.07);
-      env(g, s, .01, .05, .1); chain(o, g, out); o.start(s); o.stop(s+.12); } }
-  function setType(type){
-    wantType = type;
-    if (!ctx || ctx.state !== 'running' || !st.on || type === curType) return;
-    var t = ctx.currentTime, old = curType && layers[curType];
-    if (old){ old.g.gain.cancelScheduledValues(t); old.g.gain.setTargetAtTime(0, t, 1.0); var oo = old, ot = curType;
-      setTimeout(function(){ if (curType !== ot && layers[ot] === oo){ oo.stop.forEach(function(n){ try{ n.stop(); }catch(e){} }); try { oo.g.disconnect(); } catch(e){} delete layers[ot]; } }, 7000); }
-    curType = type; if (!type) return;
-    var L = layers[type] || (layers[type] = makeLayer(type));
-    L.g.gain.cancelScheduledValues(t); L.g.gain.setTargetAtTime(1, t, 1.3);
-  }
   function applyLevel(){ if (!ctx) return; var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(level(), t, .4); }
-  function loop(){ // sparse one-shot texture (crackles / drips / chirps) for the active layer only
-    if (!ctx || ctx.state !== 'running' || !st.on || document.hidden) return;
-    var L = curType && layers[curType]; if (L && L.spawn) L.spawn(ctx.currentTime + .05);
+  function loop(){ if (!running() || document.hidden) return; var L = curSyn && synth[curSyn]; if (L && L.spawn) L.spawn(ctx.currentTime + .05); }
+  function preloadSfx(){ // fetch the short event sounds once audio is unlocked (small files)
+    Object.keys(SFXV).forEach(function(k, i){ setTimeout(function(){ if (ctx) load('sfx-' + SFXV[k][0]); }, 800 + i*250); });
   }
+  var preloaded = false;
   function unlock(){
     if (!st.on || !ensure()) return;
-    if (ctx.state === 'suspended') ctx.resume().then(function(){ disarm(); applyLevel(); var w = wantType; curType = null; setType(w); }, function(){});
-    else if (ctx.state === 'running'){ disarm(); applyLevel(); if (wantType !== curType){ var w2 = wantType; setType(w2); } }
+    var go = function(){ disarm(); applyLevel(); if (!preloaded){ preloaded = true; preloadSfx(); } if (wantTheme && !curTheme) applyTheme(wantTheme); };
+    if (ctx.state === 'suspended') ctx.resume().then(go, function(){});
+    else if (ctx.state === 'running') go();
   }
   var armed = false, EVS = ['pointerdown','keydown','touchend','click'];
   function arm(){ if (armed) return; armed = true; EVS.forEach(function(e){ window.addEventListener(e, unlock, {capture:true, passive:true}); }); }
   function disarm(){ if (!armed) return; armed = false; EVS.forEach(function(e){ window.removeEventListener(e, unlock, {capture:true, passive:true}); }); }
   function setOn(on){
     st.on = on; save(); ui();
-    if (on){ unlock(); if (ctx && ctx.state !== 'running') arm(); if (!spawnT) spawnT = setInterval(loop, 180); }
-    else { applyLevel(); clearInterval(spawnT); spawnT = 0; if (ctx) setTimeout(function(){ if (!st.on && ctx.state === 'running') ctx.suspend(); }, 900); }
+    if (on){ unlock(); if (ctx && ctx.state !== 'running') arm(); if (!spawnT) spawnT = setInterval(loop, 180); if (ctx && ctx.state === 'running' && wantTheme){ curTheme = null; applyTheme(wantTheme); } }
+    else { applyLevel(); clearInterval(spawnT); spawnT = 0; clearTimeout(rotT); if (ctx) setTimeout(function(){ if (!st.on && ctx.state === 'running'){ fadeOutCur(); synthFallback(null); curTheme = null; ctx.suspend(); } }, 900); }
   }
-  // ---- one-shot SFX ----
-  function horn(){
-    if (!ctx || ctx.state !== 'running' || !st.on) return;
-    var t = ctx.currentTime + .03, lp = filt('lowpass', 300, 2), g = ctx.createGain(); chain(lp, g, sfxBus);
-    lp.frequency.setValueAtTime(300, t); lp.frequency.linearRampToValueAtTime(1300, t+.45); lp.frequency.linearRampToValueAtTime(700, t+1.6);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.16, t+.4); g.gain.setValueAtTime(.16, t+1.2); g.gain.exponentialRampToValueAtTime(.0005, t+2.2);
-    [[98, 0], [98.7, 0], [147, .55]].forEach(function(p){ var o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(p[0]*.94, t); o.frequency.linearRampToValueAtTime(p[0], t+.25);
-      og.gain.value = p[1] ? .35 : .5; chain(o, og, lp); o.start(t); o.stop(t+2.3); });
+  // ---------- one-shot event sounds ----------
+  var rr = {};
+  function playSfx(kind){
+    if (!running()) return;
+    var list = SFXV[kind];
+    if (!list || !list.length){ chime(); return; }
+    rr[kind] = ((rr[kind] || 0) + 1) % list.length;
+    var id = 'sfx-' + list[rr[kind]], t0 = performance.now();
+    load(id, function(buf){
+      if (!buf || !running() || performance.now() - t0 > 1500){ if (!buf) chime(); return; }   // too late = skip (don't fire long after scrolling past)
+      var s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = buf; g.gain.value = kind === 'battle' ? 1.1 : .9;
+      s.connect(g); g.connect(sfxBus); s.start(ctx.currentTime + .02);
+      // duck the bed a little under the effect
+      bedBus.gain.cancelScheduledValues(ctx.currentTime); bedBus.gain.setTargetAtTime(1.3, ctx.currentTime, .15); bedBus.gain.setTargetAtTime(2.2, ctx.currentTime + Math.min(3, buf.duration), .8);
+    });
   }
-  function anvil(){
-    if (!ctx || ctx.state !== 'running' || !st.on) return;
-    var t = ctx.currentTime + .03, f0 = 610;
-    [[1, .2, 1.4], [2.76, .12, .9], [5.4, .07, .6], [8.93, .04, .35]].forEach(function(p){ var o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f0*p[0];
-      env(g, t, .002, p[1], p[2]); chain(o, g, sfxBus); o.start(t); o.stop(t+p[2]+.05); });
-    var b = ctx.createBufferSource(); b.buffer = white; var hp = filt('highpass', 3000), g2 = ctx.createGain(); env(g2, t, .001, .25, .03); chain(b, hp, g2, sfxBus); b.start(t); b.stop(t+.05);
+  function chime(){
+    if (!running()) return;
+    var t = ctx.currentTime + .03, f0 = 523.25;
+    [[1, .08, 2.2], [2.01, .035, 1.6], [3, .02, 1.1]].forEach(function(p){ var o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f0*p[0];
+      env(g, t, .01, p[1], p[2]); chain(o, g, sfxBus); o.start(t); o.stop(t+p[2]+.05); });
   }
   // targets: {y (px from line top), kind, fired}
   var targets = [], lastY = null, lastFire = 0, fired = [];
   function setTargets(list){ targets = list; lastY = null; }
   function spark(y){
     if (lastY === null){ lastY = y; return; }
-    var y0 = lastY; lastY = y; if (Math.abs(y - y0) > 2500) return; // jumps (links, reload) don't fire
+    var y0 = lastY; lastY = y; if (Math.abs(y - y0) > 2500) return; // jumps (links, reload, mini-map) don't fire
     var now = performance.now();
     for (var i = 0; i < targets.length; i++){
       var tg = targets[i];
       if (tg.fired){ if (Math.abs(y - tg.y) > 320) tg.fired = false; continue; }
       if ((y0 < tg.y && y >= tg.y) || (y0 > tg.y && y <= tg.y)){
         tg.fired = true;
-        if (now - lastFire > 1200){ lastFire = now; fired.push(tg.kind); if (fired.length > 20) fired.shift(); if (tg.kind === 'horn') horn(); else anvil(); }
+        if (now - lastFire > 2200){ lastFire = now; fired.push(tg.kind); if (fired.length > 20) fired.shift(); playSfx(tg.kind); }
       }
     }
   }
-  if (ambB) ambB.addEventListener('click', function(ev){ setOn(!st.on); });
+  if (ambB) ambB.addEventListener('click', function(){ setOn(!st.on); });
   if (avol) avol.addEventListener('input', function(){ st.vol = +avol.value; if (st.vol > 0 && !st.on){ st.on = true; setOn(true); } save(); ui(); applyLevel(); });
   document.addEventListener('visibilitychange', function(){ if (!ctx) return; if (document.hidden) ctx.suspend(); else if (st.on) ctx.resume(); });
   ui();
   if (AC && st.on){ arm(); spawnT = setInterval(loop, 180); }
-  return {onTheme:function(theme){ setType(TYPE[theme] || 'wind'); }, setTargets:setTargets, spark:spark, horn:function(){ unlock(); horn(); }, anvil:function(){ unlock(); anvil(); },
-    state:function(){ return {st:st, ctx:ctx && ctx.state, type:curType, want:wantType, layers:Object.keys(layers), targets:targets.length, fired:fired.slice()}; }};
+  return {onTheme:function(theme){ setTheme(theme); }, setTargets:setTargets, spark:spark, play:function(k){ unlock(); playSfx(k); },
+    state:function(){ return {st:st, ctx:ctx && ctx.state, theme:curTheme, want:wantTheme, bed:cur && cur.bed, hist:hist.slice(), synth:curSyn, cached:Object.keys(bufs), failed:Object.keys(failed), targets:targets.length, fired:fired.slice()}; }};
+})();
+
+// =====================================================================
+// EVENT CONTENT CLASSIFIER (shared by the card-edge bursts and event SFX)
+// keyword match on title first, then summary/tags, then the era theme
+// =====================================================================
+var KIND_RX = [
+  ['dragon', /ejderha|dragon|wyrm|j[öo]rmun/],
+  ['battle', /sava[şs]|ba[sş]k[ıi]n|ku[sş]atma|muharebe|katliam|[çc]at[ıi][şs]ma|isyan|ayaklan|bozgun|fethe|istila/],
+  ['magic',  /cad[ıi]|b[üu]y[üu]|witch|portal|girift|iblis|lanet|hi[çc]lik|sihir/],
+  ['death',  /ölüm|öldü|ölür|ölen|cenaze|katled|\byas\b|infaz|idam|suikast|can verir/],
+  ['sea',    /deniz|okyanus|gemi|liman|amanar|korsan|dalga/],
+  ['holy',   /tanr[ıi]|kutsal|melek|ilahi|tap[ıi]nak|dirilt|\belma|seraphim|ayin/],
+  ['forge',  /c[üu]ce|demirci|forge|armatech|d[öo]k[üu]m|at[öo]lye|\bmaden/],
+  ['storm',  /f[ıi]rt[ıi]na|deprem|yağmur|keder ya[ğg]|\bsel\b/],
+  ['beast',  /kurt adam|\binu\b|canavar|yarat[ıi]k|hydra/],
+  ['nature', /orman|a[ğg]a[çc]|\bentler?\b|druid|do[ğg]a|bah[çc]e|[şs]elale/]
+];
+var THEME_KIND = {witch:'magic', occult:'magic', girift:'magic', war:'battle', blood:'battle', fire:'battle', death:'death', grief:'death',
+                  light:'holy', timestop:'holy', festival:'holy', sea:'sea', rain:'storm', crown:'sea', elven:'nature', calm:'nature', forge:'forge', industrial:'forge'};
+function kindOf(e){
+  var t = lc(e.title), all = lc([e.sum, e.chars.join(' '), e.places.join(' '), e.factions.join(' ')].join(' '));
+  for (var i=0;i<KIND_RX.length;i++) if (KIND_RX[i][1].test(t)) return KIND_RX[i][0];
+  for (var j=0;j<KIND_RX.length;j++) if (KIND_RX[j][1].test(all)) return KIND_RX[j][0];
+  return THEME_KIND[THEME_OF[e.o]] || null;
+}
+var KIND_OF = {}; events.forEach(function(e){ KIND_OF[e.o] = kindOf(e); });
+// burst colour per kind (major cards only)
+var BURST = {magic:['180,107,255','spark'], death:['18,14,20','smoke'], battle:['255,58,46','spark'], dragon:['255,110,30','spark'], holy:['255,238,190','gold'],
+             sea:['63,224,208','spark'], storm:['127,180,255','spark'], nature:['110,220,120','spark'], beast:['255,70,70','spark'], forge:['255,179,71','spark']};
+function burstCard(el){
+  var e = evByO[+el.dataset.o]; if (!e) return;
+  var card = el.querySelector('.card'); if (!card) return;
+  var r = card.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
+  var b = BURST[KIND_OF[e.o]], n = 64;
+  if (!b){ var L = (VEC[EV_ELS.indexOf(el)] || VEC[0]).line; b = [Math.round(L[0])+','+Math.round(L[1])+','+Math.round(L[2]), 'gold']; }
+  if (b[1] === 'smoke'){ FX.burst(r, b[0], 'smoke', n*0.7); FX.burst(r, '205,205,220', 'spark', n*0.25); }
+  else FX.burst(r, b[0], b[1], n);
+}
+(function(){ // once per entry: fire when a major card is ~45% visible, re-arm when it has left the screen
+  if (reduce || !('IntersectionObserver' in window)) return;
+  var armedB = new WeakMap();
+  var io = new IntersectionObserver(function(ents){
+    ents.forEach(function(en){
+      var el = en.target;
+      if (!en.isIntersecting){ armedB.set(el, true); return; }
+      if (en.intersectionRatio >= .45 && armedB.get(el) !== false){ armedB.set(el, false); setTimeout(function(){ burstCard(el); }, 380); }
+    });
+  }, {threshold:[0, .45]});
+  EV_ELS.forEach(function(el){ if (el.classList.contains('major')){ armedB.set(el, true); io.observe(el.querySelector('.card') ? el : el); } });
+})();
+
+// =====================================================================
+// TAG CARDS ("bilgi kağıdı"): clicking a chip opens an animated parchment
+// sheet with the tag's bio (site-build/tag_info.json -> assets/tags.js),
+// photos with the same slider as the cards, and the list of events in which
+// the tag appears (click = jump there). Places without their own photos show
+// images of events at that place; characters without photos get an emblem.
+// =====================================================================
+var TagCard = (function(){
+  var INFO = window.TAGINFO || {}, KEYS = {};
+  Object.keys(INFO).forEach(function(k){ KEYS[lc(k)] = k; (INFO[k].alias||[]).forEach(function(a){ KEYS[lc(a)] = k; }); });
+  var TYPE = {c:'Karakter', p:'Mekân', f:'Topluluk'}, CLS = {c:'chars', p:'places', f:'factions'};
+  function resolve(name){
+    var k = KEYS[lc(name)]; if (k) return {key:k, via:null};
+    var base = String(name).split(/,|\s\(/)[0].trim();          // "Balahnur, 67. Cadde" / "Ark Armatech (kale)"
+    if (base !== name && KEYS[lc(base)]) return {key:KEYS[lc(base)], via:base};
+    return null;
+  }
+  function eventsWith(type, name){
+    var f = CLS[type], n = lc(name);
+    return events.filter(function(e){ return e[f].some(function(x){ return lc(x) === n; }); });
+  }
+  var el = document.createElement('div');
+  el.className = 'tc'; el.hidden = true; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-labelledby','tcTitle');
+  el.innerHTML = '<div class="tc-sheet"><div class="tc-roll tc-roll-t" aria-hidden="true"></div><div class="tc-paper">'+
+    '<button class="tc-x" type="button" aria-label="Kapat (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></button>'+
+    '<div class="tc-in"></div></div><div class="tc-roll tc-roll-b" aria-hidden="true"></div><div class="tc-seal" aria-hidden="true">✦</div></div>';
+  document.body.appendChild(el);
+  var inEl = el.querySelector('.tc-in'), opener = null, closeT = 0;
+  function photosFor(type, key, evs){
+    var info = INFO[key] || {}, ph = (info.ph||[]).map(function(p){ return {f:p.f, w:p.w, h:p.h, cap:p.cap}; });
+    if (!ph.length && type === 'p'){
+      evs.forEach(function(e){ if (ph.length < 4 && e.imgs && e.imgs[0]) ph.push({f:e.imgs[0].c, w:e.imgs[0].w, h:e.imgs[0].h, cap:e.title, auto:1}); });
+    }
+    return ph;
+  }
+  function build(type, name){
+    var r = resolve(name), key = r && r.key, info = key ? INFO[key] : null;
+    if (info && info.t) type = info.t === type ? type : (type || info.t);
+    var evs = eventsWith(type, name);
+    if (r && r.via && !evs.length) evs = eventsWith(type, r.via);
+    var ph = photosFor(type, key || name, evs);
+    if (!ph.length && type === 'p' && r && r.via) ph = photosFor('p', key, eventsWith('p', key));
+    var h = '';
+    if (ph.length){
+      h += '<div class="tc-media'+(ph.length>1?' multi':'')+'" data-i="0"><div class="slides">';
+      ph.forEach(function(p, i){ h += '<figure class="slide'+(i===0?' on':'')+'"><img '+(i<2?'src':'data-src')+'="'+esc(p.f)+'" width="'+p.w+'" height="'+p.h+'" alt="'+esc(p.cap||name)+'" decoding="async">'+(p.cap?'<figcaption>'+esc(p.cap)+'</figcaption>':'')+'</figure>'; });
+      h += '</div>';
+      if (ph.length>1){
+        h += '<button class="gnav prev" type="button" aria-label="Önceki görsel"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>'+
+             '<button class="gnav next" type="button" aria-label="Sonraki görsel"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button><div class="dots">';
+        for (var i=0;i<ph.length;i++) h += '<i'+(i===0?' class="on"':'')+'></i>';
+        h += '</div>';
+      }
+      if (ph[0].auto) h += '<span class="tc-auto">Bu mekânın geçtiği olaylardan</span>';
+      h += '</div>';
+    } else {
+      h += '<div class="tc-emblem tc-e-'+type+'">'+NONAGON+'<span>'+esc((name||'?').charAt(0).toLocaleUpperCase('tr'))+'</span></div>';
+    }
+    h += '<div class="tc-body"><div class="tc-k">'+(TYPE[type]||'Etiket')+'</div><h2 class="tc-t" id="tcTitle">'+esc(name)+'</h2>';
+    if (r && r.via) h += '<div class="tc-s">'+esc(key)+' içinde</div>';
+    else if (info && info.sub) h += '<div class="tc-s">'+esc(info.sub)+'</div>';
+    h += '<div class="tc-rule" aria-hidden="true"><i></i><b>✦</b><i></i></div>';
+    if (info && info.bio && info.bio.length && !(r && r.via && type !== 'p')){
+      if (r && r.via) h += '<p class="tc-via">Bağlı olduğu yer: <b>'+esc(key)+'</b></p>';
+      info.bio.forEach(function(p){ h += '<p>'+esc(p)+'</p>'; });
+    } else if (!info){
+      h += '<p class="tc-none">Bu ad için arşivde henüz ayrıntılı bir kayıt yok. Aşağıda geçtiği olaylar listeleniyor.</p>';
+    }
+    if (info && info.facts && !(r && r.via)){
+      h += '<dl class="tc-facts">'; info.facts.forEach(function(f){ h += '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>'; }); h += '</dl>';
+    }
+    if (evs.length){
+      var asc = evs.slice().sort(function(a,b){ return a.o-b.o; });
+      h += '<div class="tc-evh">Geçtiği olaylar <span>'+evs.length+'</span></div><ol class="tc-evs">';
+      asc.forEach(function(e){ h += '<li><button type="button" data-go="'+e.o+'"><b>'+esc(e.big)+'</b><span>'+esc(e.title)+'</span></button></li>'; });
+      h += '</ol>';
+    }
+    h += '</div>';
+    return h;
+  }
+  function open(type, name, from){
+    clearTimeout(closeT);
+    opener = from || null;
+    inEl.innerHTML = build(type, name); inEl.scrollTop = 0;
+    el.hidden = false; el.classList.remove('out');
+    document.body.classList.add('tc-open');
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ el.classList.add('on'); }); });
+    el.querySelector('.tc-x').focus({preventScroll:true});
+  }
+  function close(){
+    if (el.hidden || el.classList.contains('out')) return;
+    el.classList.remove('on'); el.classList.add('out'); document.body.classList.remove('tc-open');
+    closeT = setTimeout(function(){ el.hidden = true; el.classList.remove('out'); inEl.innerHTML = ''; }, 420);
+    if (opener && opener.focus) opener.focus({preventScroll:true});
+  }
+  function slide(m, i){
+    var s = m.querySelectorAll('.slide'), n = s.length; if (n < 2) return; i = ((i % n) + n) % n;
+    s.forEach(function(x, j){ x.classList.toggle('on', j===i); if (Math.abs(j-i) <= 1){ var im = x.querySelector('img'); if (im && im.dataset.src && !im.getAttribute('src')) im.src = im.dataset.src; } });
+    m.querySelectorAll('.dots i').forEach(function(d, j){ d.classList.toggle('on', j===i); }); m.dataset.i = i;
+  }
+  function go(o){
+    close();
+    var t = itemsEl.querySelector('.ev[data-o="'+o+'"]'); if (!t) return;
+    var y = t.getBoundingClientRect().top + window.scrollY - innerHeight*0.22;
+    window.scrollTo({top:y, behavior: reduce ? 'auto' : 'smooth'});
+    t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash'); setTimeout(function(){ t.classList.remove('flash'); }, 2600);
+  }
+  el.addEventListener('click', function(ev){
+    if (ev.target.closest('.tc-x')) return close();
+    var m = ev.target.closest('.tc-media');
+    if (m){ var nb = ev.target.closest('.gnav'); if (nb) return slide(m, +m.dataset.i + (nb.classList.contains('next')?1:-1));
+            var d = ev.target.closest('.dots i'); if (d) return slide(m, Array.prototype.indexOf.call(d.parentNode.children, d)); }
+    var g = ev.target.closest('[data-go]'); if (g) return go(+g.dataset.go);
+    if (!ev.target.closest('.tc-paper')) close();
+  });
+  document.addEventListener('keydown', function(ev){
+    if (el.hidden) return;
+    if (ev.key === 'Escape') close();
+    else if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft'){ var m = el.querySelector('.tc-media.multi'); if (m) slide(m, +m.dataset.i + (ev.key === 'ArrowRight'?1:-1)); }
+    else if (ev.key === 'Tab'){ var f = Array.prototype.slice.call(el.querySelectorAll('button')).filter(function(b){ return b.offsetParent; }); if (!f.length) return;
+      var k = f.indexOf(document.activeElement); ev.preventDefault(); f[(k + (ev.shiftKey?-1:1) + f.length) % f.length].focus(); }
+  });
+  (function(){ var sx = 0, sy = 0; el.addEventListener('touchstart', function(ev){ sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; }, {passive:true});
+    el.addEventListener('touchend', function(ev){ var m = ev.target.closest && ev.target.closest('.tc-media.multi'); if (!m) return; var t = ev.changedTouches[0], dx = t.clientX-sx, dy = t.clientY-sy;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)*1.3) slide(m, +m.dataset.i + (dx<0?1:-1)); }, {passive:true}); })();
+  // chips become buttons (keyboard + screen readers)
+  itemsEl.querySelectorAll('.chips li').forEach(function(li){ li.setAttribute('role','button'); li.tabIndex = 0;
+    li.setAttribute('aria-label', li.textContent + ' — bilgi kartını aç'); if (resolve(li.textContent)) li.classList.add('has-info'); });
+  itemsEl.addEventListener('click', function(ev){
+    var li = ev.target.closest('.chips li'); if (!li) return;
+    ev.preventDefault(); open(li.classList.contains('c') ? 'c' : (li.classList.contains('p') ? 'p' : 'f'), li.textContent, li);
+  });
+  itemsEl.addEventListener('keydown', function(ev){
+    var li = ev.target.closest && ev.target.closest('.chips li'); if (!li || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+    ev.preventDefault(); li.click();
+  });
+  return {open:open, close:close, resolve:resolve, isOpen:function(){ return !el.hidden; }};
+})();
+
+// =====================================================================
+// MINI-MAP: hovering the era indicator (bottom-left) unfolds a small list
+// of chapters; click = smooth scroll there. Collapsed and faint otherwise;
+// tap toggles on touch screens.
+// =====================================================================
+var MiniMap = (function(){
+  var mm = document.createElement('nav'); mm.className = 'mm'; mm.id = 'mm'; mm.setAttribute('aria-label','Bölümler — mini harita');
+  var secs = Array.prototype.slice.call(itemsEl.querySelectorAll('section.era'));
+  function span(id){ // year range of a chapter from its numeric dates (display: newest → oldest)
+    var ys = events.filter(function(e){ return e.era === id && e.num; }).map(function(e){ var m = /\d{4}/.exec(e.big); return m ? +m[0] : null; }).filter(Boolean);
+    if (!ys.length) return '';
+    var a = Math.min.apply(null, ys), b = Math.max.apply(null, ys); return a === b ? String(a) : b + '–' + a;
+  }
+  var h = '<div class="mm-h">Bölümler</div><ol>';
+  secs.forEach(function(s, i){ var id = s.dataset.era, c = chById[id] || {name:id}, no = chNo[id] || 0;
+    h += '<li style="--d:'+Math.min(i,18)*22+'"><button type="button" data-era="'+esc(id)+'"><i>'+(ROMAN[no-1]||no)+'</i><span>'+esc(c.name)+'</span><em>'+esc(span(id))+'</em></button></li>'; });
+  h += '</ol>';
+  mm.innerHTML = h; hud.appendChild(mm);
+  hud.setAttribute('aria-haspopup','true'); hud.setAttribute('aria-expanded','false'); hud.tabIndex = 0;
+  hud.title = 'Bölümler arasında gezinmek için üzerine gel';
+  // mouse: hover opens / leaving closes; touch & pen: tap toggles (decided per pointer, not per device, so hybrids work)
+  var openT = 0, closeT2 = 0, lastPT = 'mouse';
+  function set(o){ hud.classList.toggle('mm-open', o); hud.setAttribute('aria-expanded', o ? 'true' : 'false'); if (o) mark(); }
+  function mark(){ var cur = curO != null && evByO[curO] ? evByO[curO].era : null;
+    mm.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.era === cur); });
+    var on = mm.querySelector('button.on'); if (on){ var ol = mm.querySelector('ol'); var top = on.offsetTop - ol.clientHeight/2; ol.scrollTop = Math.max(0, top); } }
+  hud.addEventListener('pointerdown', function(ev){ lastPT = ev.pointerType || 'mouse'; });
+  hud.addEventListener('pointerenter', function(ev){ if (ev.pointerType !== 'mouse') return; clearTimeout(closeT2); openT = setTimeout(function(){ set(true); }, 120); });
+  hud.addEventListener('pointerleave', function(ev){ if (ev.pointerType !== 'mouse') return; clearTimeout(openT); closeT2 = setTimeout(function(){ set(false); }, 320); });
+  hud.addEventListener('click', function(ev){
+    var b = ev.target.closest('.mm button');
+    if (b){ ev.stopPropagation(); var s = itemsEl.querySelector('section.era[data-era="'+b.dataset.era+'"]'); if (s){ var y = s.getBoundingClientRect().top + window.scrollY - innerHeight*0.12; window.scrollTo({top:y, behavior: reduce ? 'auto' : 'smooth'}); }
+      if (lastPT !== 'mouse') set(false); return; }
+    if (lastPT === 'mouse'){ clearTimeout(openT); clearTimeout(closeT2); set(true); }
+    else set(!hud.classList.contains('mm-open'));
+  });
+  hud.addEventListener('keydown', function(ev){ if ((ev.key === 'Enter' || ev.key === ' ') && ev.target === hud){ ev.preventDefault(); set(!hud.classList.contains('mm-open')); if (hud.classList.contains('mm-open')){ var f = mm.querySelector('button.on') || mm.querySelector('button'); if (f) f.focus(); } }
+    else if (ev.key === 'Escape'){ set(false); hud.focus(); } });
+  hud.addEventListener('focusout', function(){ setTimeout(function(){ if (!hud.contains(document.activeElement)) set(false); }, 50); });
+  document.addEventListener('click', function(ev){ if (!hud.contains(ev.target)) set(false); });
+  window.addEventListener('scroll', function(){ if (lastPT !== 'mouse' && hud.classList.contains('mm-open')){ clearTimeout(closeT2); closeT2 = setTimeout(function(){ set(false); }, 1600); } }, {passive:true});
+  return {open:function(){ set(true); }, close:function(){ set(false); }, mark:mark};
 })();
 
 // =====================================================================
@@ -853,12 +1211,13 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(function()
 window.addEventListener('load', function(){ relayout(); });
 window.addEventListener('resize', function(){ relayout(); });
 mqMobile.addEventListener && mqMobile.addEventListener('change', function(){ if (mqMobile.matches!==MOBILE){ location.reload(); } });
-// SFX targets: major battles -> war horn, dwarf / forge events -> anvil (dot centre, px from line top)
+// SFX targets: every major event gets a sound matching its content (dragon / battle / magic / death / sea / holy / forge /
+// storm / beast; nature + unmatched -> soft chime). Fired when the moving line spark reaches the event's dot.
 var SFX_EVS = EV_ELS.map(function(el){ var e = evByO[+el.dataset.o]; if (!e || !e.major) return null;
-  var k = /Savaş/.test(e.title) ? 'horn' : (/[Cc]üce|Crownforge|demirci|Forge/.test(e.title) ? 'anvil' : null);
-  return k ? {el:el, kind:k} : null; }).filter(Boolean);
+  var k = KIND_OF[e.o]; if (k === 'nature') k = null;
+  return {el:el, kind:k || 'chime'}; }).filter(Boolean);
 window.Ambience_targets = function(sy){ if (!lineEl) return;
   Ambience.setTargets(SFX_EVS.map(function(t){ var d = t.el.querySelector('.dot') || t.el, r = d.getBoundingClientRect(); return {y: r.top + sy + r.height/2 - sparkGeo.top - 13, kind:t.kind, fired:false}; })); };
 window.Ambience_targets(window.scrollY);
-window.__ulv = {Music:Music, Ambience:Ambience, FX:FX, Effects:Effects, Lightbox:Lightbox, theme:THEME_OF, atm:function(){return ATM;}};
+window.__ulv = {Music:Music, Ambience:Ambience, FX:FX, Effects:Effects, Lightbox:Lightbox, TagCard:TagCard, MiniMap:MiniMap, kind:KIND_OF, burstCard:burstCard, theme:THEME_OF, atm:function(){return ATM;}};
 })();
