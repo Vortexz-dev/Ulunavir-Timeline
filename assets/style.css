@@ -325,7 +325,9 @@ body.lb-open .hud,body.lb-open .mp{opacity:0;pointer-events:none}
 .mp-vol:focus-visible{outline:1px dashed var(--gold2);outline-offset:4px}
 .mp-now{font-family:Cinzel;font-size:10.5px;letter-spacing:.08em;color:var(--muted);max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mp.empty .mp-play{opacity:.4}
-.mp-host{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1;overflow:hidden}
+/* YouTube oynatıcısı: ekranın içinde (display:none / ekran dışı DEĞİL → tarayıcı kısıtlamaz), saydam, tıklanamaz.
+   opacity:0 bilerek: görüntü karesi boyanmaz (test: .01'de kare düşmesi arttı), ses etkilenmez. */
+.mp-host{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1;overflow:hidden;contain:strict}
 .mp-host iframe{width:200px;height:200px;border:0}
 
 @media (max-width:860px){
@@ -350,3 +352,15 @@ body.lb-open .hud,body.lb-open .mp{opacity:0;pointer-events:none}
 .date .est.med{font-size:9px;letter-spacing:.08em;text-transform:none;opacity:.7}
 .date .est.low{font-size:10px;color:#ffd27a;border:1px solid color-mix(in srgb,#ffd27a 70%,transparent);border-style:solid;background:color-mix(in srgb,#ffd27a 12%,transparent);opacity:1}
 .more-in .evid-low{border-left:2px solid color-mix(in srgb,#ffd27a 70%,transparent);padding-left:8px}
+
+/* Efekt düzeyi düğmesi (Tam / Hafif) */
+.fx-btn{height:26px;padding:0 10px;border-radius:13px;border:1px solid #ffffff22;background:#0d0912b0;color:#e8dcc6;font-family:Cinzel;font-size:10px;letter-spacing:.06em;cursor:pointer;opacity:.55;transition:opacity .25s;white-space:nowrap}
+.fx-btn:hover,.fx-btn:focus-visible{opacity:1}
+.fx-btn:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
+.mp.open .fx-btn{display:none}
+@media (max-width:860px){.fx-btn{height:24px;font-size:9px;padding:0 8px}}
+/* Hafif mod: aynı görünüm, daha az GPU/CPU yükü */
+body.fx-lite .age-grain{animation:none}
+body.fx-lite .hud,body.fx-lite .mp-btn,body.fx-lite .mp-panel,body.fx-lite .gnav{backdrop-filter:none}
+body.fx-lite .bg-fog{filter:none}
+

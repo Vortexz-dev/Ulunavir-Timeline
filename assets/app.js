@@ -170,9 +170,10 @@ var lineEl = document.querySelector('.line'), bgEra = document.getElementById('b
     agePaper = document.getElementById('agePaper'), ageGrain = document.getElementById('ageGrain'), ageCracks = document.getElementById('ageCracks'),
     ageTint = document.getElementById('ageTint'), vignette = document.querySelector('.vignette'), hud = document.getElementById('hud'),
     mpEl = document.getElementById('mp'), sparkEl = document.getElementById('lineSpark');
-var anchors = [];
+var anchors = [], sparkGeo = {top:0, x:0, h:0, p:0}; // cached so scroll sparks never force a layout
 function computeAnchors(){
   var sy = window.scrollY;
+  if (lineEl){ var lr = lineEl.getBoundingClientRect(), tl = document.getElementById('timeline'); sparkGeo.top = lr.top + sy; sparkGeo.x = lr.left + lr.width/2; sparkGeo.h = tl ? tl.offsetHeight : lr.height; }
   anchors = EV_ELS.map(function(el){ var r = el.getBoundingClientRect(); return r.top + sy + Math.min(r.height, 400)/2; });
 }
 var ATM = null, lastKey = '';
@@ -206,7 +207,7 @@ function applyAtmosphere(){
 // =====================================================================
 var FX = (function(){
   var cv = document.getElementById('particles'), ctx = cv.getContext('2d'), W = 0, H = 0, dpr = 1;
-  var scale = MOBILE ? 0.5 : 1;
+  var baseScale = MOBILE ? 0.5 : 1, scale = baseScale, lite = false;
   var MAX = {rain:150, snow:130, embers:80, ash:60, smoke:9, motes:60, wisps:12, dust:80, mist:7};
   var COL = {snow:'235,245,255', embers:'255,140,60', ash:'170,165,160', smoke:'40,32,30', motes:'255,214,120', wisps:'170,90,255', dust:'230,205,150', mist:'190,225,230'};
   var sprites = {}, pools = {}, weight = {}, target = {}, sparks = [];
@@ -235,14 +236,32 @@ var FX = (function(){
     }
   }
   function resize(){
-    dpr = Math.min(window.devicePixelRatio||1, MOBILE?1.25:1.5);
+    dpr = Math.min(window.devicePixelRatio||1, lite ? 1 : (MOBILE?1.25:1.5));
     W = cv.width = Math.round(innerWidth*dpr); H = cv.height = Math.round(innerHeight*dpr);
   }
   function ensure(k){
     var n = Math.round(MAX[k]*scale), pool = pools[k];
     while (pool.length < n){ var p = {}; spawn(k, p, true); pool.push(p); }
   }
-  var running = !reduce, lastT = 0;
+  var running = !reduce, lastT = 0, lastDraw = 0;
+  // frame-rate probe: only real, measured slowness switches to the light mode (see Effects below)
+  var probe = {t0:0, n:0, slow:0, cb:null};
+  function measure(t){
+    if (!probe.cb) return;
+    if (!probe.t0){ probe.t0 = t; probe.n = 0; return; }
+    probe.n++;
+    if (t - probe.t0 >= 3000){
+      var fps = probe.n * 1000 / (t - probe.t0); probe.t0 = t; probe.n = 0;
+      probe.slow = fps < 40 ? probe.slow + 1 : 0;
+      probe.cb(fps, probe.slow);
+    }
+  }
+  function setLite(on){
+    on = !!on; if (on === lite) return; lite = on;
+    scale = baseScale * (lite ? 0.4 : 1);
+    PTYPES.forEach(function(k){ var n = Math.round(MAX[k]*scale); if (pools[k].length > n) pools[k].length = n; });
+    resize();
+  }
   function setTargets(p){ PTYPES.forEach(function(k){ target[k] = Math.min(1, p[k]||0); }); }
   function emitSparks(n, dir, x, y, rgb){
     if (reduce) return;
@@ -253,6 +272,9 @@ var FX = (function(){
   }
   function frame(t){
     if (!running) return;
+    measure(t);
+    if (lite && lastDraw && t - lastDraw < 30){ requestAnimationFrame(frame); return; } // light mode: ~30fps particles
+    lastDraw = t;
     var dt = lastT ? Math.min(3, (t-lastT)/16.67) : 1; lastT = t;
     ctx.clearRect(0,0,W,H);
     for (var ki=0; ki<PTYPES.length; ki++){
@@ -301,9 +323,9 @@ var FX = (function(){
   resize(); addEventListener('resize', resize);
   if (!reduce){
     requestAnimationFrame(frame);
-    document.addEventListener('visibilitychange', function(){ running = !document.hidden; lastT = 0; if (running) requestAnimationFrame(frame); });
+    document.addEventListener('visibilitychange', function(){ running = !document.hidden; lastT = 0; lastDraw = 0; probe.t0 = 0; probe.slow = 0; if (running) requestAnimationFrame(frame); });
   }
-  return { setTargets:setTargets, emitSparks:emitSparks, dpr:function(){return dpr;}, active:function(){ var o={}; PTYPES.forEach(function(k){ if (weight[k]>0.02) o[k]=+weight[k].toFixed(2); }); return o; } };
+  return { setTargets:setTargets, emitSparks:emitSparks, setLite:setLite, lite:function(){return lite;}, onFps:function(cb){ probe.cb = cb; probe.t0 = 0; probe.slow = 0; }, dpr:function(){return dpr;}, active:function(){ var o={}; PTYPES.forEach(function(k){ if (weight[k]>0.02) o[k]=+weight[k].toFixed(2); }); return o; } };
 })();
 
 // per-frame work driven from FX loop (or scroll in reduced-motion mode)
@@ -316,16 +338,45 @@ function tick(){
     sparkAcc += Math.abs(dy);
     if (sparkAcc > 22){
       var n = Math.min(3, Math.floor(sparkAcc/22)); sparkAcc = 0;
-      var r = sparkEl.getBoundingClientRect();
-      var cy = r.top + r.height/2;
-      if (cy > 0 && cy < innerHeight && r.height){
+      var cy = sparkGeo.top - sy + 13 + sparkGeo.p * sparkGeo.h;
+      if (cy > 0 && cy < innerHeight && sparkGeo.h){
         var d = FX.dpr(), L = ATM.line;
-        FX.emitSparks(n, dy>0?1:-1, (r.left + r.width/2)*d, cy*d, Math.round(L[0])+','+Math.round(L[1])+','+Math.round(L[2]));
+        FX.emitSparks(n, dy>0?1:-1, sparkGeo.x*d, cy*d, Math.round(L[0])+','+Math.round(L[1])+','+Math.round(L[2]));
       }
     }
   }
 }
 if (reduce) window.addEventListener('scroll', function(){ requestAnimationFrame(tick); }, {passive:true});
+
+// =====================================================================
+// EFFECTS LEVEL: "Tam" (full, default) / "Hafif" (light).
+// Default = full. Only if the measured frame rate stays under ~40fps for
+// ~6s of real use does it switch to light automatically (not saved).
+// A manual click on the toggle always wins and is remembered.
+// =====================================================================
+var Effects = (function(){
+  var KEY = 'ulv-fx', manual = null, auto = false;
+  try { var v = localStorage.getItem(KEY); if (v === 'full' || v === 'lite') manual = v; } catch(e){}
+  var b = document.getElementById('fxBtn');
+  function isLite(){ return manual ? manual === 'lite' : auto; }
+  function apply(){
+    var l = isLite();
+    document.body.classList.toggle('fx-lite', l);
+    FX.setLite(l);
+    if (b){
+      b.textContent = 'Efektler: ' + (l ? 'Hafif' : 'Tam') + (!manual && auto ? ' (oto)' : '');
+      b.setAttribute('aria-pressed', l ? 'true' : 'false');
+      b.title = l ? 'Hafif efektler (daha akıcı). Tam efektlere geçmek için tıkla.' : 'Tam efektler. Takılma olursa Hafif’e geçmek için tıkla.';
+    }
+  }
+  if (b) b.addEventListener('click', function(){ manual = isLite() ? 'full' : 'lite'; try { localStorage.setItem(KEY, manual); } catch(e){} apply(); });
+  if (!reduce) FX.onFps(function(fps, slowWindows){
+    if (manual || auto) return;
+    if (slowWindows >= 2){ auto = true; apply(); }
+  });
+  apply();
+  return {state:function(){ return {manual:manual, auto:auto, lite:isLite()}; }, set:function(m){ manual = m; apply(); }};
+})();
 
 // =====================================================================
 // HUD + current event
@@ -505,11 +556,14 @@ var Music = (function(){
       if (player) return;
       var d = document.createElement('div'); d.id = 'mpP0'; document.getElementById('mpHost').appendChild(d);
       player = new YT.Player(d.id, { width:200, height:200, host:(MU.host||'https://www.youtube.com'),
-        playerVars:{autoplay:0, controls:0, disablekb:1, playsinline:1, rel:0, iv_load_policy:3, fs:0, origin:location.origin},
+        playerVars:{autoplay:0, controls:0, disablekb:1, playsinline:1, rel:0, iv_load_policy:3, fs:0, modestbranding:1, enablejsapi:1, vq:'tiny', origin:location.origin},
         events:{
           onReady:function(){ ready = true; try { player.setVolume(0); } catch(e){} var q = readyQ; readyQ = []; q.forEach(function(f){ f(); }); },
           onStateChange:function(ev){
             var S = YT.PlayerState;
+            // we only need the audio: ask for the smallest video stream (less to download + decode).
+            // Never seek/replay on BUFFERING: let YouTube refill its buffer on its own.
+            if (ev.data === S.PLAYING || ev.data === S.BUFFERING) lowQ();
             if (ev.data === S.ENDED){ if (st.on) go(st.idx+1, true); return; }
             isPlaying = ev.data === S.PLAYING || ev.data === S.BUFFERING;
             if (ev.data === S.PLAYING){
@@ -522,13 +576,15 @@ var Music = (function(){
           onError:function(ev){
             lastErr = ev.data; isPlaying = false; clearTimeout(skipT);
             // same song, other upload (e.g. label "Topic" tracks that refuse embedding: 101/150)
-            if (st.on && altI + 1 < tracks[st.idx].ids.length){ altI++; try { player.loadVideoById({videoId:tracks[st.idx].ids[altI], startSeconds:0}); } catch(e){} return; }
+            if (st.on && altI + 1 < tracks[st.idx].ids.length){ altI++; try { player.loadVideoById({videoId:tracks[st.idx].ids[altI], startSeconds:0, suggestedQuality:'tiny'}); } catch(e){} return; }
             errStreak++; ui();
             if (st.on && errStreak < N) skipT = setTimeout(function(){ go(st.idx+1, true); }, 900);
           }
         }});
     });
   }
+  var qAsked = '';
+  function lowQ(){ try { var id = (player.getVideoData()||{}).video_id; if (id && id !== qAsked){ qAsked = id; player.setPlaybackQuality('tiny'); } } catch(e){} }
   function fadeTo(to, ms, done){
     clearInterval(fadeT); if (!player || !player.getVolume){ done && done(); return; }
     var from = player.getVolume() || 0, t0 = performance.now();
@@ -548,7 +604,7 @@ var Music = (function(){
       if (!st.on) return;
       applyMute();
       if (!keepVol){ try { player.setVolume(0); } catch(e){} }
-      altI = 0; try { player.loadVideoById({videoId:tracks[st.idx].id, startSeconds:0}); } catch(e){}
+      altI = 0; try { player.loadVideoById({videoId:tracks[st.idx].id, startSeconds:0, suggestedQuality:'tiny'}); } catch(e){}
       loadedIdx = st.idx;
       if (keepVol){ clearInterval(fadeT); try { player.setVolume(st.vol); } catch(e){} } else fadeTo(st.vol, MU.fadeMs||1200);
     });
@@ -609,7 +665,7 @@ function buildAnimations(){
   gsap.to('.bg-fog', {yPercent:-30, xPercent:4, ease:'none', scrollTrigger:{start:0, end:'max', scrub:true}});
   var tlEl = document.getElementById('timeline');
   ScrollTrigger.create({trigger:tlEl, start:'top 60%', end:'bottom 60%', scrub:true, onUpdate:function(self){
-    var p = self.progress;
+    var p = self.progress; sparkGeo.p = p;
     gsap.set('#lineFill', {scaleY:p}); gsap.set('#lineSpark', {y: p*tlEl.offsetHeight});
     hudBar.style.width = (p*100).toFixed(1)+'%';
   }});
@@ -645,8 +701,8 @@ function buildAnimations(){
     if (!mobile && window.matchMedia('(hover:hover)').matches){
       var wrap = el.querySelector('.card-wrap');
       wrap.addEventListener('mousemove', function(ev){ var r = wrap.getBoundingClientRect(); var px = (ev.clientX-r.left)/r.width-.5, py=(ev.clientY-r.top)/r.height-.5;
-        gsap.to(wrap, {rotateY: px*8, rotateX: -py*6, duration:.4, ease:'power2.out'}); });
-      wrap.addEventListener('mouseleave', function(){ gsap.to(wrap, {rotateY:0, rotateX:0, duration:.6}); });
+        gsap.to(wrap, {rotateY: px*8, rotateX: -py*6, duration:.4, ease:'power2.out', overwrite:'auto'}); });
+      wrap.addEventListener('mouseleave', function(){ gsap.to(wrap, {rotateY:0, rotateX:0, duration:.6, overwrite:'auto'}); });
     }
   });
 }
@@ -676,5 +732,5 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(function()
 window.addEventListener('load', function(){ relayout(); });
 window.addEventListener('resize', function(){ relayout(); });
 mqMobile.addEventListener && mqMobile.addEventListener('change', function(){ if (mqMobile.matches!==MOBILE){ location.reload(); } });
-window.__ulv = {Music:Music, FX:FX, Lightbox:Lightbox, theme:THEME_OF, atm:function(){return ATM;}};
+window.__ulv = {Music:Music, FX:FX, Effects:Effects, Lightbox:Lightbox, theme:THEME_OF, atm:function(){return ATM;}};
 })();
