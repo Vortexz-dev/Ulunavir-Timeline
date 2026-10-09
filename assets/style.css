@@ -471,7 +471,9 @@ body.fx-lite .mm,body.fx-lite .mm li{transition-duration:.15s}
 .mm{max-width:0;transition:grid-template-rows .45s cubic-bezier(.3,.8,.25,1),opacity .3s,margin .45s,max-width .45s cubic-bezier(.3,.8,.25,1)}
 .hud.mm-open .mm{max-width:300px}
 /* the music player's (hidden) panel widens its box over the era HUD on phones: let clicks pass through the empty area */
-.mp{pointer-events:none}.mp-btn{pointer-events:auto}
+.mp{pointer-events:none}.mp-btn,.fx-btn{pointer-events:auto}
+/* ...but the effects toggle must stay clickable (it is a child of .mp); hidden together with the player */
+body.lb-open .fx-btn{pointer-events:none}
 .end-credits{margin:34px auto 0;max-width:620px;font-size:12px;line-height:1.5;color:#8d806c}.end-credits a{color:#b9ab95}
 
 /* autoplay-blocked hint */
