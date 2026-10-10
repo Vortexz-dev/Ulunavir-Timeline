@@ -17,3 +17,8 @@ As soon as roads.json has entries with 2+ points, caravans use roads.json instea
 
 ## whirlpool.webp (v2)
 Circular, de-squashed crop of the painted whirlpool (centre ~4503,1380 full-res px); rotated in place by map.js.
+
+## v3 data
+- `sealanes.json` — ship lanes: contours of the coast-distance field at 110/170/250 px from land (generated, so ships never cross land). `[{len, points:[[x,y],…]}]`.
+- `life.json` — hand-placed life data: `smoke` = chimney emitters `[x, y, size, tint]` (tint 1 = dark forge smoke), `settlements` = `[x, y, radius]` used for the town soundscape.
+- `roads_auto.json` — now 16 traced routes (caravans spread over them by length). `roads.json` still takes over when filled.

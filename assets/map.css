@@ -101,3 +101,8 @@ body.fx-lite .mapx{backdrop-filter:none}
 @media (prefers-reduced-motion:reduce){.mapx-route .r-dash{animation:none}}
 /* v2: life layer (birds, caravans, whirlpool) between the map and the atmosphere */
 .mapx-life{position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none}
+/* v3: toggle buttons (clouds / map sound) */
+.mapx-tools button svg .off{display:none}
+.mapx-tools button.is-off{color:#e8dcc680}
+.mapx-tools button.is-off svg .off{display:inline}
+.mapx-tools button.is-off svg .on{display:none}

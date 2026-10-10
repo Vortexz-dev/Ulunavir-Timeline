@@ -698,8 +698,9 @@ var Music = (function(){
   function load(i){ if (loadedIdx === i) return; loadedIdx = i; au.src = tracks[i].src; au.preload = 'auto'; }
   function refresh(){ var a = active(); isPlaying = !!(a && !a.paused && !a.ended); ui(); }
   // plays the element of the current mode; reports autoplay refusal
+  var held = false, heldWas = false;   // world map open: music paused (position kept), resumed on close
   function play(fade, ms){
-    if (!st.on) return;
+    if (!st.on || held) return;
     var a = active();
     if (mode == null){ if (!N) return; load(st.idx); }
     else if (a._song !== mode){ a.src = SONGS[mode].src; a._song = mode; a.preload = 'auto'; }
@@ -785,7 +786,13 @@ var Music = (function(){
   [au, sp[0], sp[1]].forEach(function(a){ a.addEventListener('playing', hintUi); a.addEventListener('pause', hintUi); });
   var _ui = ui; ui = function(){ _ui(); hintUi(); };
   if (st.on && N) { play(true); window.addEventListener('load', function(){ if (!isPlaying) play(true); }); } // try autoplay right away; falls back to first gesture
-  return {onEvent:function(){}, region:region, songs:SONGS, next:function(){ step(1); }, prev:function(){ step(-1); },
+  function hold(on){
+    on = !!on; if (on === held) return;
+    if (on){ heldWas = st.on && (isPlaying || pending); held = true;
+      var a = active(); mixTo(a, 0, 900, function(){ if (held) [au, sp[0], sp[1]].forEach(function(x){ x.pause(); }); }); }
+    else { held = false; if (heldWas && st.on) play(true, 1500); }
+  }
+  return {onEvent:function(){}, region:region, hold:hold, songs:SONGS, next:function(){ step(1); }, prev:function(){ step(-1); },
     state:function(){ var a = active(); return {st:st, idx:st.idx, n:N, mode:mode, want:want, song:mode != null ? SONGS[mode].name : null, title:mode != null ? SONGS[mode].name : (N?title(st.idx):null),
       playing:isPlaying, blocked:blocked, t:+(a.currentTime||0).toFixed(2), defT:+(au.currentTime||0).toFixed(2), defPaused:au.paused, vol:Math.round(a.volume*100), src:a.currentSrc,
       saved:saved, switches:switches, errStreak:errStreak, now:now.textContent}; }};
@@ -807,6 +814,8 @@ var Music = (function(){
 // - Own on/off (+ ambience volume) in the music panel, localStorage 'ulv-amb2'.
 //   Off = silent, event sounds included.
 // =====================================================================
+window.__ulvAudioHold = function(on){ try { Music.hold(on); } catch(e){} try { Ambience.hold(on); } catch(e){} };
+window.__ulvAudioState = function(){ return {music: Music.state(), amb: Ambience.state()}; };
 var Ambience = (function(){
   var KEY = 'ulv-amb2', cfg = MU.ambience || {}, ERAS = (MU.eraAmbience || []).filter(function(r){ return r && r.file && r.chapters; });
   var EVSFX = MU.eventSfx || {}, GAP = MU.sfxMinGapMs != null ? MU.sfxMinGapMs : 3000;
@@ -851,7 +860,8 @@ var Ambience = (function(){
     sfxBus = ctx.createGain(); sfxBus.gain.value = 0.32; sfxBus.connect(sfxLvl);
     return ctx;
   }
-  function running(){ return ctx && ctx.state === 'running' && st.on; }
+  var held = false;   // world map open: ambience + event sounds silenced, positions kept
+  function running(){ return ctx && ctx.state === 'running' && st.on && !held; }
   // ---------- one-shot buffers (event sounds) ----------
   function url(f){ return 'assets/sfx/' + (/\.(mp3|ogg|m4a|wav|opus)$/i.test(f) ? f : f + '.mp3'); }
   function load(id, cb){
@@ -1008,7 +1018,18 @@ var Ambience = (function(){
   ui();
   if (AC && st.on) arm();
   function vstate(v){ return v ? {file:v.file, t:v.time(), gain:+v.vg.gain.value.toFixed(3), target:v.target, loops:v.loops} : null; }
-  return {onEvent:onEvent, setTargets:setTargets, spark:spark, play:function(o){ unlock(); playSfx(String(o)); },
+  function hold(on){
+    on = !!on; if (on === held) return; held = on;
+    if (!ctx) return;
+    if (on){ var t = ctx.currentTime; gate.gain.cancelScheduledValues(t); gate.gain.setTargetAtTime(0, t, .25);
+      setTimeout(function(){ if (held) POOL.forEach(function(s){ if (s.busy) try { s.el.pause(); } catch(e){} }); }, 1000); }
+    else if (st.on){
+      var go = function(){ POOL.forEach(function(s){ if (s.busy && s.el.paused){ var p = s.el.play(); if (p && p.catch) p.catch(function(){}); } }); applyLevel();
+        if (wantIdx >= 0 && (wantIdx !== curIdx || wantWar !== curWar)) applyState(wantIdx, wantWar); };
+      if (ctx.state === 'suspended') ctx.resume().then(go, function(){}); else go();
+    }
+  }
+  return {onEvent:onEvent, setTargets:setTargets, spark:spark, hold:hold, play:function(o){ unlock(); playSfx(String(o)); },
     eras:ERAS, war:WAR, _seekEnd:function(sec){ if (cur && cur.n && cur.n.a){ var el = cur.n.a.el; try { el.currentTime = Math.max(0, el.duration - sec); } catch(e){} } },
     state:function(){ return {st:st, ctx:ctx && ctx.state, eras:ERAS.length, era:curIdx, file:curIdx >= 0 ? ERAS[curIdx].file : null, war:curWar, want:wantIdx, wantWar:wantWar,
       normal:cur && vstate(cur.n), warV:cur && vstate(cur.w), slots:POOL.filter(function(s){ return s.busy; }).length, eraChanges:eraChanges, bus:ambBus && +ambBus.gain.value.toFixed(3),
