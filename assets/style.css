@@ -299,6 +299,7 @@ a{color:var(--gold2)}
 body.lb-open .hud,body.lb-open .mp{opacity:0;pointer-events:none}
 
 /* --- music player --- */
+.mp-btn{flex:0 0 auto}
 .mp{--line:#ff8a3c;position:fixed;right:18px;bottom:18px;z-index:30;display:flex;align-items:center;gap:8px;transition:opacity .3s}
 .mp-btn{width:38px;height:38px;border-radius:50%;border:1px solid color-mix(in srgb,var(--line) 45%,#ffffff22);background:#0d0912b0;backdrop-filter:blur(6px);color:#e8dcc6;display:grid;place-items:center;cursor:pointer;padding:0;opacity:.62;transition:opacity .25s,box-shadow .3s,transform .2s;position:relative}
 .mp-btn:hover,.mp.open .mp-btn,.mp.playing .mp-btn{opacity:1}
