@@ -23,6 +23,9 @@
     dn:'<svg viewBox="0 0 24 24"><g class="on"><circle cx="9" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 3.2v1.6M9 15.2v1.6M2.2 10h1.6M14.2 10h1.6M4.2 5.2l1.1 1.1M12.7 13.7l1.1 1.1M4.2 14.8l1.1-1.1M12.7 6.3l1.1-1.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M20.5 15.2a4.6 4.6 0 01-6.3 5.3 4.8 4.8 0 004-6.9 4.6 4.6 0 012.3 1.6z" fill="currentColor"/></g><g class="off"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></g></svg>',
     pin:'<svg viewBox="0 0 24 24"><path d="M12 21.5s-6.5-6.2-6.5-11.2a6.5 6.5 0 0113 0c0 5-6.5 11.2-6.5 11.2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.3 7.6l5.4 5.4M14.7 7.6l-5.4 5.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
   };
+  I.wx = '<svg viewBox="0 0 24 24"><path d="M6.5 13.5h9a3.2 3.2 0 00.3-6.4A4.7 4.7 0 006.8 6.1 3.7 3.7 0 006.5 13.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 16.5v4M6.3 17.5l3.4 2M9.7 17.5l-3.4 2M15.5 16l-1.2 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  I.roads = '<svg viewBox="0 0 24 24"><path d="M3.5 19.5c3-1 4-4 7-5.5s7.5-.5 10-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 9.5c2.5-.5 3.5-3 6.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.2" stroke-linecap="round"/><circle cx="3.5" cy="19.5" r="1.6" fill="currentColor"/><circle cx="20.5" cy="9" r="1.6" fill="currentColor"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  I.plan = '<svg viewBox="0 0 24 24"><path d="M6 21V4M6 4.5h10l-2.2 3.2L16 11H6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="17.5" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 18.5h6.5" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.8 1.8"/></svg>';
   var PIN_I = {
     battle:'<svg viewBox="0 0 24 24"><path d="M5 4l9.5 9.5M19 4L9.5 13.5M4 17.5l3 3M20 17.5l-3 3M6.2 15.2l2.6 2.6M17.8 15.2l-2.6 2.6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>',
     found:'<svg viewBox="0 0 24 24"><path d="M6 21V9l-1.5-2V4h3v1.5h2V4h5v1.5h2V4h3v3L18 9v12zM10.5 21v-4a1.5 1.5 0 013 0v4" fill="currentColor"/></svg>',
@@ -47,7 +50,7 @@
         '<canvas class="mapx-life"></canvas>' +
         '<canvas class="mapx-fx"></canvas>' +
         '<canvas class="mapx-night"></canvas>' +
-                '<svg class="mapx-svg" xmlns="http://www.w3.org/2000/svg"><g class="mapx-roads"></g><g class="mapx-route"><path class="r-glow"/><path class="r-ink"/><path class="r-dash"/><g class="r-segs"></g><g class="r-nodes"></g></g></svg>' +
+                '<svg class="mapx-svg" xmlns="http://www.w3.org/2000/svg"><g class="mapx-roads"></g><g class="mapx-planr"><path class="p-glow"/><path class="p-ink"/><path class="p-sea"/><g class="p-nodes"></g></g><g class="mapx-route"><path class="r-glow"/><path class="r-ink"/><path class="r-dash"/><g class="r-segs"></g><g class="r-nodes"></g></g></svg>' +
         '<div class="mapx-pins"></div>' +
         '<div class="mapx-labels"></div>' +
         '<div class="mapx-vig" aria-hidden="true"></div>' +
@@ -55,6 +58,7 @@
       '<div class="mapx-tools" role="toolbar" aria-label="Harita araçları">' +
         '<button type="button" class="mt-nav on" data-tool="nav" aria-pressed="true" title="Gezinme (sürükle, tekerlekle yakınlaş)">' + I.hand + '</button>' +
         '<button type="button" class="mt-route" data-tool="route" aria-pressed="false" title="Rota ölç (tıkla: nokta ekle)">' + I.route + '</button>' +
+        '<button type="button" class="mt-plan" aria-pressed="false" title="Yolculuk planla (yerden yere en kısa yol)">' + I.plan + '</button>' +
         '<i class="mt-sep"></i>' +
         '<button type="button" class="mt-in" title="Yakınlaş">' + I.plus + '</button>' +
         '<button type="button" class="mt-out" title="Uzaklaş">' + I.minus + '</button>' +
@@ -63,15 +67,20 @@
         '<button type="button" class="mt-cloud" aria-pressed="true" title="Bulutlar">' + I.cloud + '</button>' +
         '<button type="button" class="mt-dn" aria-pressed="true" title="Gece / gündüz döngüsü (kapalıyken hep gündüz)">' + I.dn + '</button>' +
         '<button type="button" class="mt-pins" aria-pressed="true" title="Tarihî olay iğneleri">' + I.pin + '</button>' +
+        '<button type="button" class="mt-roads" aria-pressed="false" title="Yollar">' + I.roads + '</button>' +
+        '<button type="button" class="mt-wx" aria-pressed="false" title="Mevsim ve hava">' + I.wx + '</button>' +
         '<div class="mt-sndwrap"><button type="button" class="mt-snd" aria-pressed="true" title="Harita sesleri">' + I.snd + '</button>' +
         '<div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div>' +
       '</div>' +
       '<div class="mapx-rt" hidden>' +
-        '<div class="rt-main"><span class="rt-km">—</span><span class="rt-t"><b class="rt-walk">—</b> yaya · <b class="rt-horse">—</b> atlı</span></div>' +
+        '<div class="rt-main"><span class="rt-km">—</span><span class="rt-t"><b class="rt-walk">—</b> yaya · <b class="rt-horse">—</b> atlı · <b class="rt-cart">—</b> kervan · <b class="rt-air">—</b> hava gemisi</span></div>' +
         '<div class="rt-sub"><span class="rt-hint">Haritaya tıklayarak durak ekle</span><span class="rt-est">ölçek tahmini</span></div>' +
         '<div class="rt-btns"><button type="button" class="rt-undo" title="Son durağı geri al (Backspace)">' + I.undo + '</button><button type="button" class="rt-clear" title="Rotayı temizle">' + I.trash + '</button></div>' +
       '</div>' +
       '<div class="mapx-pop" hidden></div>' +
+      '<div class="mapx-plan" hidden role="dialog" aria-label="Yolculuk planla"><div class="pl-h"><b>Yolculuk planla</b><button type="button" class="pl-x" aria-label="Kapat">' + I.x + '</button></div>' +
+        '<div class="pl-stops"></div><button type="button" class="pl-add">+ Durak ekle</button><div class="pl-out" aria-live="polite"></div>' +
+        '<datalist id="mapxPlaces"></datalist></div>' +
       '<aside class="mapx-place" hidden role="dialog" aria-label="Yer bilgisi"><div class="mpl-roll" aria-hidden="true"></div><button type="button" class="mpl-x" aria-label="Kapat">' + I.x + '</button><div class="mpl-in"></div></aside>' +
       '<div class="mapx-load" aria-hidden="true"><i></i></div>' +
       '<button type="button" class="mapx-x" aria-label="Haritayı kapat" title="Kapat (Esc)">' + I.x + '</button>' +
@@ -93,7 +102,8 @@
   var anim = null;          // smooth zoom target {s, ax, ay}
   var vel = {x: 0, y: 0}, inertia = false;
   var tool = 'nav', route = [], isOpen = false, dirty = true, raf = 0;
-  var tiles = {}, tileCount = 0, baseImg = null;
+  var planW = 0, tiles = {}, tileCount = 0, baseImg = null, NETD = null, roadsOn = false, wxOn = false, plan = null;
+  try { roadsOn = localStorage.getItem('ulv-map-roads') === '1'; wxOn = localStorage.getItem('ulv-map-wx') === '1'; } catch(e){}
 
   function lite(){ return document.body.classList.contains('fx-lite') || autoLite; }
   var autoLite = false;
@@ -107,7 +117,7 @@
       CFG = r[0]; TL = r[1]; PLACES = Array.isArray(r[2]) ? r[2] : ((r[2] && r[2].places) || []); PINS = (r[2] && r[2].pins) || []; ROADS = Array.isArray(r[3]) ? r[3] : [];
       W = TL.width; H = TL.height; maxS = CFG.maxZoom || 2.5;
       rt.querySelector('.rt-est').hidden = !CFG.scaleIsEstimate;
-      buildPlaces(); buildRoads(); LIFE.init(Array.isArray(r[4]) ? r[4] : [], Array.isArray(r[5]) ? r[5] : [], r[6] || {}, r[7]);
+      NETD = r[7] && r[7].nodes ? r[7] : null; buildPlaces(); buildRoads(); buildPlanList(); LIFE.init(Array.isArray(r[4]) ? r[4] : [], Array.isArray(r[5]) ? r[5] : [], r[6] || {}, r[7]);
       return new Promise(function(res){ baseImg = new Image(); baseImg.decoding = 'async'; baseImg.onload = baseImg.onerror = function(){ res(); }; baseImg.src = BASE + 'base.webp'; });
     }).then(function(){ loaded = true; ov.classList.add('ready'); FXL.init(); resize(true); });
     return loading;
@@ -118,7 +128,8 @@
   function clampView(){
     view.s = Math.max(minS, Math.min(maxS, view.s));
     var mw = W * view.s, mh = H * view.s, pad = 0;
-    if (mw <= vw) view.x = (vw - mw) / 2; else view.x = Math.min(pad, Math.max(vw - mw - pad, view.x));
+    var padX = plan && plan.open && vw > 700 ? planW : 0;   // the planner panel covers the left edge: allow the map to slide under it
+    if (mw <= vw) view.x = (vw - mw) / 2; else view.x = Math.min(padX, Math.max(vw - mw - pad, view.x));
     if (mh <= vh) view.y = (vh - mh) / 2; else view.y = Math.min(pad, Math.max(vh - mh - pad, view.y));
   }
   function toWorld(px, py){ return {x: (px - view.x) / view.s, y: (py - view.y) / view.s}; }
@@ -187,13 +198,29 @@
     // parent level underneath (already cached most of the time), then the sharp level
     if (lv.z > 1) drawLevel(L[lv.z - 1], a.x, a.y, b.x, b.y);
     if (lv.z > 0) drawLevel(lv, a.x, a.y, b.x, b.y);
+    if (roadsOn) drawNet();
     tiltBlur();
+  }
+  // road network overlay (toggle): inked, semi-transparent paths drawn into the static map layer (redrawn only on view change)
+  var netPaths = null;
+  function drawNet(){
+    if (!NETD) return;
+    if (!netPaths){ netPaths = [new Path2D(), new Path2D(), new Path2D()];
+      NETD.edges.forEach(function(e){ var P = netPaths[e.t] || netPaths[2], q = e.p; P.moveTo(q[0][0], q[0][1]); for (var i = 1; i < q.length; i++) P.lineTo(q[i][0], q[i][1]); }); }
+    var s = view.s, u = 1 / s, k = Math.min(1.6, .75 + s * .9);
+    ctx.save(); ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * view.x, dpr * view.y); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(250,232,190,.22)'; ctx.lineWidth = 5.5 * k * u; ctx.stroke(netPaths[0]);
+    ctx.strokeStyle = 'rgba(122,62,22,.62)'; ctx.lineWidth = 2.6 * k * u; ctx.stroke(netPaths[0]);
+    ctx.strokeStyle = 'rgba(250,232,190,.16)'; ctx.lineWidth = 4 * k * u; ctx.stroke(netPaths[1]);
+    ctx.strokeStyle = 'rgba(92,58,28,.52)'; ctx.lineWidth = 1.7 * k * u; ctx.stroke(netPaths[1]);
+    ctx.setLineDash([4.5 * k * u, 4 * k * u]); ctx.strokeStyle = 'rgba(84,56,30,.48)'; ctx.lineWidth = 1.2 * k * u; ctx.stroke(netPaths[2]);
+    ctx.restore();
   }
   // tilt-shift depth: blur the top/bottom bands of the map layer (only redrawn on view change; no-op where ctx.filter is unsupported)
   var tiltCv = null;
   function tiltBlur(){
     if (!(tiltO > 0) || !('filter' in ctx)) return;
-    var w = cvT.width, h = cvT.height, bh = Math.round(h * .26), blur = (2.6 * dpr * tiltO).toFixed(2);
+    var w = cvT.width, h = cvT.height, bh = Math.round(h * .2), blur = (1.6 * dpr * tiltO).toFixed(2);
     if (!tiltCv) tiltCv = document.createElement('canvas');
     if (tiltCv.width !== w || tiltCv.height !== bh){ tiltCv.width = w; tiltCv.height = bh; }
     var x = tiltCv.getContext('2d');
@@ -272,7 +299,7 @@
     Array.prototype.forEach.call(gRoads.children, function(p){
       p.setAttribute('d', p._pts.map(function(q, i){ var s = toScreen(q[0], q[1]); return (i ? 'L' : 'M') + s.x.toFixed(1) + ' ' + s.y.toFixed(1); }).join(''));
     });
-    drawRoute();
+    drawRoute(); drawPlan();
   }
   function TC(){ return window.__ulv && window.__ulv.TagCard; }
   function mediaHtml(ph, auto){
@@ -363,6 +390,8 @@
     if (d < 1){ var h = Math.max(1, Math.round(d * 24)); return h + ' saat'; }   // speeds are per day of travel
     return (d < 10 ? (Math.round(d * 10) / 10).toString().replace('.', ',') : Math.round(d)) + ' gün';
   }
+  // flying steam airship (Aetherion Magnus class): straight line, ~AIR_KMH cruising, AIR_HPD flight hours per day (estimate; no figure in the archive)
+  function fmtAir(k){ var v = CFG.airshipKmh || 60, hpd = CFG.airshipHoursPerDay || 18, h = k / v; if (h < 1) return Math.max(5, Math.round(h * 12) * 5) + ' dk'; if (h <= hpd) return (h < 10 ? (Math.round(h * 2) / 2).toString().replace('.', ',') : Math.round(h)) + ' saat'; return fmtDays(h / hpd); }
   function segLen(a, b){ return Math.hypot(b.x - a.x, b.y - a.y); }
   function totalPx(){ var t = 0; for (var i = 1; i < route.length; i++) t += segLen(route[i - 1], route[i]); return t; }
   function updateReadout(){
@@ -370,6 +399,8 @@
     rt.querySelector('.rt-km').textContent = route.length > 1 ? fmtKm(k) : '—';
     rt.querySelector('.rt-walk').textContent = route.length > 1 ? fmtDays(k / (CFG.walkKmPerDay || 30)) : '—';
     rt.querySelector('.rt-horse').textContent = route.length > 1 ? fmtDays(k / (CFG.horseKmPerDay || 60)) : '—';
+    rt.querySelector('.rt-cart').textContent = route.length > 1 ? fmtDays(k / (CFG.cartKmPerDay || 25)) : '—';
+    rt.querySelector('.rt-air').textContent = route.length > 1 ? fmtAir(k) : '—';
     rt.querySelector('.rt-hint').textContent = !route.length ? 'Haritaya tıklayarak durak ekle' : route.length === 1 ? 'Sonraki durağa tıkla' : route.length + ' durak · noktaları sürükleyebilirsin';
     rt.querySelector('.rt-undo').disabled = rt.querySelector('.rt-clear').disabled = !route.length;
   }
@@ -410,6 +441,95 @@
     ov.querySelectorAll('[data-tool]').forEach(function(b){ var on = b.dataset.tool === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
     ov.classList.toggle('t-route', t === 'route'); rt.hidden = t !== 'route'; updateReadout();
   }
+
+  // ---------------------------------------------------------------- journey planner: named places -> shortest path on the road network (Dijkstra)
+  var planEl = ov.querySelector('.mapx-plan'), planStops = planEl.querySelector('.pl-stops'), planOut = planEl.querySelector('.pl-out');
+  var pGlow = svg.querySelector('.p-glow'), pInk = svg.querySelector('.p-ink'), pSea = svg.querySelector('.p-sea'), pNodes = svg.querySelector('.p-nodes');
+  plan = {open: false, road: [], sea: [], stops: []};
+  function planPlaces(){ return PLACES.filter(function(p){ return p.rank !== 'hidden'; }); }
+  function buildPlanList(){
+    var dl = planEl.querySelector('datalist'); dl.innerHTML = planPlaces().map(function(p){ return '<option value="' + esc(p.name) + '"></option>'; }).join('');
+    planStops.innerHTML = ''; addStop(); addStop();
+  }
+  function addStop(val){
+    var n = planStops.children.length; if (n >= 6) return;
+    var row = document.createElement('div'); row.className = 'pl-row';
+    row.innerHTML = '<span class="pl-n">' + String.fromCharCode(65 + n) + '</span><input type="search" list="mapxPlaces" placeholder="Yer ara…" autocomplete="off" spellcheck="false" aria-label="Durak ' + (n + 1) + '"><button type="button" class="pl-rm" aria-label="Durağı kaldır">×</button>';
+    if (val) row.querySelector('input').value = val;
+    planStops.appendChild(row); relabel();
+  }
+  function relabel(){ Array.prototype.forEach.call(planStops.children, function(r, i){ r.querySelector('.pl-n').textContent = String.fromCharCode(65 + i); r.querySelector('.pl-rm').hidden = planStops.children.length <= 2; }); }
+  function norm(t){ return String(t || '').toLocaleLowerCase('tr-TR').replace(/[’'`]/g, '').replace(/\s+/g, ' ').trim(); }
+  function placeByName(t){ var q = norm(t); if (!q) return null; var L = planPlaces(), i;
+    for (i = 0; i < L.length; i++) if (norm(L[i].name) === q) return L[i];
+    for (i = 0; i < L.length; i++) if (norm(L[i].name).indexOf(q) === 0) return L[i];
+    return null; }
+  function nearNode(p){
+    var N = NETD.nodes, best = -1, bd = 1e9;
+    for (var i = 0; i < N.length; i++){ if (N[i][3] && norm(N[i][3]) === norm(p.name)) return {i: i, d: 0}; var d = Math.hypot(N[i][0] - p.x, N[i][1] - p.y); if (d < bd){ bd = d; best = i; } }
+    return {i: best, d: bd};
+  }
+  function dijkstra(a, b){
+    var N = NETD.nodes.length, dist = new Array(N).fill(Infinity), prev = new Array(N).fill(-1), via = new Array(N).fill(null), done = new Array(N).fill(false);
+    dist[a] = 0;
+    for (;;){ var u = -1, bd = Infinity; for (var i = 0; i < N; i++) if (!done[i] && dist[i] < bd){ bd = dist[i]; u = i; }
+      if (u < 0 || u === b) break; done[u] = true;
+      NETD.edges.forEach(function(e){ if (e.a !== u && e.b !== u) return; var v = e.a === u ? e.b : e.a, nd = dist[u] + e.len; if (nd < dist[v]){ dist[v] = nd; prev[v] = u; via[v] = e; } }); }
+    if (!isFinite(dist[b])) return null;
+    var pts = [], v = b; while (v !== a){ var e = via[v], q = e.b === v ? e.p.slice() : e.p.slice().reverse(); pts = pts.length ? q.concat(pts.slice(1)) : q; v = prev[v]; }
+    return {len: dist[b], pts: pts};
+  }
+  function computePlan(){
+    var st = Array.prototype.map.call(planStops.querySelectorAll('input'), function(i){ var p = placeByName(i.value); i.classList.toggle('bad', !!i.value && !p); return p; }).filter(Boolean);
+    plan.road = []; plan.sea = []; plan.stops = st;
+    if (st.length < 2 || !NETD){ planOut.innerHTML = st.length < 2 ? '<p class="pl-hint">En az iki yer seç; en kısa yol yol ağı üzerinden çizilir.</p>' : ''; drawPlan(); return; }
+    var roadPx = 0, seaPx = 0, airPx = 0, notes = [];
+    for (var i = 1; i < st.length; i++){
+      var A = st[i - 1], B = st[i]; airPx += Math.hypot(B.x - A.x, B.y - A.y);
+      var na = nearNode(A), nb = nearNode(B), r = (na.d < 380 && nb.d < 380) ? dijkstra(na.i, nb.i) : null;
+      if (r){ var P = r.pts.slice(); if (na.d > 30){ P.unshift([A.x, A.y]); roadPx += na.d; } if (nb.d > 30){ P.push([B.x, B.y]); roadPx += nb.d; }
+        roadPx += r.len; plan.road.push(P); if (na.d > 60 || nb.d > 60) notes.push(A.name + ' / ' + B.name + ': yola kadar patika (düz hat)'); }
+      else { var d = Math.hypot(B.x - A.x, B.y - A.y); seaPx += d; plan.sea.push([[A.x, A.y], [B.x, B.y]]); notes.push(A.name + ' → ' + B.name + ': yol bağlantısı yok, deniz yolu / düz hat sayıldı'); }
+    }
+    var rk = km(roadPx), sk = km(seaPx), ak = km(airPx), seaDay = CFG.shipKmPerDay || 120;
+    function t(v){ return fmtDays(rk / v + sk / seaDay); }
+    planOut.innerHTML = '<div class="pl-km"><b>' + fmtKm(rk + sk) + '</b>' + (sk ? ' <small>(' + fmtKm(rk) + ' kara · ' + fmtKm(sk) + ' deniz)</small>' : ' <small>yol ağı üzerinden</small>') + '</div>' +
+      '<dl class="pl-t"><dt>Yaya</dt><dd>' + t(CFG.walkKmPerDay || 30) + '</dd><dt>Atlı</dt><dd>' + t(CFG.horseKmPerDay || 60) + '</dd><dt>Araba · kervan</dt><dd>' + t(CFG.cartKmPerDay || 25) + '</dd>' +
+      '<dt>Hava gemisi</dt><dd>' + fmtAir(ak) + ' <small>(düz uçuş ' + fmtKm(ak) + ')</small></dd></dl>' +
+      (notes.length ? '<ul class="pl-notes">' + notes.map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>' : '') +
+      '<p class="pl-fine">Hızlar tahmini: yaya ' + (CFG.walkKmPerDay || 30) + ', atlı ' + (CFG.horseKmPerDay || 60) + ', kervan ' + (CFG.cartKmPerDay || 25) + ' km/gün' + (sk ? ', gemi ' + seaDay + ' km/gün' : '') + '; Aetherion Magnus tipi buharlı hava gemisi ~' + (CFG.airshipKmh || 60) + ' km/sa, günde ~' + (CFG.airshipHoursPerDay || 18) + ' saat uçuş.</p>';
+    drawPlan(); fitPlan();
+  }
+  function fitPlan(){
+    var all = [].concat.apply([], plan.road.concat(plan.sea)); if (!all.length) return;
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; all.forEach(function(q){ x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); });
+    var pr = planEl.getBoundingClientRect(), sr = stage.getBoundingClientRect(); planW = Math.max(0, pr.right - sr.left + 20); var padL = vw > 700 ? Math.max(60, pr.right - sr.left + 40) : 30, padB = vw > 700 ? 40 : Math.min(vh * .6, Math.max(vh * .3, sr.bottom - pr.top + 20));
+    var ns = Math.max(minS, Math.min(maxS * .5, Math.min((vw - padL - 60) / Math.max(1, x1 - x0), (vh - padB - 80) / Math.max(1, y1 - y0))));
+    var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2; view.s = ns; view.x = padL + (vw - padL) / 2 - cx * ns; view.y = (vh - padB) / 2 + 20 - cy * ns; clampView(); dirty = true; kick();
+  }
+  function pathD(P){ return P.map(function(q, i){ var o = toScreen(q[0], q[1]); return (i ? 'L' : 'M') + o.x.toFixed(1) + ' ' + o.y.toFixed(1); }).join(''); }
+  function drawPlan(){
+    if (!plan) return;
+    var d = plan.road.map(pathD).join(''), ds = plan.sea.map(pathD).join('');
+    pGlow.setAttribute('d', d); pInk.setAttribute('d', d); pSea.setAttribute('d', ds);
+    while (pNodes.childNodes.length > plan.stops.length) pNodes.removeChild(pNodes.lastChild);
+    while (pNodes.childNodes.length < plan.stops.length){ var g = document.createElementNS(SVGNS, 'g'); g.setAttribute('class', 'p-node'); g.innerHTML = '<circle r="9"/><text dy="3.6"></text>'; pNodes.appendChild(g); }
+    plan.stops.forEach(function(p, i){ var o = toScreen(p.x, p.y), g = pNodes.childNodes[i]; g.setAttribute('transform', 'translate(' + o.x.toFixed(1) + ' ' + o.y.toFixed(1) + ')'); g.lastChild.textContent = String.fromCharCode(65 + i); });
+  }
+  function togglePlan(on){
+    plan.open = on == null ? !plan.open : !!on; planEl.hidden = !plan.open;
+    var b = ov.querySelector('.mt-plan'); b.classList.toggle('on', plan.open); b.setAttribute('aria-pressed', plan.open ? 'true' : 'false');
+    if (plan.open){ if (tool === 'route') setTool('nav'); closePanel(); var f = planStops.querySelector('input'); if (f && !f.value) setTimeout(function(){ f.focus(); }, 30); computePlan(); }
+    else { plan.road = []; plan.sea = []; plan.stops = []; drawPlan(); clampView(); dirty = true; kick(); }
+  }
+  planEl.addEventListener('input', function(ev){ if (ev.target.tagName === 'INPUT') computePlan(); });
+  planEl.addEventListener('change', function(ev){ if (ev.target.tagName === 'INPUT') computePlan(); });
+  planEl.addEventListener('click', function(ev){
+    if (ev.target.closest('.pl-x')) togglePlan(false);
+    else if (ev.target.closest('.pl-add')){ addStop(); var ins = planStops.querySelectorAll('input'); ins[ins.length - 1].focus(); }
+    else if (ev.target.closest('.pl-rm')){ ev.target.closest('.pl-row').remove(); relabel(); computePlan(); }
+  });
+  ['pointerdown', 'wheel', 'touchmove'].forEach(function(t){ planEl.addEventListener(t, function(ev){ ev.stopPropagation(); }, {passive: true}); });
 
   // ---------------------------------------------------------------- input
   var ptrs = {}, drag = null, lastTap = 0, pinch = null;
@@ -487,6 +607,9 @@
     else if (b.classList.contains('mt-cloud')){ cloudsOn = !cloudsOn; try { localStorage.setItem('ulv-map-clouds', cloudsOn ? '1' : '0'); } catch(e){} syncToggles(); kick(); }
     else if (b.classList.contains('mt-snd')){ if (window.__ulvMapAudio){ window.__ulvMapAudio.setOn(!window.__ulvMapAudio.isOn()); } syncToggles(); }
     else if (b.classList.contains('mt-dn')){ DN.setRun(!DN.run); syncToggles(); kick(); }
+    else if (b.classList.contains('mt-roads')){ roadsOn = !roadsOn; try { localStorage.setItem('ulv-map-roads', roadsOn ? '1' : '0'); } catch(e){} syncToggles(); dirty = true; kick(); }
+    else if (b.classList.contains('mt-wx')){ wxOn = !wxOn; try { localStorage.setItem('ulv-map-wx', wxOn ? '1' : '0'); } catch(e){} syncToggles(); kick(); }
+    else if (b.classList.contains('mt-plan')){ togglePlan(); }
     else if (b.classList.contains('mt-pins')){ pinsOn = !pinsOn; try { localStorage.setItem('ulv-map-pins', pinsOn ? '1' : '0'); } catch(e){} pinsLayer.classList.toggle('off', !pinsOn); syncToggles(); dirty = true; kick(); }
   });
   function syncToggles(){
@@ -494,6 +617,8 @@
     var db = ov.querySelector('.mt-dn'), pb = ov.querySelector('.mt-pins');
     db.classList.toggle('is-off', !DN.run); db.setAttribute('aria-pressed', DN.run ? 'true' : 'false'); db.title = DN.run ? 'Gece/gündüz döngüsünü durdur (gündüze sabitle)' : 'Gece/gündüz döngüsünü başlat';
     pb.classList.toggle('is-off', !pinsOn); pb.setAttribute('aria-pressed', pinsOn ? 'true' : 'false'); pb.title = pinsOn ? 'Tarihî olay iğnelerini gizle' : 'Tarihî olay iğnelerini göster';
+    [['.mt-roads', roadsOn, 'Yolları gizle', 'Yolları göster'], ['.mt-wx', wxOn, 'Mevsim ve havayı kapat', 'Mevsim ve hava: kar, fırtınalar, rüzgâr']].forEach(function(a){
+      var e = ov.querySelector(a[0]); e.classList.toggle('is-off', !a[1]); e.setAttribute('aria-pressed', a[1] ? 'true' : 'false'); e.title = a[1] ? a[2] : a[3]; });
     cb.classList.toggle('is-off', !cloudsOn); cb.setAttribute('aria-pressed', cloudsOn ? 'true' : 'false'); cb.title = cloudsOn ? 'Bulutları gizle' : 'Bulutları göster';
     sb.classList.toggle('is-off', !so); sb.setAttribute('aria-pressed', so ? 'true' : 'false'); sb.title = so ? 'Harita seslerini kapat' : 'Harita seslerini aç';
     if (!window.__ulvMapAudio) sb.parentNode.hidden = true;
@@ -519,9 +644,9 @@
   document.addEventListener('keydown', function(ev){
     if (!isOpen) return;
     var k = ev.key, tgt = ev.target, typing = tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable);
-    if (typing) return;
+    if (typing){ if (k === 'Escape' && plan && plan.open && planEl.contains(tgt) && !tgt.value){ ev.preventDefault(); tgt.blur(); togglePlan(false); } return; }   // in the planner: 1st Esc clears the field, 2nd closes
     var U2 = window.__ulv; if (U2 && ((U2.TagCard && U2.TagCard.isOpen && U2.TagCard.isOpen()) || document.querySelector('.lb:not([hidden])'))) return;  // a card opened on top of the map handles its own keys
-    if (k === 'Escape'){ ev.preventDefault(); ev.stopImmediatePropagation(); if (!pop.hidden) pop.hidden = true; else if (!plc.hidden) closePanel(); else close(); return; }
+    if (k === 'Escape'){ ev.preventDefault(); ev.stopImmediatePropagation(); if (!pop.hidden) pop.hidden = true; else if (!plc.hidden) closePanel(); else if (plan && plan.open) togglePlan(false); else close(); return; }
     var handled = true, step = 120;
     if (k === 'Backspace' || k === 'Delete'){ if (tool === 'route') undo(); }
     else if (k === '+' || k === '=') smoothZoom((anim ? anim.s : view.s) * 1.5, vw / 2, vh / 2);
@@ -566,9 +691,11 @@
     // atmosphere: full ~60fps, light ~30fps, reduced-motion: only on view change
     DN.step(t / 1000);
     var animFx = FXL.ok && !reduce, period = lite() ? 33 : 0;
-    if (FXL.ok && (t - fxLast >= period || reduce || moved)){ FXL.draw(t / 1000); fxLast = t; }
-    if (loaded && !reduce && (t - lifeLast >= period || moved)){ LIFE.draw(t / 1000); lifeLast = t; }
-    if (loaded && window.__ulvMapAudio && t - sndLast > 250){ sndLast = t; var cw0 = toWorld(vw / 2, vh / 2), pr = LIFE.probe(cw0.x, cw0.y); pr.zf = LIFE.zoomF(); window.__ulvMapAudio.update(pr); }
+    var DBG = window.__ulvMapDbg || 0;
+    if (FXL.ok && !DBG.nofx && (t - fxLast >= period || reduce || moved)){ FXL.draw(t / 1000); fxLast = t; }
+    if (loaded && !reduce && !DBG.nolife && (t - lifeLast >= period || moved)){ LIFE.draw(t / 1000); lifeLast = t; }
+    if (loaded && window.__ulvMapAudio && t - sndLast > 250){ sndLast = t; var cw0 = toWorld(vw / 2, vh / 2), pr = LIFE.probe(cw0.x, cw0.y); pr.zf = LIFE.zoomF(); pr.night = DN.v.night; pr.storm = STORM.near(cw0.x, cw0.y);
+      pr.snow = wxOn ? Math.max(1 - lin(560, 980, cw0.y), 1 - lin(260, 520, Math.hypot(cw0.x - 2290, (cw0.y - 700) * 1.5))) : 0; window.__ulvMapAudio.update(pr); }
     // auto light: sustained < 32fps while open
     if (!lite() && animFx){ fpsAcc += dt; fpsN++; if (fpsAcc > 2000){ var fps = fpsN * 1000 / fpsAcc; slow = fps < 32 ? slow + 1 : 0; if (slow >= 2 && !noAuto){ autoLite = true; FXL.resize(); } fpsAcc = 0; fpsN = 0; } }
     if (animFx || loaded || anim || inertia || dirty) kick();
@@ -579,7 +706,7 @@
   // whirlpool, ships/fleets on coastal sea lanes, caravans on roads, chimney smoke, ember glow, bird flocks.
   // Disabled under reduced motion; Light mode = fewer of everything.
   var LIFE = (function(){
-    var cv = ov.querySelector('.mapx-life'), c = cv.getContext('2d'), cvN = ov.querySelector('.mapx-night'), cN = cvN.getContext('2d');
+    var cv = ov.querySelector('.mapx-life'), c = cv.getContext('2d'), cvN = ov.querySelector('.mapx-night');
     var land = null, field = null, landPts = [], roadsA = [], lanes = [], wp = null, wpIn = null, DATA = {smoke: [], settlements: []};
     var cars = [], flocks = [], ships = [], nextFlock = 1, lastT = 0, ready = false;
     var WP = {x: 4503, y: 1380, r: 132, sq: 0.68};
@@ -607,7 +734,7 @@
         var g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, '#000'); g.addColorStop(.42, '#000'); g.addColorStop(.62, 'rgba(0,0,0,0)');
         x.fillStyle = g; x.fillRect(0, 0, s, s); wpIn = t;
       }; wp.src = BASE + 'whirlpool.webp';
-      makeSmokeSprites(); ready = true;
+      makeSmokeSprites(); loadLights(); ready = true;
     }
     function isLand(x, y){ if (!land || x < 0 || y < 0 || x >= W || y >= H) return false; return land.a[((y / H * land.h) | 0) * land.w + ((x / W * land.w) | 0)] === 1; }
     // distance to the nearest coast in full-res px (fog field encoding: sqrt(d/512))
@@ -683,7 +810,7 @@
       k.g.n = Math.max(0, k.g.n - 1); var rev = g.b === k.to; k.hops++; carOnEdge(k, g, rev, 0); g.n++; k.d0 = -1e9; return true;
     }
     function stepCars(dt, lt){
-      var want = lt ? 28 : 100, guard = 0;
+      var want = lt ? 45 : 160, guard = 0;
       while (cars.length < want && guard++ < want){ var n = newCar(true); if (!n) break; cars.push(n); }
       while (cars.length > want){ retire(cars.pop()); }
       for (var i = 0; i < cars.length; i++){
@@ -695,35 +822,62 @@
       }
     }
     var CART = [['#e9dfc6', '#6b4a28'], ['#c9b48a', '#5a3a1e'], ['#a83a2a', '#4a2c16'], ['#2f5a8a', '#3d2a18']], BAN = ['#b3262a', '#d9a62e', '#2c5aa0', '#1f6b3a'];
-    function drawCars(t, nightV, N){
-      var s = view.s, sz = clamp(19.5 * s, 3.5, 12), lamps = nightV > .02 && N;
-      if (lamps){ N.save(); N.globalCompositeOperation = 'lighter'; }
+    function drawCars(t, nightV){
+      var s = view.s, sz = clamp(19.5 * s, 3.5, 12), lamps = nightV > .02, dots = new Path2D(), trails = new Path2D();
       for (var i = 0; i < cars.length; i++){
         var k = cars[i], fin = k.d0 > -1e8 ? Math.min(1, (k.d - k.d0) / (k.gate ? 14 : 45)) : 1, fade = Math.min(fin, k.cont ? 1 : (k.tot - k.d) / 18); if (fade <= 0) continue;
         var q = at(k, k.d), P = toScreen(q.x, q.y); if (!vis(P, 60)) continue;
         var off = sz * .45; P = {x: P.x - Math.sin(q.ang) * off, y: P.y + Math.cos(q.ang) * off};
-        if (k.trail.length > 1 && k.kind !== 'rider'){
-          c.lineCap = 'round'; c.lineWidth = Math.max(.9, sz * .45);
-          for (var j = 1; j < k.trail.length; j++){
-            var A = toScreen(k.trail[j - 1].x, k.trail[j - 1].y), B = j === k.trail.length - 1 ? P : toScreen(k.trail[j].x, k.trail[j].y);
-            c.strokeStyle = 'rgba(70,52,30,' + (0.16 * j / k.trail.length * fade).toFixed(3) + ')';
-            c.beginPath(); c.moveTo(A.x, A.y); c.lineTo(B.x, B.y); c.stroke();
-          }
-        }
         var z = sz * k.size;
-        c.save(); c.translate(P.x, P.y); c.rotate(q.ang); c.globalAlpha = .92 * fade;
-        if (k.kind === 'army') drawArmy(k, z, t);
-        else if (z < 3.6){ c.fillStyle = '#1d140c'; var nn = k.kind === 'rider' ? 1 : k.carts; for (var m0 = 0; m0 < nn; m0++){ c.beginPath(); c.arc(-m0 * z * 1.2, 0, z * (m0 ? .42 : .52), 0, 6.283); c.fill(); } }
-        else if (k.kind === 'rider') drawRider(k, z, t);
-        else for (var m = 0; m < k.carts; m++) drawCart(k, z, -m * z * 1.75, t);
-        c.restore();
-        if (lamps){   // lanterns (night canvas, additive)
-          var la = nightV * fade, lr = Math.max(2.2, z * .55);
-          if (k.kind === 'army'){ for (var u = 0; u < k.n; u += 5){ var ox = -u * z * .36; lampAt(N, P.x + Math.cos(q.ang) * ox, P.y + Math.sin(q.ang) * ox, lr * 1.1, la * .9, t + u); } }
-          else lampAt(N, P.x + Math.cos(q.ang) * z * .7, P.y + Math.sin(q.ang) * z * .7, lr, la, t + k.ph);
+        if (z < 3.6){   // far: batched dots (one fill for all caravans)
+          var nn = k.kind === 'rider' ? 1 : k.kind === 'army' ? 3 : k.carts, ca0 = Math.cos(q.ang), sa0 = Math.sin(q.ang);
+          for (var m0 = 0; m0 < nn; m0++){ var rr = z * (m0 ? .42 : .52) * (k.kind === 'army' ? .8 : 1), dx = -m0 * z * 1.2; dots.moveTo(P.x + ca0 * dx + rr, P.y + sa0 * dx); dots.arc(P.x + ca0 * dx, P.y + sa0 * dx, rr, 0, 6.283); }
+          if (lamps) carLamps(k, P, q, z, fade);
+          continue;
         }
+        if (k.trail.length > 2 && k.kind !== 'rider'){   // dust track: one path per caravan
+          var A0 = toScreen(k.trail[0].x, k.trail[0].y); trails.moveTo(A0.x, A0.y);
+          for (var j = 1; j < k.trail.length - 1; j++){ var B0 = toScreen(k.trail[j].x, k.trail[j].y); trails.lineTo(B0.x, B0.y); }
+          trails.lineTo(P.x, P.y);
+        }
+        // cached sprite per kind/colour/length/size: one drawImage per caravan instead of ~10 vector fills
+        var o = carSprite(k, z), sc = z / o.zq, ca1 = Math.cos(q.ang) * sc * dpr, sa1 = Math.sin(q.ang) * sc * dpr;
+        c.setTransform(ca1, sa1, -sa1, ca1, P.x * dpr, P.y * dpr); c.globalAlpha = .92 * fade; c.drawImage(o.cv, o.x0, o.y0, o.w, o.h);
+        if (lamps) carLamps(k, P, q, z, fade);
       }
-      if (lamps) N.restore();
+      c.setTransform(dpr, 0, 0, dpr, 0, 0); c.globalAlpha = 1;
+      c.fillStyle = 'rgba(29,20,12,.88)'; c.fill(dots);
+      c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = Math.max(.9, sz * .45); c.strokeStyle = 'rgba(70,52,30,.09)'; c.stroke(trails);
+    }
+    function carLamps(k, P, q, z, fade){
+        {   // lanterns: every wagon carries 1-2, armies torches along the column; each casts a small warm pool
+          // far away many overlapping pools would read as glowing roads: dim them with distance; the abandoned Southern Lands keep only a rare lit caravan
+          var la = fade * (.45 + .55 * Math.min(1, Math.max(0, (z - 3.5) / 6))) * (q.y > 3750 ? ((k.hue | 0) % 4 ? 0 : .6) : 1);
+          if (la < .01) return;
+          var lr = Math.max(1.1, z * .2), pr = Math.max(7, z * 3.2), ca = Math.cos(q.ang), sa = Math.sin(q.ang);
+          if (k.kind === 'army'){ for (var u = 0; u < k.n; u += 4){ var ox = -u * z * .36; NGL.lamp(P.x + ca * ox, P.y + sa * ox, lr * 1.1, la * .9, k.ph + u * .37, u % 8 ? 0 : pr); } }
+          else if (k.kind === 'rider') NGL.lamp(P.x + ca * z * .3, P.y + sa * z * .3, lr * .9, la * .8, k.ph, pr * .7);
+          else for (var m1 = 0; m1 < k.carts; m1++){ var cx0 = -m1 * z * 1.75;
+            NGL.lamp(P.x + ca * (cx0 + z * .45) - sa * z * .3, P.y + sa * (cx0 + z * .45) + ca * z * .3, lr, la, k.ph + m1, pr);
+            if ((k.hue + m1) & 1) NGL.lamp(P.x + ca * (cx0 - z * .5) + sa * z * .3, P.y + sa * (cx0 - z * .5) - ca * z * .3, lr * .8, la * .75, k.ph + m1 + .5, 0); }
+        }
+    }
+    var SPC = {}, nSPC = 0;
+    function carSprite(k, z){
+      var zq = Math.max(3.5, Math.round(z * 2) / 2), len = k.kind === 'army' ? k.n : k.carts, key = k.kind + (k.hue | 0) + '|' + len + '|' + zq + '|' + dpr, o = SPC[key];
+      if (o) return o;
+      if (nSPC > 600){ SPC = {}; nSPC = 0; }
+      var x0, x1, y0, y1, u = Math.max(1.2, zq * .2);
+      if (k.kind === 'army'){ x0 = -k.n * zq * .36 - zq * .8; x1 = u + 1; y0 = -zq * 1.2; y1 = u * 1.3; }
+      else if (k.kind === 'rider'){ x0 = -zq * .5; x1 = zq * .62; y0 = -zq * .32; y1 = zq * .32; }
+      else { x0 = -(k.carts - 1) * 1.75 * zq - zq * .7; x1 = zq * 1.3; y0 = -zq * .42; y1 = zq * .42; }
+      x0 -= 1; y0 -= 1; x1 += 1; y1 += 1;
+      var cv0 = document.createElement('canvas'); cv0.width = Math.ceil((x1 - x0) * dpr); cv0.height = Math.ceil((y1 - y0) * dpr);
+      var x = cv0.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, -x0 * dpr, -y0 * dpr);
+      var keep = c; c = x;
+      try { if (k.kind === 'army') drawArmy(k, zq, 0); else if (k.kind === 'rider') drawRider(k, zq, 0); else for (var m = 0; m < k.carts; m++) drawCart(k, zq, -m * zq * 1.75, 0); } finally { c = keep; }
+      o = SPC[key] = {cv: cv0, x0: x0, y0: y0, w: x1 - x0, h: y1 - y0, zq: zq}; nSPC++;
+      return o;
     }
     function horse(z, x, col){
       c.fillStyle = col || '#4a2e18'; c.beginPath(); c.ellipse(x, 0, z * .34, z * .13, 0, 0, 6.283); c.fill();
@@ -758,14 +912,6 @@
         c.fillStyle = BAN[(k.hue + b / 6) & 3]; c.beginPath(); c.moveTo(bx, -z * 1.1); c.lineTo(bx - z * (.55 + fl * .2), -z * (1 - fl * .1)); c.lineTo(bx, -z * .78); c.closePath(); c.fill();
       }
     }
-    var LAMP = null;
-    function lampSprite(){
-      if (LAMP) return LAMP; var S = 64, t = document.createElement('canvas'); t.width = t.height = S; var x = t.getContext('2d');
-      var g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
-      g.addColorStop(0, 'rgba(255,236,190,1)'); g.addColorStop(.12, 'rgba(255,200,110,.85)'); g.addColorStop(.35, 'rgba(255,150,50,.28)'); g.addColorStop(1, 'rgba(255,120,30,0)');
-      x.fillStyle = g; x.fillRect(0, 0, S, S); LAMP = t; return t;
-    }
-    function lampAt(N, x, y, r, a, ph){ var f = .85 + .15 * Math.sin(ph * 7.3); N.globalAlpha = Math.min(1, a * f); N.drawImage(lampSprite(), x - r * 2.4, y - r * 2.4, r * 4.8, r * 4.8); }
     // ---- ships: several types, some in fleets; only on coastal sea lanes (contours of the coast-distance field => never cross land)
     var TYPES = {
       galleon: {sc: 1.55, v: 5.5, beam: .3, w: 2}, cog: {sc: 1.1, v: 6.5, beam: .32, w: 1}, sloop: {sc: .8, v: 9, beam: .26, w: 1},
@@ -831,6 +977,7 @@
       var q = wPt(); q.x = sx; q.y = sy; q.a = ang; q.b = t; q.f = fade; q.gl = Math.random() < .12; q.gr = Math.random() < .12;
       q.jl = rnd(-.06, .06); q.jr = rnd(-.06, .06); q.w = rnd(.75, 1.25); P.push(q);
     }
+    var WK0 = {}, WK1 = {};
     function drawWakes(t){
       var s = view.s;
       for (var i = wakes.length - 1; i >= 0; i--){
@@ -839,29 +986,27 @@
         if (!P.length){ if (!tr.live) wakes.splice(i, 1); continue; }
         var H = toScreen(P[P.length - 1].x, P[P.length - 1].y), T0 = toScreen(P[0].x, P[0].y);
         if (!vis(H, 120) && !vis(T0, 120)) continue;
-        var prev = null;
+        // batched: arms go into 3 alpha buckets per wake, churned water into one path (few draw calls per ship)
+        var prev = null, bk = [new Path2D(), new Path2D(), new Path2D()], ch = new Path2D(), lw = Math.max(.5, tr.Lw * s * .034), anyC = false;
         for (var j = 0; j < P.length; j++){
           var p = P[j], a = (t - p.b) / tr.life; if (a < 0) a = 0;
           var back = a * tr.life * tr.v, hw = tr.B * .45 + back * .2, nx = -Math.sin(p.a), ny = Math.cos(p.a);
-          var C = toScreen(p.x, p.y), cur = {C: C, a: a, f: p.f, hw: hw * s,
-            L: toScreen(p.x + nx * hw * (1 + p.jl), p.y + ny * hw * (1 + p.jl)), R: toScreen(p.x - nx * hw * (1 + p.jr), p.y - ny * hw * (1 + p.jr)), p: p};
+          var Cx = p.x * s + view.x, Cy = p.y * s + view.y, kl = hw * (1 + p.jl), kr = hw * (1 + p.jr);
+          var cur = prev === WK0 ? WK1 : WK0; cur.x = Cx; cur.y = Cy; cur.a = a; cur.f = p.f; cur.lx = (p.x + nx * kl) * s + view.x; cur.ly = (p.y + ny * kl) * s + view.y; cur.rx = (p.x - nx * kr) * s + view.x; cur.ry = (p.y - ny * kr) * s + view.y;
           if (prev){
-            var aa = (a + prev.a) / 2, al = .4 * Math.pow(1 - aa, 1.5) * Math.min(prev.f, cur.f);
-            if (al > .01){
-              c.strokeStyle = 'rgba(236,246,250,' + al.toFixed(3) + ')';
-              c.lineWidth = Math.max(.5, tr.Lw * s * (.022 + .03 * aa) * p.w);
-              c.beginPath();
-              if (!p.gl){ c.moveTo(prev.L.x, prev.L.y); c.lineTo(cur.L.x, cur.L.y); }
-              if (!p.gr){ c.moveTo(prev.R.x, prev.R.y); c.lineTo(cur.R.x, cur.R.y); }
-              c.stroke();
-              if (aa < .45 && (j & 1)){   // central churned water
-                c.fillStyle = 'rgba(225,240,246,' + (al * .22 * (1 - aa / .45)).toFixed(3) + ')';
-                c.beginPath(); c.arc(C.x, C.y, Math.max(.8, tr.B * s * (.4 + .9 * aa)), 0, 6.283); c.fill();
-              }
+            var aa = (a + prev.a) / 2, al = Math.pow(1 - aa, 1.5) * Math.min(prev.f, cur.f);
+            if (al > .025){
+              var B2 = bk[al > .66 ? 0 : al > .33 ? 1 : 2];
+              if (!p.gl){ B2.moveTo(prev.lx, prev.ly); B2.lineTo(cur.lx, cur.ly); }
+              if (!p.gr){ B2.moveTo(prev.rx, prev.ry); B2.lineTo(cur.rx, cur.ry); }
+              if (aa < .45 && (j & 1)){ var rr = Math.max(.8, tr.B * s * (.4 + .9 * aa)); ch.moveTo(Cx + rr, Cy); ch.arc(Cx, Cy, rr, 0, 6.283); anyC = true; }
             }
           }
           prev = cur;
         }
+        c.lineWidth = lw;
+        c.strokeStyle = 'rgba(236,246,250,.33)'; c.stroke(bk[0]); c.strokeStyle = 'rgba(236,246,250,.2)'; c.stroke(bk[1]); c.strokeStyle = 'rgba(236,246,250,.08)'; c.stroke(bk[2]);
+        if (anyC){ c.fillStyle = 'rgba(225,240,246,.05)'; c.fill(ch); }
       }
     }
     function drawShips(t, nv){
@@ -879,12 +1024,14 @@
         d = k.d0 + k.dir * k.t; q = laneAt(k.ln, d); ang = q.ang + (k.dir < 0 ? Math.PI : 0);
         wx = q.x - Math.sin(ang) * k.lat; wy = q.y + Math.cos(ang) * k.lat; var P = toScreen(wx, wy); if (!vis(P, 60)) continue;
         c.save(); c.translate(P.x, P.y); c.globalAlpha = fade; drawShip(base * k.sz, k.type, ang, t, k.ph); c.restore();
-        if (nv > .02){   // stern lantern + masthead light
-          var L0 = base * k.sz * TYPES[k.type].sc, lr = Math.max(1.8, L0 * .09);
-          cN.save(); cN.globalCompositeOperation = 'lighter';
-          lampAt(cN, P.x - Math.cos(ang) * L0 * .5, P.y - Math.sin(ang) * L0 * .5, lr, nv * fade, t + k.ph);
-          if (L0 > 9) lampAt(cN, P.x, P.y - L0 * .85, lr * .7, nv * fade * .8, t * 1.3 + k.ph);
-          cN.restore();
+        if (nv > .02){   // big ships: stern lanterns, deck lights, masthead; small boats one lantern; warm pool on the water
+          var L0 = base * k.sz * TYPES[k.type].sc, lr = Math.max(1, L0 * .045), ca = Math.cos(ang), sa = Math.sin(ang), big = k.type === 'galleon' || k.type === 'cog';
+          NGL.lamp(P.x - ca * L0 * .5, P.y - sa * L0 * .5, lr, fade, k.ph, L0 * (big ? 1.3 : .9));
+          if (big){ NGL.lamp(P.x - ca * L0 * .45 - sa * L0 * .12, P.y - sa * L0 * .45 + ca * L0 * .12, lr * .85, fade * .9, k.ph + 1, 0);
+            NGL.lamp(P.x + ca * L0 * .1, P.y + sa * L0 * .1, lr * .8, fade * .8, k.ph + 2, L0 * .7);
+            NGL.lamp(P.x + ca * L0 * .45, P.y + sa * L0 * .45, lr * .75, fade * .75, k.ph + 3, 0);
+            NGL.lamp(P.x, P.y - L0 * .9, lr * .7, fade * .8, k.ph + 4, 0); }
+          else if (k.type === 'longship') NGL.lamp(P.x + ca * L0 * .3, P.y + sa * L0 * .3, lr * .8, fade * .8, k.ph + 2, 0);
         }
       }
     }
@@ -1022,73 +1169,116 @@
       c.restore();
     }
     function resize(){ cv.width = cvN.width = Math.round(vw * dpr); cv.height = cvN.height = Math.round(vh * dpr); }
-    // ---- night lights: thousands of tiny twinkling warm points (denser in big cities, faint along main roads) + soft city halos
-    var LX = null, LY, LS, LP, LF, LT, LB, LW, LN = 0, halos = [], lightsLite = null;
-    function buildLights(){
-      if (!land) return false;
-      var lt = lite(), f = lt ? .4 : 1, X = [], Y = [], S = [], P = [], F = [], T = [], B = [], Wc = [];
-      halos = [];
-      function add(x, y, sz, br, thr){ if (!isLand(x, y)) return; X.push(x); Y.push(y); S.push(sz); P.push(rnd(0, 6.283)); F.push(rnd(.8, 3.6)); T.push(thr); B.push(br); Wc.push(Math.random() < .3 ? 1 : 0); }
-      function cluster(x, y, R, n, br){
-        n = Math.round(n * f);
-        for (var i = 0; i < n; i++){ var u = Math.max(1e-4, Math.random()), r = Math.min(R * 1.5, R * .5 * Math.sqrt(-2 * Math.log(u))), a = rnd(0, 6.283);
-          add(x + Math.cos(a) * r, y + Math.sin(a) * r * .85, rnd(.6, 1.35), rnd(.45, 1) * br, rnd(0, .55)); }
+    // ---- night lights: ONE WebGL pass on the night canvas. Static city lights (lights.bin: placed on roofs/walls/streets
+    // detected in the painted map, built once into a GPU buffer; twinkle, staggered switch-on and occasional lamps going
+    // off/on are computed in the shader) + soft warm light pools that brighten the darkened map around settlements,
+    // ships and caravans. Dynamic lanterns are written into a preallocated Float32Array each frame (no allocations).
+    var NGL = (function(){
+      var gl = null, prog = null, A = {}, U = {}, bufP = null, bufQ = null, bufD = null, nP = 0, nQ = 0, ok = false, cleared = true;
+      var DMAX = 1400, dyn = new Float32Array(DMAX * 48), nd = 0, STR = 32;
+      var VS = ['attribute vec4 aA;attribute vec4 aB;uniform vec3 uView;uniform vec2 uRes;uniform float uT;uniform float uNV;uniform float uPx;uniform float uPool;',
+        'varying vec2 vC;varying float vA;varying float vK;varying float vW;',
+        'void main(){float k=aB.w,sd=aB.z;vec2 sp=aA.xy*uView.x+uView.yz;float r;float a=aB.y;',
+        ' if(k<.5){r=aB.x*uPx*2.6;a*=.74+.26*sin(uT*(.7+sd*2.6)+sd*61.);',
+        '  float per=11.+sd*23.;float wv=uT/per+sd*37.;float wi=floor(wv),wf=fract(wv);float hs=fract(sin(wi*12.9898+sd*78.233)*43758.545);',
+        '  a*=1.-step(hs,.06)*smoothstep(0.,.06,wf)*(1.-smoothstep(.9,1.,wf))*.96;',
+        '  a*=smoothstep(sd*.55,sd*.55+.15,uNV);}',
+        ' else if(k<1.5){r=aB.x*uView.x;a*=uPool*(.9+.1*sin(uT*.8+sd*9.));}',
+        ' else if(k<2.5){r=aB.x*2.6;a*=.86+.14*sin(uT*7.3+sd*13.);}',
+        ' else{r=aB.x;}',
+        ' a*=uNV;sp+=aA.zw*r;vec2 cl=sp/uRes*2.-1.;gl_Position=vec4(cl.x,-cl.y,0.,1.);vC=aA.zw;vA=a;vK=k;vW=fract(sd*7.13);}'].join('\n');
+      var FS = ['precision mediump float;varying vec2 vC;varying float vA;varying float vK;varying float vW;',
+        'void main(){float d=dot(vC,vC);if(d>1.||vA<.003)discard;vec3 c;',
+        ' if(vK<.5||(vK>1.5&&vK<2.5)){float core=exp(-d*20.);float halo=exp(-d*5.)*.38;c=mix(vec3(1.,.74,.40),vec3(1.,.90,.68),vW)*core*1.25+vec3(1.,.52,.18)*halo;}',
+        ' else{float f=1.-d;c=vec3(1.,.58,.26)*f*f*f*.75;}',
+        ' gl_FragColor=vec4(c*vA,0.);}'].join('\n');
+      var CORN = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1];
+      function put(arr, o, x, y, sz, br, sd, k){ for (var c = 0; c < 6; c++){ var j = o + c * 8; arr[j] = x; arr[j + 1] = y; arr[j + 2] = CORN[c * 2]; arr[j + 3] = CORN[c * 2 + 1]; arr[j + 4] = sz; arr[j + 5] = br; arr[j + 6] = sd; arr[j + 7] = k; } }
+      function init(){
+        try { gl = cvN.getContext('webgl', {premultipliedAlpha: true, alpha: true, antialias: false, depth: false, stencil: false}); } catch(e){ gl = null; }
+        if (!gl) return;
+        function sh(t, src){ var o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
+        try { prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
+          if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog)); } catch(e){ if (window.console) console.warn('map night lights: shader failed', e); gl = null; return; }
+        gl.useProgram(prog); A.a = gl.getAttribLocation(prog, 'aA'); A.b = gl.getAttribLocation(prog, 'aB');
+        ['uView', 'uRes', 'uT', 'uNV', 'uPx', 'uPool'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
+        gl.enableVertexAttribArray(A.a); gl.enableVertexAttribArray(A.b);
+        gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+        bufD = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufD); gl.bufferData(gl.ARRAY_BUFFER, dyn.byteLength, gl.DYNAMIC_DRAW);
+        cvN.addEventListener('webglcontextlost', function(e){ e.preventDefault(); ok = false; }, false);
+        ok = true;
       }
-      var RK = {capital: [190, 1100, 1, .55], city: [130, 420, .95, .42], town: [75, 140, .85, .3], district: [110, 260, .9, .3], landmark: [40, 30, .7, .15]};
-      PLACES.forEach(function(p){ var k = RK[p.rank]; if (!k) return; cluster(p.x, p.y, k[0], k[1], k[2]); halos.push([p.x, p.y, k[0] * 1.5, k[3]]); });
-      DATA.settlements.forEach(function(st){ var big = st[2] >= 200; cluster(st[0], st[1], st[2] * .7, big ? 170 : 95, .9); halos.push([st[0], st[1], st[2] * 1.1, big ? .3 : .2]); });
-      DATA.smoke.forEach(function(e){ cluster(e[0], e[1], 18, 9, 1); });
-      netEdges.forEach(function(g){ if (g.t > 1) return; var step = g.t === 0 ? 22 : 34, pr = (g.t === 0 ? .55 : .35) * f;
-        for (var d = 12; d < g.tot - 12; d += step){ if (Math.random() > pr) continue; var q = at(g, d); add(q.x + rnd(-4, 4), q.y + rnd(-4, 4), rnd(.5, .9), rnd(.25, .55), rnd(.2, .7)); } });
-      LN = X.length; LX = new Float32Array(X); LY = new Float32Array(Y); LS = new Float32Array(S); LP = new Float32Array(P); LF = new Float32Array(F); LT = new Float32Array(T); LB = new Float32Array(B); LW = new Uint8Array(Wc);
-      lightsLite = lt; return true;
-    }
-    var LCOL = ['rgba(255,214,140,', 'rgba(255,170,80,'];
-    function drawLights(t, nv){
-      if (nv <= .01) return;
-      if (!LX || lightsLite !== lite()){ if (!buildLights()) return; }
-      var s = view.s, A = toWorld(-10, -10), Bw = toWorld(vw + 10, vh + 10), sz0 = .9 + Math.min(s, .7) * 1.7, zf = zoomF();
-      cN.save(); cN.globalCompositeOperation = 'lighter';
-      // city halos (orbit-style glow, strongest when zoomed out)
-      var spr = lampSprite(), hk = nv * (.12 + .88 * Math.pow(1 - zf, 1.6));
-      for (var h = 0; h < halos.length; h++){ var H0 = halos[h], P0 = toScreen(H0[0], H0[1]), R = H0[2] * s; if (P0.x + R < 0 || P0.y + R < 0 || P0.x - R > vw || P0.y - R > vh) continue;
-        cN.globalAlpha = Math.min(1, H0[3] * hk); cN.drawImage(spr, P0.x - R, P0.y - R, R * 2, R * 2); }
-      cN.globalAlpha = 1;
-      var paths = [], dk = 1 - .4 * sstep(.45, 1, zf);
-      for (var b = 0; b < 12; b++) paths.push(new Path2D());
-      for (var i = 0; i < LN; i++){
-        var x = LX[i], y = LY[i]; if (x < A.x || y < A.y || x > Bw.x || y > Bw.y) continue;
-        var on = nv - LT[i]; if (on <= 0) continue; on = on > .25 ? 1 : on / .25;
-        var a = LB[i] * on * dk * (.68 + .32 * Math.sin(t * LF[i] + LP[i])); if (a < .05) continue;
-        var px = x * s + view.x, py = y * s + view.y, z = Math.min(3.4, LS[i] * sz0);
-        var bk = Math.min(5, (a * 6) | 0) + LW[i] * 6; paths[bk].rect(px - z / 2, py - z / 2, z, z);
+      function setStatic(pts, pools){   // pts: [x,y,size,bright]*, pools: [x,y,r,bright]*
+        if (!gl) return;
+        nP = pts.length / 4; var a = new Float32Array(nP * 48);
+        for (var i = 0; i < nP; i++) put(a, i * 48, pts[i * 4], pts[i * 4 + 1], pts[i * 4 + 2], pts[i * 4 + 3], Math.random(), 0);
+        bufP = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufP); gl.bufferData(gl.ARRAY_BUFFER, a, gl.STATIC_DRAW);
+        nQ = pools.length / 4; var q = new Float32Array(nQ * 48);
+        for (i = 0; i < nQ; i++) put(q, i * 48, pools[i * 4], pools[i * 4 + 1], pools[i * 4 + 2], pools[i * 4 + 3], Math.random(), 1);
+        bufQ = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufQ); gl.bufferData(gl.ARRAY_BUFFER, q, gl.STATIC_DRAW);
       }
-      for (b = 0; b < 12; b++){ cN.fillStyle = LCOL[b >= 6 ? 1 : 0] + ((b % 6 + 1) / 6 * nv).toFixed(3) + ')'; cN.fill(paths[b]); }
-      // forges / lava glow brighter at night
-      for (var g = 0; g < GLOW.length; g++){ var G = GLOW[g], PG = toScreen(G[0], G[1]), RG = G[2] * s * 2.2; cN.globalAlpha = .45 * nv; cN.drawImage(spr, PG.x - RG, PG.y - RG, RG * 2, RG * 2); }
-      cN.restore();
+      function begin(){ nd = 0; }
+      // screen-space (css px) lantern: bright core + optional warm pool of radius pr
+      function lamp(x, y, r, a, sd, pr){
+        if (nd >= DMAX - 1 || a < .01 || x < -60 || y < -60 || x > vw + 60 || y > vh + 60) return;
+        put(dyn, nd * 48, x, y, r, a, sd, 2); nd++;
+        if (pr > 0){ put(dyn, nd * 48, x, y, pr, a * .55, sd, 3); nd++; }
+      }
+      function bind(b){ gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.vertexAttribPointer(A.a, 4, gl.FLOAT, false, STR, 0); gl.vertexAttribPointer(A.b, 4, gl.FLOAT, false, STR, 16); }
+      function flush(t, nv, zf, lt){
+        if (!ok) return;
+        if (nv <= .01){ if (!cleared){ gl.viewport(0, 0, cvN.width, cvN.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); cleared = true; } return; }
+        cleared = false;
+        gl.viewport(0, 0, cvN.width, cvN.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.uniform2f(U.uRes, vw, vh); gl.uniform1f(U.uT, t % 10000); gl.uniform1f(U.uNV, nv);
+        gl.uniform1f(U.uPx, .75 + Math.min(view.s, .7) * 1.5);
+        gl.uniform1f(U.uPool, .3 + .7 * Math.pow(1 - zf, 1.4));
+        gl.uniform3f(U.uView, view.s, view.x, view.y);
+        if (bufQ && nQ){ bind(bufQ); gl.drawArrays(gl.TRIANGLES, 0, nQ * 6); }
+        if (bufP && nP){ var n = Math.round(nP * (lt ? .5 : 1) * (.42 + .58 * sstep(.04, .4, zf))); bind(bufP); gl.drawArrays(gl.TRIANGLES, 0, n * 6); }
+        if (nd){ gl.uniform3f(U.uView, 1, 0, 0); bind(bufD); gl.bufferSubData(gl.ARRAY_BUFFER, 0, dyn.subarray(0, nd * 48)); gl.drawArrays(gl.TRIANGLES, 0, nd * 6); }
+      }
+      return {init: init, setStatic: setStatic, begin: begin, lamp: lamp, flush: flush, get ok(){ return ok; }, get n(){ return nP; }, get pools(){ return nQ; }, get dyn(){ return nd; }};
+    })();
+    var LN = 0;
+    function loadLights(){
+      NGL.init(); if (!NGL.ok) return;
+      fetch(BASE + 'lights.bin').then(function(r){ if (!r.ok) throw new Error('lights.bin ' + r.status); return r.arrayBuffer(); }).then(function(ab){
+        var u = new Uint16Array(ab), np = u[0], nq = u[1], pts = new Float32Array(np * 4), pools = [], o = 2;
+        for (var i = 0; i < np; i++, o += 3){ pts[i * 4] = u[o]; pts[i * 4 + 1] = u[o + 1]; pts[i * 4 + 2] = (u[o + 2] & 255) / 20; pts[i * 4 + 3] = (u[o + 2] >> 8) / 255; }
+        for (i = 0; i < nq; i++, o += 4) pools.push(u[o], u[o + 1], u[o + 2], u[o + 3] / 1000 * .55);
+        GLOW.forEach(function(g){ pools.push(g[0], g[1], g[2] * 2.4, .5); });   // forges / lava
+        NGL.setStatic(pts, pools); LN = np; kick();
+      }).catch(function(e){ if (window.console) console.warn('map night lights', e); });
     }
+    var simAcc = 0;
     function draw(t){
       var dt = lastT ? Math.min(.1, t - lastT) : .016; lastT = t;
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, vw, vh);
-      cN.setTransform(dpr, 0, 0, dpr, 0, 0); cN.clearRect(0, 0, vw, vh);
       if (!ready || reduce) return;
       var lt = lite(), zf = zoomF(), nv = DN.v.lights;
-      stepCars(dt, lt); stepBirds(dt, lt); stepShips(dt, lt); var sv = stepSmoke(dt, lt, zf);
-      drawLights(t, nv);
-      drawWhirl(t, lt); drawGlow(t, lt); drawShips(t, nv); drawCars(t, nv, cN); drawSmoke(sv, zf); drawBirds(lt);
+      // far away the movement is sub-pixel: simulate caravans/ships/birds at ~30 Hz (Light: ~20 Hz) and draw every frame
+      simAcc += dt; if (simAcc >= (zf < .28 ? (lt ? .05 : .033) : 0)){ stepCars(simAcc, lt); stepBirds(simAcc, lt); stepShips(simAcc, lt); simAcc = 0; }
+      var sv = stepSmoke(dt, lt, zf);
+      NGL.begin(); var D = window.__ulvMapDbg || 0;
+      drawWhirl(t, lt); drawGlow(t, lt); if (!D.noships) drawShips(t, nv); if (!D.nocars) drawCars(t, nv); if (!D.nosmoke) drawSmoke(sv, zf); drawBirds(lt);
+      if (!D.nonight) NGL.flush(t, nv, zf, lt);
     }
     // what is around a world point (for the soundscape)
     function probe(x, y){
       var town = 0, S = DATA.settlements;
       for (var i = 0; i < S.length; i++){ var d = Math.hypot(S[i][0] - x, S[i][1] - y); town = Math.max(town, 1 - sstep(S[i][2] * .6, S[i][2] * 2.2, d)); }
       var landF = 0, n = 0; for (var a = 0; a < 5; a++){ var ox = a ? Math.cos(a * 1.57) * 120 : 0, oy = a ? Math.sin(a * 1.57) * 120 : 0; landF += isLand(x + ox, y + oy) ? 1 : 0; n++; }
-      return {town: town, land: landF / n, coast: coastDist(x, y)};
+      var sh = 0, ca = 0;   // ship / caravan proximity (world px), for creaks+lapping and hooves+wheels when zoomed close
+      for (i = 0; i < ships.length; i++){ var k = ships[i], q = laneAt(k.ln, k.d0 + k.dir * k.t); sh = Math.max(sh, 1 - sstep(25, 150, Math.hypot(q.x - x, q.y - y))); }
+      for (i = 0; i < cars.length; i++){ var c = cars[i]; if (c.d < 0 || c.d > c.tot) continue; var q2 = at(c, c.d); ca = Math.max(ca, 1 - sstep(20, 120, Math.hypot(q2.x - x, q2.y - y))); }
+      return {town: town, land: landF / n, coast: coastDist(x, y), ship: sh, car: ca};
     }
-    return {init: init, resize: resize, draw: draw, zoomF: zoomF, spawn: spawnFlock, probe: probe, coastDist: coastDist,
+    function landPt(){ return landPts.length ? landPts[(Math.random() * landPts.length) | 0] : null; }
+    return {init: init, resize: resize, draw: draw, zoomF: zoomF, landPt: landPt, spawn: spawnFlock, probe: probe, coastDist: coastDist,
       stats: function(){ return {ships: ships.length, wakes: wakes.length, wakePts: wakes.reduce(function(n, w){ return n + w.pts.length; }, 0), galleon: (function(){ var g = ships.filter(function(k){ return k.type === "galleon" && k.t > 300; })[0]; if (!g) return null; var q = laneAt(g.ln, g.d0 + g.dir * g.t); return [Math.round(q.x), Math.round(q.y)]; })(), fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
         shipPos: ships.slice(0, 6).map(function(k){ var q = laneAt(k.ln, k.d0 + k.dir * k.t); return [Math.round(q.x), Math.round(q.y)]; }),
-        net: !!NET, netEdges: netEdges.length, armies: armies, lights: LN, kinds: cars.reduce(function(o, k){ o[k.kind] = (o[k.kind] || 0) + 1; return o; }, {}), hops: cars.filter(function(k){ return k.hops; }).length,
+        net: !!NET, netEdges: netEdges.length, armies: armies, lights: LN, pools: NGL.pools, dynLights: NGL.dyn, kinds: cars.reduce(function(o, k){ o[k.kind] = (o[k.kind] || 0) + 1; return o; }, {}), hops: cars.filter(function(k){ return k.hops; }).length,
         cars: cars.length, carRoads: cars.reduce(function(o, k){ var j = roadGeo().indexOf(k.g); o[j] = (o[j] || 0) + 1; return o; }, {}), gates: cars.filter(function(k){ return k.gate; }).length, flocks: flocks.length, roads: roadGeo().length, lanes: lanes.length, smoke: smoke.length, land: landPts.length,
         carPos: cars.slice(0, 4).map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
   })();
@@ -1098,7 +1288,9 @@
     var cells = [mk(), mk()], last = 0;
     function mk(){ return {x: -9999, y: -9999, r: 300, a: 0, fl: 0, life: 0, age: 0, vx: 0, vy: 0, next: 0, f2: 0}; }
     function spawn(c0, t){
-      for (var i = 0; i < 60; i++){
+      var lp = wxOn && c0 === cells[1] && Math.random() < .8 ? LIFE.landPt() : null;   // weather on: passing rain storms over land too
+      if (lp){ c0.x = lp[0] - 160; c0.y = lp[1] - 40; c0.land = 1; } else c0.land = 0;
+      for (var i = 0; i < 60 && !lp; i++){
         var x = 300 + Math.random() * (W - 600), y = 300 + Math.random() * (H - 600), d = LIFE.coastDist(x, y);
         if (d > 180 && d < 520){ c0.x = x; c0.y = y; break; }
       }
@@ -1108,17 +1300,19 @@
       var dt = last ? Math.min(.2, t - last) : 0; last = t;
       for (var i = 0; i < 2; i++){
         var c0 = cells[i];
-        if (c0.age >= c0.life){ if (Math.random() < .02 || !c0.life) spawn(c0, t + i * 40); continue; }
+        if (c0.age >= c0.life){ if (Math.random() < (wxOn ? .05 : .02) || !c0.life) spawn(c0, t + i * 40); continue; }
         c0.age += dt; c0.x += c0.vx * dt; c0.y += c0.vy * dt;
         c0.a = Math.min(1, c0.age / 12, (c0.life - c0.age) / 12);
         if (t > c0.next){ c0.f2 = t; c0.next = t + 6 + Math.random() * 12; }
         var e = t - c0.f2; c0.fl = e < 0 || e > .7 ? 0 : (e < .08 ? 1 : e < .16 ? .25 : e < .24 ? .8 : Math.max(0, .8 - (e - .24) * 2));
       }
     }
-    return {cells: cells, step: step};
+    function near(x, y){ var b = 0; for (var i = 0; i < 2; i++){ var c0 = cells[i]; if (c0.a > .05) b = Math.max(b, c0.a * (1 - Math.min(1, Math.hypot(c0.x - x, c0.y - y) / (c0.r * 2.2)))); } return b; }
+    return {cells: cells, step: step, near: near};
   })();
   var cloudsOn = true; try { cloudsOn = localStorage.getItem('ulv-map-clouds') !== '0'; } catch(e){}
   // ---------------------------------------------------------------- day/night cycle: 1 min day + 1 min night; paused = eases back to noon
+  function lin(a, b, x){ return Math.max(0, Math.min(1, (x - a) / (b - a))); }
   var DN = (function(){
     var run = true; try { run = localStorage.getItem('ulv-map-dn') !== '0'; } catch(e){}
     var PERIOD = 120, ph = .03, last = 0, v = {day: 1, dusk: 0, night: 0, elev: 1, sx: 0, sy: .5, lights: 0, ph: .25};
@@ -1128,7 +1322,7 @@
       if (run && !reduce) ph = (ph + dt / PERIOD) % 1;
       else { var d = .25 - ph; if (d > .5) d -= 1; if (d < -.5) d += 1; ph = reduce ? .25 : (ph + d * Math.min(1, dt * 1.4) + 1) % 1; }
       var a = ph * 6.2832, e = Math.sin(a);
-      v.ph = ph; v.day = ss(-.12, .2, e); v.night = 1 - v.day; v.dusk = Math.exp(-Math.pow(e / .2, 2)); v.elev = Math.abs(e);
+      v.ph = ph; v.day = ss(-.26, .3, e); v.night = 1 - v.day; v.dusk = Math.exp(-Math.pow(e / .4, 2)); v.elev = Math.abs(e);
       var la = e >= 0 ? a : a - Math.PI; v.sx = Math.cos(la); v.sy = .55 * Math.sin(la) + .15;
       v.lights = ss(.18, .8, v.night);
       return v;
@@ -1145,7 +1339,7 @@
       'precision mediump float;',
       'uniform sampler2D uField;uniform vec2 uRes;uniform float uK;uniform vec3 uView;uniform vec2 uMap;uniform vec2 uCenter;',
       'uniform float uTime;uniform float uZoom;uniform float uLite;uniform vec4 uFogP;uniform float uCloud;uniform vec2 uWind;uniform vec4 uSt0;uniform vec4 uSt1;uniform vec2 uFl;',
-      'uniform sampler2D uBase;uniform float uHasBase;uniform vec4 uDN;uniform vec2 uSun;',
+      'uniform sampler2D uBase;uniform float uHasBase;uniform vec4 uDN;uniform vec2 uSun;uniform float uWx;',
       'float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
       'float fbm(vec2 p){float v=0.,a=.5,s=0.;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int i=0;i<5;i++){if(uLite>.5&&i>2)break;v+=a*n(p);s+=a;p=m*p;a*=.5;}return v/s;}',
@@ -1187,7 +1381,16 @@
       '  vec2 cid=floor(ws/46.); float cr=h(cid); float cph=fract(t*.13+cr*7.31);',
       '  vec2 cj=vec2(h(cid+3.1),h(cid+7.7))*30.+8.; float cd=length(fract(ws/46.)*46.-cj);',
       '  float cap0=step(.88,cr)*smoothstep(0.,.12,cph)*(1.-smoothstep(.12,.45,cph))*(1.-smoothstep(1.,3.2,cd));',
-      '  o.rgb+=vec3(.95,.98,1.)*cap0*.28*sea*smoothstep(.2,.55,uZoom);}',
+      '  o.rgb+=vec3(.95,.98,1.)*cap0*.28*sea*smoothstep(.2,.55,uZoom);',
+      // choppy patches: drifting regions of short crossing waves, normal-shaded from the sun (troughs dark, crests lit)
+      '  float chop=smoothstep(.52,.74,n(ws/760.+vec2(t*.006,-t*.004)))*sea*smoothstep(.06,.3,uZoom);',
+      '  if(chop>.01){vec2 wp=ws/19.;float ta=t*1.3;',
+      '   float c0=sin(wp.x*1.1+wp.y*.45-ta)+.8*sin(wp.x*.42-wp.y*1.05-ta*.8)+.9*n(wp*1.6+vec2(ta*.4,0.));',
+      '   float cx=sin((wp.x+.35)*1.1+wp.y*.45-ta)+.8*sin((wp.x+.35)*.42-wp.y*1.05-ta*.8)+.9*n((wp+vec2(.35,0.))*1.6+vec2(ta*.4,0.));',
+      '   float cy=sin(wp.x*1.1+(wp.y+.35)*.45-ta)+.8*sin(wp.x*.42-(wp.y+.35)*1.05-ta*.8)+.9*n((wp+vec2(0.,.35))*1.6+vec2(ta*.4,0.));',
+      '   vec2 gw=vec2(cx-c0,cy-c0)*2.4;float lit=dot(normalize(vec3(-gw,1.)),normalize(vec3(uSun*.8+vec2(.3,-.5),.9)));',
+      '   over(o,vec3(0.,.03,.07),clamp(.92-lit,0.,1.)*.30*chop);o.rgb+=vec3(.75,.88,.98)*pow(max(0.,lit),8.)*.22*chop*(1.-uDN.z*.7);',
+      '   o.rgb+=vec3(.92,.97,1.)*smoothstep(1.55,2.3,c0)*.14*chop;}}',
       // coastal foam lines rolling toward the shore (patchy, not on every coast)
       ' {float cz=smoothstep(.08,.35,uZoom); if(cz>0.){float nn=n(w/90.+t*.03);',
       '  float fr=fract(dist/15.+t*.33+nn*1.3); float wv=smoothstep(0.,.07,fr)*(1.-smoothstep(.07,.32,fr));',
@@ -1206,19 +1409,30 @@
       ' if(uHasBase>.5){vec2 tx=vec2(1.6)/vec2(639.,615.); vec3 lw=vec3(.3,.59,.11);',
       '  float hl=dot(texture2D(uBase,uv-vec2(tx.x,0.)).rgb,lw),hr=dot(texture2D(uBase,uv+vec2(tx.x,0.)).rgb,lw),hu=dot(texture2D(uBase,uv-vec2(0.,tx.y)).rgb,lw),hd=dot(texture2D(uBase,uv+vec2(0.,tx.y)).rgb,lw);',
       '  vec3 nn=normalize(vec3((hl-hr)*3.2,(hu-hd)*3.2,1.)); float lam=dot(nn,L3)-L3.z;',
-      '  float rs=landM*(1.-fogA*.8)*mix(.55,1.,day);',
-      '  o.rgb+=mix(vec3(1.,.9,.7),vec3(1.,.62,.32),dusk)*max(0.,lam)*.55*rs*day;',
-      '  over(o,mix(vec3(.05,.03,.08),vec3(.01,.02,.06),night),clamp(-lam,0.,1.)*.75*rs);}',
+      '  float lowS=1.-smoothstep(.3,.95,elev)*day;float rs=landM*(1.-fogA*.8)*(.12+.88*lowS);',
+      '  o.rgb+=mix(vec3(1.,.9,.7),vec3(1.,.6,.3),dusk)*max(0.,lam)*.32*rs*day;',
+      '  over(o,mix(vec3(.05,.03,.08),vec3(.01,.02,.06),night),clamp(-lam,0.,1.)*.42*rs);}',
       // broad sun-side gradient (far side a little darker) + low-sun warmth
       ' vec2 sd=uv-.5; float side=dot(sd,normalize(uSun+vec2(1e-4)));',
-      ' over(o,vec3(.04,.02,.05),clamp(.10-side*.22,0.,.2)*day*(.5+dusk));',
-      ' over(o,vec3(1.,.48,.20),.15*dusk*(.55+side*.6+.25));',
-      ' o.rgb+=vec3(1.,.55,.25)*.05*dusk*max(0.,side+.3);',
+      ' float lowS2=1.-smoothstep(.3,.95,elev)*day;',
+      ' over(o,vec3(.04,.02,.05),clamp(.10-side*.22,0.,.2)*day*lowS2*(.4+dusk));',
+      ' over(o,mix(vec3(1.,.50,.18),vec3(.95,.38,.30),clamp(.5-side,0.,1.)),.24*dusk*(.6+side*.5+.2));',
+      ' o.rgb+=vec3(1.,.62,.28)*.09*dusk*max(0.,side+.35);',
       ' over(o,vec3(.012,.026,.075),.60*night);',
       ' o.rgb+=vec3(.02,.04,.09)*night*(1.-landM*.5);',
+      // weather (toggle): snow-whitened north & high peaks + snowfall, wind gust streaks over the Karduwh forests
+      ' if(uWx>.01){float nz=1.-smoothstep(560.,980.,w.y);float pk=(1.-smoothstep(260.,520.,length((w-vec2(2290.,700.))*vec2(1.,1.5))));',
+      '  float sz=max(nz,pk)*landM*(1.-fogA*.6);float sn=n(w/38.)*.6+n(w/11.)*.4;',
+      '  over(o,mix(vec3(.80,.86,.94),vec3(.95,.97,1.),day),sz*smoothstep(.35,.75,sn)*.42*uWx*(1.-night*.5));',
+      '  float szf=max(nz,pk)*(1.-fogA*.6);if(uLite<.5&&szf>.02){for(int L=0;L<2;L++){float fl=float(L);vec2 g=css/(15.+fl*11.)+vec2(sin(t*.6+fl*2.)*.8+t*(.6+fl*.3),-t*(1.6+fl*.9));',
+      '   vec2 id=floor(g);vec2 fq=fract(g)-.5-(vec2(h(id),h(id+5.3))-.5)*.6;float fk=step(.55,h(id+1.7));',
+      '   o.rgb+=vec3(.95,.97,1.)*(1.-smoothstep(.05,.16+fl*.04,length(fq)))*fk*szf*(.75-fl*.2)*uWx*smoothstep(.12,.45,uZoom);}}',
+      '  float gm=(1.-smoothstep(220.,520.,length((w-vec2(1450.,1320.))*vec2(1.,1.3))))*landM*uWx*smoothstep(.15,.45,uZoom);',
+      '  if(gm>.01){float env=smoothstep(.3,1.,sin(t*.37)*.5+.5+sin(t*.91)*.3);vec2 gq=vec2((w.x+w.y*.25)/70.-t*1.6,(w.y-w.x*.12)/4.5);',
+      '   o.rgb+=vec3(.92,.96,.9)*smoothstep(.78,.96,n(gq))*smoothstep(.3,.7,n(gq*.13+3.))*.16*gm*env*(1.-night*.6);}}',
       // slow warm light sweep across the map (full mode)
       ' if(uLite<.5){float sw=dot(uv,vec2(.857,.514));float ph=fract(t/46.)*2.4-.5;float band=exp(-pow((sw-ph)/.10,2.));o.rgb+=vec3(1.,.88,.66)*band*.05*(1.-fogA*.6)*day*(1.-dusk);}',
-      ' vec3 cTint=mix(mix(vec3(1.),vec3(1.12,.74,.52),dusk),vec3(.20,.26,.42),night);',
+      ' vec3 cTint=mix(mix(vec3(1.),mix(vec3(1.22,.78,.50),vec3(1.12,.62,.74),clamp(.5-side*1.5,0.,1.)),dusk),vec3(.20,.26,.42),night);',
       ' float a0=cloud(c0,t*.03,thr); float a0l=cloud(c0-vec2(.012,.016),t*.03,thr);',
       ' vec3 cc0=mix(vec3(.50,.54,.62),vec3(1.,.98,.94),clamp(.6+(a0-a0l)*3.5,0.,1.));',
       ' over(o,cc0*cTint,min(a0*.8,.78)*uCloud*cap*(1.-.25*night));',
@@ -1238,7 +1452,7 @@
       gl.useProgram(prog);
       var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['uField','uRes','uK','uView','uMap','uCenter','uTime','uZoom','uLite','uFogP','uCloud','uWind','uSt0','uSt1','uFl','uBase','uHasBase','uDN','uSun'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
+      ['uField','uRes','uK','uView','uMap','uCenter','uTime','uZoom','uLite','uFogP','uCloud','uWind','uSt0','uSt1','uFl','uBase','uHasBase','uDN','uSun','uWx'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
       tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 1, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, new Uint8Array([255]));
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -1268,7 +1482,7 @@
     }
     function resize(){
       if (!vw) return;
-      ratio = lite() ? 0.33 : Math.min(0.6, 0.5 * dpr);
+      ratio = lite() ? 0.33 : Math.min(0.5, 0.45 * dpr);
       if (fallback || !gl){ cvF.width = Math.round(vw * dpr); cvF.height = Math.round(vh * dpr); return; }
       cvF.width = Math.max(2, Math.round(vw * ratio)); cvF.height = Math.max(2, Math.round(vh * ratio));
     }
@@ -1296,7 +1510,7 @@
       gl.uniform4f(U.uSt0, S0.x, S0.y, S0.r, lt || reduce ? 0 : S0.a); gl.uniform4f(U.uSt1, S1.x, S1.y, S1.r, lt || reduce ? 0 : S1.a); gl.uniform2f(U.uFl, S0.fl, S1.fl);
       var wd = C.wind || [1, 0.35]; gl.uniform2f(U.uWind, wd[0], wd[1]);
       gl.uniform1i(U.uBase, 1); gl.uniform1f(U.uHasBase, hasBase && !lt ? 1 : 0);
-      var dv = DN.v; gl.uniform4f(U.uDN, dv.day, dv.dusk, dv.night, dv.elev); gl.uniform2f(U.uSun, dv.sx, dv.sy);
+      var dv = DN.v; gl.uniform4f(U.uDN, dv.day, dv.dusk, dv.night, dv.elev); gl.uniform2f(U.uSun, dv.sx, dv.sy); gl.uniform1f(U.uWx, wxOn ? 1 : 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     return {init: init, resize: resize, draw: draw, get ok(){ return ok; }};

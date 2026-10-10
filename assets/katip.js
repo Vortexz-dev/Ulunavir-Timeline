@@ -79,11 +79,12 @@ function esc(s){ return s.replace(/[&<>"']/g, function(c){ return {'&':'&amp;','
 function fmt(s){ return esc(s).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>'); }
 // deep links [[kart:ID|Başlık]] / [[tag:slug|Ad]] -> buttons; ids that do not exist on the site are dropped (label kept as text)
 var LSEEN = {}, LN = 0;   // per message: each target linked once, at most 6 buttons
-var LINK = /\[\[\s*(kart|tag)\s*:\s*([^|\]]{1,80}?)\s*(?:\|([^\]]{1,120}))?\]\]/g;
+var LINK = /\[\[\s*(kart|tag)\s*:\s*([^|\]]{1,80}?)\s*(?:\|([^\]]{1,120}))?\]\]|⟦\s*(kart|tag)\s*:\s*([^⟧|]{1,80}?)\s*⟧/gi;
 function linkHTML(kind, id, label){
   var N = window.__ulvNav, D = window.TIMELINE, TI = window.TAGINFO || {};
+  kind = String(kind).toLowerCase();
   if (kind === 'kart'){
-    var o = parseInt(id, 10), e = null; if (D) for (var i = 0; i < D.events.length; i++) if (D.events[i].o === o){ e = D.events[i]; break; }
+    var o = parseFloat(String(id).replace(',', '.')), e = null; if (D) for (var i = 0; i < D.events.length; i++) if (D.events[i].o === o){ e = D.events[i]; break; }   // fractional card ids (155.6) must not be truncated
     if (!e || LSEEN['k' + o] || LN >= 6) return label ? fmt(label) : '';
     LSEEN['k' + o] = 1; LN++;
     return '<button type="button" class="kp-link kp-l-kart" data-kart="' + o + '" title="Zaman çizelgesinde göster: ' + esc(e.title) + '"><i aria-hidden="true">✦</i>' + esc(label || e.title) + '</button>';
@@ -96,12 +97,12 @@ function linkHTML(kind, id, label){
 }
 function inline(s){
   var out = '', last = 0, m; LINK.lastIndex = 0;
-  while ((m = LINK.exec(s))){ out += fmt(s.slice(last, m.index)) + linkHTML(m[1], m[2], m[3] && m[3].trim()); last = LINK.lastIndex; }
+  while ((m = LINK.exec(s))){ out += fmt(s.slice(last, m.index)) + (m[1] ? linkHTML(m[1], m[2], m[3] && m[3].trim()) : linkHTML(m[4], m[5], '')); last = LINK.lastIndex; }
   return out + fmt(s.slice(last));
 }
 function md(src){
   LSEEN = {}; LN = 0;
-  src = src.replace(/\[\[[^\]\n]*\]?$/, '').replace(/⟦[^⟧\n]*⟧\s?/g, '');   // hide a link still being typed; never show raw markers
+  src = src.replace(/\[\[[^\]\n]*\]?$/, '').replace(/⟦[^⟧\n]*$/, '').replace(/⟦(?!\s*(?:kart|tag)\s*:)[^⟧\n]*⟧\s?/gi, '');   // hide a link still being typed; ⟦kart:N⟧ markers become links, other raw markers are hidden
   var lines = src.replace(/\r/g,'').split('\n'), html = '', list = null, para = [];
   function flushP(){ if (para.length){ html += '<p>' + para.map(inline).join('<br>') + '</p>'; para = []; } }
   function flushL(){ if (list){ html += '</' + list + '>'; list = null; } }
@@ -142,20 +143,43 @@ panel.innerHTML =
   '<button type="submit" class="kp-send" title="Gönder (Enter)" aria-label="Gönder"><svg viewBox="0 0 24 24"><path d="M20 3C12 4 7 9 5 17l-1 4 4-1c1-3 2-5 4-7l-3 1c2-4 5-7 11-11z" fill="currentColor"/></svg></button></form>';
 document.body.appendChild(panel); document.body.appendChild(btn);
 var log = panel.querySelector('.kp-log'), inp = panel.querySelector('.kp-in'), form = panel.querySelector('.kp-form'), sendB = panel.querySelector('.kp-send');
-var busy = false;
+var busy = false, lastIds = [];
 
-function bubble(r, text, anim){
+// "İlgili kartlar": when an answer names no card, offer the timeline cards behind the best retrieved passages
+function cardOfChunk(c){
+  var D = window.TIMELINE; if (!c || c.k !== 'ev' || !D) return null;
+  var m = c.r && /^kart:([\d.]+)$/.exec(c.r); if (m) return parseFloat(m[1]);
+  for (var i = 0; i < D.events.length; i++){ var e = D.events[i]; if (c.t === e.date + ' — ' + e.title || c.t === e.title) return e.o; }
+  return null;
+}
+function relatedCards(ids, answer){
+  if (!KB || !ids || !ids.length) return [];
+  var by = {}; KB.d.chunks.forEach(function(c){ by[c.i] = c; });
+  var a = fold(answer || ''), out = [], seen = {};
+  ids.forEach(function(id, rank){ var c = by[id], o = cardOfChunk(c); if (o == null || seen[o]) return; seen[o] = 1;
+    var e = null; window.TIMELINE.events.forEach(function(x){ if (x.o === o) e = x; }); if (!e) return;
+    var hit = toks(e.title).filter(function(w){ return w.length >= 4 && a.indexOf(w) >= 0; }).length;
+    out.push({o: o, s: hit * 2 + (ids.length - rank) / ids.length, t: e.title}); });
+  out.sort(function(x, y){ return y.s - x.s; });
+  return out.slice(0, 3).map(function(x){ return x.o; });
+}
+function relHTML(rel){
+  var D = window.TIMELINE; if (!rel || !rel.length || !D) return '';
+  var h = rel.map(function(o){ var e = null; D.events.forEach(function(x){ if (x.o === o) e = x; }); return e ? '<button type="button" class="kp-link kp-l-kart" data-kart="' + o + '" title="Zaman çizelgesinde göster: ' + esc(e.title) + '"><i aria-hidden="true">✦</i>' + esc(e.title.length > 60 ? e.title.slice(0, 58) + '…' : e.title) + '</button>' : ''; }).join('');
+  return h ? '<div class="kp-rel"><span>İlgili kartlar</span>' + h + '</div>' : '';
+}
+function bubble(r, text, anim, rel){
   var row = document.createElement('div'); row.className = 'kp-msg ' + (r === 'u' ? 'kp-u' : 'kp-m') + (anim && !lite() ? ' kp-in-anim' : '');
   if (r === 'm') row.innerHTML = '<img class="kp-av" src="' + AV + '" alt="" width="30" height="30">';
   var b = document.createElement('div'); b.className = 'kp-b';
-  if (r === 'u') b.textContent = text; else b.innerHTML = md(text);
+  if (r === 'u') b.textContent = text; else b.innerHTML = md(text) + relHTML(rel);
   row.appendChild(b); log.appendChild(row); scroll(); return b;
 }
 function scroll(){ log.scrollTop = log.scrollHeight; }
 function render(){
   log.innerHTML = '';
   bubble('m', GREET, false);
-  st.msgs.forEach(function(m){ bubble(m.r, m.t, false); });
+  st.msgs.forEach(function(m){ bubble(m.r, m.t, false, m.rel); });
 }
 function typing(){
   var row = document.createElement('div'); row.className = 'kp-msg kp-m kp-typing';
@@ -202,7 +226,7 @@ function ask(q){
   st.msgs.push({r:'u', t:q}); save(); bubble('u', q, true);
   var ty = typing();
   loadKB().catch(function(){ return null; }).then(function(){
-    var ids = retrieve(q, prevU);
+    var ids = retrieve(q, prevU); lastIds = ids;
     return fetch(API, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({q:q, h:hist, ids:ids})});
   }).then(function(r){
     if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(j){ throw {code: j.err || (r.status === 429 ? 'rate' : 'x')}; });
@@ -212,7 +236,9 @@ function ask(q){
     function finish(){
       wr.end(function(){
         var t = wr.text().trim();
-        if (t){ st.msgs.push({r:'m', t:t}); save(); }
+        if (t){ var m0 = {r:'m', t:t};
+          if (!/\[\[\s*kart\s*:|⟦\s*kart\s*:/i.test(t) || !b.querySelector('.kp-l-kart')){ var rel = relatedCards(lastIds, t); if (rel.length){ m0.rel = rel; b.insertAdjacentHTML('beforeend', relHTML(rel)); scroll(); } }
+          st.msgs.push(m0); save(); }
         else { b.innerHTML = md(errText(failed ? 'x' : 'x')); }
         busy = false; sendB.disabled = false;
       });

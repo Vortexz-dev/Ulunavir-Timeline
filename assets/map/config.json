@@ -8,6 +8,21 @@
   "walkKmPerDay": 30,
   "horseKmPerDay": 60,
   "maxZoom": 2,
-  "fog": { "clearPx": 70, "densePx": 420, "edge": 0.14, "strength": 1.0 },
-  "clouds": { "strength": 1.0, "wind": [1.0, 0.35] }
+  "fog": {
+    "clearPx": 70,
+    "densePx": 420,
+    "edge": 0.14,
+    "strength": 1.0
+  },
+  "clouds": {
+    "strength": 1.0,
+    "wind": [
+      1.0,
+      0.35
+    ]
+  },
+  "cartKmPerDay": 25,
+  "shipKmPerDay": 120,
+  "airshipKmh": 60,
+  "airshipHoursPerDay": 18
 }

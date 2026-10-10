@@ -1,13 +1,16 @@
 /* Horaghfus map soundscape: own WebAudio graph, active only while the world map is open.
    Layers (CC0 / public-domain loops in assets/sfx/map/, see assets/sfx/CREDITS.md) are crossfaded continuously
    by zoom and by what is under the view centre: high wind (lowpass opens with altitude) -> lighter wind + birds
-   -> birdsong, breeze, rustling leaves; town murmur near settlements (nature ducks), soft surf near coasts. */
+   -> birdsong, breeze, rustling leaves; town murmur near settlements (nature ducks), soft surf near coasts; at night crickets/owls replace birds; rain+thunder near storms, snowstorm wind in the snowy north/peaks,
+   ship creaks/lapping near ships and hooves/wheels near caravans when zoomed close (those five load lazily). */
 (function(){
   'use strict';
   var AC = window.AudioContext || window.webkitAudioContext;
   var DIR = 'assets/sfx/map/', LEVEL = 0.5;
-  var FILES = {windHi: 'map-wind-high.mp3', windLo: 'map-wind-low.mp3', nature: 'map-nature.mp3', breeze: 'map-breeze.mp3', town: 'map-town.mp3', surf: 'map-surf.mp3'};
-  var BASE = {windHi: .46, windLo: .8, nature: .9, breeze: .7, town: .85, surf: .75};
+  var FILES = {windHi: 'map-wind-high.mp3', windLo: 'map-wind-low.mp3', nature: 'map-nature.mp3', breeze: 'map-breeze.mp3', town: 'map-town.mp3', surf: 'map-surf.mp3',
+    night: 'map-night.mp3', storm: 'map-storm.mp3', snow: 'map-snow.mp3', ship: 'map-ship.mp3', hooves: 'map-hooves.mp3'};
+  var LAZY = {night: 1, storm: 1, snow: 1, ship: 1, hooves: 1};   // fetched only the first time they become audible
+  var BASE = {windHi: .46, windLo: .8, nature: .9, breeze: .7, town: .85, surf: .75, night: .85, storm: .9, snow: .7, ship: .8, hooves: .7};
   var ctx = null, master = null, lp = null, L = {}, loading = false, active = false, sleepT = 0, tgt = {}, nloaded = 0;
   var on = true, vol = 50;   // vol 0..100; 100 = the original v3 level (LEVEL), default 50
   try { var sv = localStorage.getItem('ulv-map-vol2'); if (sv != null && sv !== '' && isFinite(+sv)) vol = Math.max(0, Math.min(100, +sv)); } catch(e){}
@@ -28,9 +31,14 @@
     Object.keys(FILES).forEach(function(k){ var g = ctx.createGain(); g.gain.value = 0; if (k === 'windHi'){ lp.connect(g); } g.connect(master); L[k] = {g: g, src: null}; });
     return ctx;
   }
+  var started = {};
   function load(){
     if (loading || !ctx) return; loading = true;
-    Object.keys(FILES).forEach(function(k){
+    Object.keys(FILES).forEach(function(k){ if (!LAZY[k]) loadOne(k); });
+  }
+  function loadOne(k){
+    if (started[k] || !ctx) return; started[k] = 1;
+    (function(){
       fetch(DIR + FILES[k]).then(function(r){ if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then(function(ab){ return new Promise(function(res, rej){ var p = ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); }); })
         .then(function(buf){
@@ -38,7 +46,7 @@
           s.loopStart = .06; s.loopEnd = Math.max(.5, buf.duration - .06);          // skip mp3 encoder padding => seamless loop
           s.connect(k === 'windHi' ? lp._in : L[k].g); s.start(0, .06 + Math.random() * (buf.duration - 1)); L[k].src = s; nloaded++;
         }).catch(function(e){ if (window.console) console.warn('map audio: ' + FILES[k] + ' failed', e); });
-    });
+    })();
   }
   function setMaster(sec){ if (!master) return; var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(active && on ? LEVEL * vol / 100 : 0, t, sec / 3); }
   function open(){
@@ -64,6 +72,13 @@
       town: town,
       surf: (close * coastF + mid * .3 * coastF) * (1 - .6 * town)
     };
+    // night: crickets/owls replace the daytime birds; storms, snowstorm wind, ships and caravans when close to them
+    var nt = sstep(.25, .75, p.night || 0);
+    tgt.night = tgt.nature * nt * 1.1 + .25 * mid * nt * landF; tgt.nature *= 1 - nt; tgt.breeze *= 1 - .4 * nt;
+    tgt.storm = Math.min(1, (p.storm || 0) * 1.3) * (.35 + .65 * (1 - far));
+    tgt.snow = (p.snow || 0) * (.4 + .6 * (1 - far)); tgt.windHi *= 1 - .5 * (p.snow || 0);
+    tgt.ship = (p.ship || 0) * close; tgt.hooves = (p.car || 0) * close * (1 - .5 * town);
+    Object.keys(LAZY).forEach(function(k){ if (tgt[k] > .01) loadOne(k); });
     var t = ctx.currentTime;
     Object.keys(tgt).forEach(function(k){ var g = L[k].g.gain; g.cancelScheduledValues(t); g.setTargetAtTime(tgt[k] * BASE[k], t, .5); });
     lp.frequency.cancelScheduledValues(t); lp.frequency.setTargetAtTime(520 + 2300 * far * far + 600 * mid, t, .6);   // wind character: dull/near -> airy/high (kept soft, no hiss)

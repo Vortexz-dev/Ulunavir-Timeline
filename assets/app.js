@@ -420,6 +420,7 @@ var FX = (function(){
   }
   function frame(t){
     if (!running) return;
+    if (document.body.classList.contains('map-open')){ lastT = 0; lastDraw = 0; setTimeout(function(){ requestAnimationFrame(frame); }, 300); return; }   // world map covers the page: pause particles
     measure(t);
     if (lite && lastDraw && t - lastDraw < 30){ requestAnimationFrame(frame); return; } // light mode: ~30fps particles
     lastDraw = t;

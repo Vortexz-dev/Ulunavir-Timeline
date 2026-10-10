@@ -7,7 +7,7 @@
 .map-btn:focus-visible{outline:2px solid #f0cf86;outline-offset:3px}
 body.fx-lite .map-btn{backdrop-filter:none}
 
-.mapx{position:fixed;inset:0;z-index:70;background:rgba(6,4,10,.72);backdrop-filter:blur(3px);overscroll-behavior:contain;touch-action:none}
+.mapx{position:fixed;inset:0;z-index:70;background:rgba(6,4,10,.86);overscroll-behavior:contain;touch-action:none}
 .mapx[hidden]{display:none}
 body.fx-lite .mapx{backdrop-filter:none}
 .mapx-panel{position:absolute;inset:3.2vh 2.6vw;border-radius:18px;overflow:hidden;background:#081c26;border:1px solid #e2b45a59;box-shadow:0 30px 90px #000d,0 0 0 1px #0008,inset 0 0 0 1px #ffffff0d;will-change:clip-path,transform}
@@ -27,14 +27,14 @@ body.fx-lite .mapx{backdrop-filter:none}
 @keyframes mapspin{to{transform:rotate(360deg)}}
 
 /* toolbar */
-.mapx-tools{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:4px;padding:5px;border-radius:14px;background:#0d0912c4;border:1px solid #e2b45a40;backdrop-filter:blur(6px);box-shadow:0 8px 26px #0009}
+.mapx-tools{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:4px;padding:5px;border-radius:14px;background:#0d0912e6;border:1px solid #e2b45a40;box-shadow:0 8px 26px #0009}
 .mapx-tools button,.mapx-x,.rt-btns button{width:34px;height:34px;padding:0;border:1px solid transparent;border-radius:10px;background:transparent;color:#e8dcc6;display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
 .mapx-tools button svg,.rt-btns svg{width:18px;height:18px}
 .mapx-tools button:hover,.rt-btns button:hover:not(:disabled){background:#e2b45a1f;color:#fff}
 .mapx-tools button.on{background:linear-gradient(180deg,#e2b45a3a,#e2b45a1a);border-color:#e2b45a77;color:#ffe2a6;box-shadow:0 0 12px #e2b45a33 inset}
 .mapx-tools .mt-sep{display:block;height:1px;margin:3px 4px;background:#e2b45a33}
 .mapx-tools button:focus-visible,.mapx-x:focus-visible,.rt-btns button:focus-visible{outline:2px solid #f0cf86;outline-offset:1px}
-.mapx-x{position:absolute;right:14px;top:14px;width:40px;height:40px;border-radius:50%;background:#0d0912c4;border-color:#e2b45a55;backdrop-filter:blur(6px);box-shadow:0 6px 20px #0009}
+.mapx-x{position:absolute;right:14px;top:14px;width:40px;height:40px;border-radius:50%;background:#0d0912e6;border-color:#e2b45a55;box-shadow:0 6px 20px #0009}
 .mapx-x svg{width:18px;height:18px}
 .mapx-x:hover{background:#2a1a10;color:#fff;box-shadow:0 0 14px #e2b45a55}
 
@@ -104,7 +104,7 @@ body.fx-lite .mapx{backdrop-filter:none}
 .mapx-tools button.is-off svg .on{display:none}
 /* map sound volume: slides out to the right of the sound button */
 .mt-sndwrap{position:relative}
-.mt-volpop{position:absolute;left:calc(100% + 10px);top:50%;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:12px;background:#0d0912e0;border:1px solid #e2b45a40;backdrop-filter:blur(6px);box-shadow:0 8px 22px #0009;
+.mt-volpop{position:absolute;left:calc(100% + 10px);top:50%;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:12px;background:#0d0912f0;border:1px solid #e2b45a40;box-shadow:0 8px 22px #0009;
   transform:translate(-10px,-50%) scaleX(.6);transform-origin:left center;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s linear .28s}
 .mt-volpop::before{content:"";position:absolute;right:100%;top:0;width:12px;height:100%}
 .mt-sndwrap:hover .mt-volpop,.mt-sndwrap:focus-within .mt-volpop,.mt-sndwrap.show .mt-volpop{opacity:1;visibility:visible;pointer-events:auto;transform:translate(0,-50%) scaleX(1);transition:opacity .22s ease,transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s}
@@ -187,3 +187,26 @@ p .mpl-est{font-size:9px;vertical-align:1px}
   .mp-place{font-size:12.5px}.mp-place.r-capital{font-size:17px}.mp-place.r-city{font-size:14px}.mp-place.r-region,.mp-place.r-sea{font-size:14px;letter-spacing:.22em}
 }
 @media (prefers-reduced-motion:reduce){.mapx-place,.mp-place,.mp-pin{transition:none}}
+
+/* ---- t122: journey planner, planned route */
+.mapx-plan{position:absolute;left:70px;top:14px;z-index:6;width:min(310px,calc(100% - 90px));max-height:calc(100% - 28px);overflow-y:auto;overscroll-behavior:contain;padding:12px 14px 14px;border-radius:14px;
+  background:linear-gradient(180deg,#f6e8c6,#e9d4a3);color:#2b1a0b;border:1px solid #8a6328;box-shadow:0 14px 40px #000b;font:15px/1.4 Cormorant,Georgia,serif}
+.mapx-plan[hidden]{display:none}
+.pl-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.pl-h b{font:700 12px Cinzel,serif;letter-spacing:.12em;text-transform:uppercase;color:#5a2a10}
+.pl-x{width:28px;height:28px;padding:0;border-radius:50%;border:1px solid #6b4a2366;background:#f3e3bf;color:#5a2a10;display:grid;place-items:center;cursor:pointer}.pl-x svg{width:14px;height:14px}
+.pl-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.pl-n{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#2b1a0b;color:#f3e3bf;font:700 11px Cinzel,serif}
+.pl-row input{flex:1;min-width:0;height:32px;padding:0 10px;border-radius:9px;border:1px solid #8a632888;background:#fffaf0;color:#2b1a0b;font:600 15px Cormorant,Georgia,serif;outline:none}
+.pl-row input:focus{border-color:#8a2f12;box-shadow:0 0 0 2px #e2b45a66}.pl-row input.bad{border-color:#b3262a;background:#fff0ea}
+.pl-rm{flex:none;width:26px;height:26px;padding:0;border:0;border-radius:50%;background:none;color:#7a2a0e;font:700 18px/1 Georgia,serif;cursor:pointer}.pl-rm:hover{background:#2b1a0b14}
+.pl-add{margin:2px 0 8px 28px;padding:4px 10px;border-radius:14px;border:1px dashed #8a6328;background:none;color:#5a2a10;font:700 11px Cinzel,serif;letter-spacing:.06em;cursor:pointer}
+.pl-km{font:600 15px Cormorant,serif;margin:4px 0 6px}.pl-km b{font:700 20px Cinzel,serif;color:#2b1305}.pl-km small{color:#6b4a28}
+.pl-t{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 8px}.pl-t dt{font:700 10.5px Cinzel,serif;letter-spacing:.06em;color:#7a4a1a;padding-top:3px}.pl-t dd{margin:0;font-weight:700}.pl-t small{font-weight:500;color:#6b4a28}
+.pl-notes{margin:0 0 6px;padding-left:16px;font-size:13.5px;color:#7a2a0e}.pl-fine,.pl-hint{margin:4px 0 0;font-size:12.5px;color:#6b4a28;font-style:italic}
+.mapx-planr path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mapx-planr .p-glow{stroke:#fff3cf;stroke-opacity:.55;stroke-width:8}
+.mapx-planr .p-ink{stroke:#8a1f12;stroke-width:3.2;stroke-dasharray:9 5;filter:drop-shadow(0 1px 2px #0009)}
+.mapx-planr .p-sea{stroke:#fff4d6;stroke-width:3;stroke-dasharray:2 8;stroke-opacity:.95;filter:drop-shadow(0 0 2px #0b2a4a) drop-shadow(0 1px 1px #000a)}
+.p-node circle{fill:#2b1a0b;stroke:#f3e3bf;stroke-width:2}.p-node text{fill:#f3e3bf;font:700 10px Cinzel,serif;text-anchor:middle}
+.mapx-rt .rt-t b{white-space:nowrap}
+@media (max-width:700px){.mapx-plan{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:55%}}

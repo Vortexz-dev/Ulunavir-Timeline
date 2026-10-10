@@ -69,3 +69,5 @@ body.fx-lite .kp-b.kp-ink{box-shadow:0 1px 3px #6b4a2022}
 .kp-link i{font-style:normal;font-size:.8em;color:#9a6a1e}
 .kp-link:hover,.kp-link:focus-visible{background:linear-gradient(180deg,#fff2d2,#f0dcab);box-shadow:0 0 0 1px #e2b45a,0 2px 8px #b58a3c66;transform:translateY(-1px)}
 .kp-l-tag i{color:#6a4aa0}
+.kp-rel{display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin-top:8px;padding-top:6px;border-top:1px dashed #b58a3c88}
+.kp-rel>span{font:700 10px Cinzel,serif;letter-spacing:.1em;text-transform:uppercase;color:#7a4a1a;margin-right:4px}
