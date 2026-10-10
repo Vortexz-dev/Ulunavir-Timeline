@@ -7,7 +7,7 @@
   var AC = window.AudioContext || window.webkitAudioContext;
   var DIR = 'assets/sfx/map/', LEVEL = 0.5;
   var FILES = {windHi: 'map-wind-high.mp3', windLo: 'map-wind-low.mp3', nature: 'map-nature.mp3', breeze: 'map-breeze.mp3', town: 'map-town.mp3', surf: 'map-surf.mp3'};
-  var BASE = {windHi: .85, windLo: .8, nature: .9, breeze: .7, town: .85, surf: .75};
+  var BASE = {windHi: .46, windLo: .8, nature: .9, breeze: .7, town: .85, surf: .75};
   var ctx = null, master = null, lp = null, L = {}, loading = false, active = false, sleepT = 0, tgt = {}, nloaded = 0;
   var on = true, vol = 50;   // vol 0..100; 100 = the original v3 level (LEVEL), default 50
   try { var sv = localStorage.getItem('ulv-map-vol2'); if (sv != null && sv !== '' && isFinite(+sv)) vol = Math.max(0, Math.min(100, +sv)); } catch(e){}
@@ -23,7 +23,8 @@
     master = ctx.createGain(); master.gain.value = 0;
     var comp = ctx.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 3;
     master.connect(comp); comp.connect(ctx.destination);
-    lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000; lp.Q.value = .6;
+    lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2000; lp.Q.value = .5;
+    var hs = ctx.createBiquadFilter(); hs.type = 'highshelf'; hs.frequency.value = 2500; hs.gain.value = -9; lp.connect(hs); lp = {connect: function(n){ hs.connect(n); }, frequency: lp.frequency, _in: lp};
     Object.keys(FILES).forEach(function(k){ var g = ctx.createGain(); g.gain.value = 0; if (k === 'windHi'){ lp.connect(g); } g.connect(master); L[k] = {g: g, src: null}; });
     return ctx;
   }
@@ -35,7 +36,7 @@
         .then(function(buf){
           var s = ctx.createBufferSource(); s.buffer = buf; s.loop = true;
           s.loopStart = .06; s.loopEnd = Math.max(.5, buf.duration - .06);          // skip mp3 encoder padding => seamless loop
-          s.connect(k === 'windHi' ? lp : L[k].g); s.start(0, .06 + Math.random() * (buf.duration - 1)); L[k].src = s; nloaded++;
+          s.connect(k === 'windHi' ? lp._in : L[k].g); s.start(0, .06 + Math.random() * (buf.duration - 1)); L[k].src = s; nloaded++;
         }).catch(function(e){ if (window.console) console.warn('map audio: ' + FILES[k] + ' failed', e); });
     });
   }
@@ -65,7 +66,7 @@
     };
     var t = ctx.currentTime;
     Object.keys(tgt).forEach(function(k){ var g = L[k].g.gain; g.cancelScheduledValues(t); g.setTargetAtTime(tgt[k] * BASE[k], t, .5); });
-    lp.frequency.cancelScheduledValues(t); lp.frequency.setTargetAtTime(650 + 5200 * far * far + 900 * mid, t, .6);   // wind character: dull/near -> airy/high
+    lp.frequency.cancelScheduledValues(t); lp.frequency.setTargetAtTime(520 + 2300 * far * far + 600 * mid, t, .6);   // wind character: dull/near -> airy/high (kept soft, no hiss)
   }
   function setOn(v){ on = !!v; try { localStorage.setItem('ulv-map-snd', on ? '1' : '0'); } catch(e){} if (on && active) open(); setMaster(.6); }
   function setVol(v){ vol = Math.max(0, Math.min(100, Math.round(+v || 0))); try { localStorage.setItem('ulv-map-vol2', String(vol)); } catch(e){} setMaster(.15); }

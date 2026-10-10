@@ -507,27 +507,33 @@
       var R = roads(); if (roadSrc === R.length + ':' + ROADS.length && roadCache) return roadCache;
       roadSrc = R.length + ':' + ROADS.length;
       roadCache = R.map(function(rd){ var p = rd.points.map(function(q){ return {x: q[0], y: q[1]}; }), L = [0];
-        for (var i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y)); return {p: p, L: L, tot: L[L.length - 1]}; })
+        for (var i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y));
+        var a = p[0], b = p[p.length - 1];
+        return {p: p, L: L, tot: L[L.length - 1], w: +rd.w || (rd.main ? 3 : 1), gA: nearTown(a.x, a.y), gB: nearTown(b.x, b.y)}; })
         .filter(function(g){ return g.tot > 40; });
       return roadCache;
     }
+    function nearTown(x, y){ var S = DATA.settlements || []; for (var i = 0; i < S.length; i++) if (Math.hypot(S[i][0] - x, S[i][1] - y) < S[i][2] * 1.3) return true; return false; }
+    // traffic weight: road length (sqrt, so long roads don't hog everything) x importance (main roads w=3, side roads w=1)
     function newCar(stagger){
       var G = roadGeo(); if (!G.length) return null;
-      var sum = 0, i; for (i = 0; i < G.length; i++) sum += G[i].tot;
-      for (var tries = 0; tries < 6; tries++){
-        var r = Math.random() * sum, g = G[0]; for (i = 0; i < G.length; i++){ r -= G[i].tot; if (r <= 0){ g = G[i]; break; } }
-        var rev = Math.random() < .5, d = stagger ? rnd(0, g.tot * .85) : 0, ok = true;
+      var gate = !stagger && Math.random() < .45, pool = gate ? G.filter(function(g){ return g.gA || g.gB; }) : G; if (!pool.length){ pool = G; gate = false; }
+      var sum = 0, i; for (i = 0; i < pool.length; i++) sum += Math.sqrt(pool[i].tot) * pool[i].w;
+      for (var tries = 0; tries < 8; tries++){
+        var r = Math.random() * sum, g = pool[0]; for (i = 0; i < pool.length; i++){ r -= Math.sqrt(pool[i].tot) * pool[i].w; if (r <= 0){ g = pool[i]; break; } }
+        // gate start: leave from the settlement end of the road; otherwise start somewhere mid-road and fade in
+        var rev = gate ? (g.gA && g.gB ? Math.random() < .5 : !g.gA) : Math.random() < .5, d = gate ? 0 : rnd(0, g.tot * .8), ok = true;
         for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o && o.g === g && Math.abs((o.rev === rev ? o.d : o.tot - o.d) - d) < 70){ ok = false; break; } }
-        if (ok || tries === 5){
+        if (ok || tries === 7){
           var p = rev ? g.p.slice().reverse() : g.p, L = [0];
           for (i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y));
-          return {g: g, rev: rev, p: p, L: L, tot: g.tot, d: d, v: rnd(5, 9), trail: [], tAcc: 0, size: rnd(.85, 1.2), carts: Math.random() < .45 ? 2 + (Math.random() < .3 ? 1 : 0) : 1};
+          return {g: g, rev: rev, p: p, L: L, tot: g.tot, d: d, d0: stagger ? d - 50 : d, gate: gate, arrive: rev ? g.gA : g.gB, v: rnd(5, 9) * (g.w > 1 ? 1 : .85), trail: [], tAcc: 0, size: rnd(.85, 1.2), carts: Math.random() < .45 ? 2 + (Math.random() < .3 ? 1 : 0) : 1};
         }
       }
       return null;
     }
     function stepCars(dt, lt){
-      var want = lt ? 11 : 32, guard = 0;
+      var want = lt ? 12 : 40, guard = 0;
       while (cars.length < want && guard++ < want){ var n = newCar(true); if (!n) break; cars.push(n); }
       if (cars.length > want) cars.length = want;
       for (var i = 0; i < cars.length; i++){
@@ -539,7 +545,7 @@
     function drawCars(){
       var s = view.s, sz = clamp(13 * s, 2.4, 8);
       for (var i = 0; i < cars.length; i++){
-        var k = cars[i], fade = Math.min(1, k.d / (k.tot * .07), (k.tot - k.d) / (k.tot * .07)); if (fade <= 0) continue;
+        var k = cars[i], fade = Math.min(1, (k.d - k.d0) / (k.gate ? 14 : 45), (k.tot - k.d) / (k.arrive ? 18 : Math.max(30, k.tot * .07))); if (fade <= 0) continue;
         var q = at(k, k.d), P = toScreen(q.x, q.y); if (!vis(P, 40)) continue;
         if (k.trail.length > 1){
           c.lineCap = 'round'; c.lineWidth = Math.max(.9, sz * .45);
@@ -778,7 +784,7 @@
     return {init: init, resize: resize, draw: draw, zoomF: zoomF, spawn: spawnFlock, probe: probe, coastDist: coastDist,
       stats: function(){ return {ships: ships.length, fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
         shipPos: ships.slice(0, 6).map(function(k){ var q = laneAt(k.ln, k.d0 + k.dir * k.t); return [Math.round(q.x), Math.round(q.y)]; }),
-        cars: cars.length, flocks: flocks.length, roads: roadGeo().length, lanes: lanes.length, smoke: smoke.length, land: landPts.length,
+        cars: cars.length, carRoads: cars.reduce(function(o, k){ var j = roadGeo().indexOf(k.g); o[j] = (o[j] || 0) + 1; return o; }, {}), gates: cars.filter(function(k){ return k.gate; }).length, flocks: flocks.length, roads: roadGeo().length, lanes: lanes.length, smoke: smoke.length, land: landPts.length,
         carPos: cars.slice(0, 4).map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
   })();
 
