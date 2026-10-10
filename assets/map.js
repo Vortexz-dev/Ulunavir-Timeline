@@ -431,6 +431,13 @@
     var land = null, landPts = [], roadsA = [], wp = null, wpIn = null;
     var cars = [], flocks = [], nextFlock = 2, lastT = 0, ready = false;
     var WP = {x: 4503, y: 1380, r: 132, sq: 0.68};
+    // sea lanes (checked against the coast-distance field: open water, within the fog-light belt)
+    var LANES = [[[700,2150],[1500,2180],[2300,2170]], [[2950,600],[3050,1200],[3100,1800]],
+                 [[1300,2600],[1450,3100],[1900,3420],[2750,3400]], [[1500,3850],[2400,3800],[3300,3850]]];
+    // chimney smoke over painted towns, ember glow over the volcanoes / forges
+    var SMOKE = [[1000,950],[1085,1015],[960,1060],[1166,1437],[1254,1437],[2206,4325],[2120,4380],[3620,991]];
+    var GLOW = [[2233,440,70],[2330,855,34],[2511,930,30],[2222,984,30],[2319,1026,32],[2212,1219,30],[2914,4484,60]];
+    var ships = [];
     function rnd(a, b){ return a + Math.random() * (b - a); }
     function init(autoRoads){
       roadsA = autoRoads || [];
@@ -560,6 +567,58 @@
         }
       }
     }
+    // ---- ships
+    function newShip(stagger){
+      var ln = LANES[(Math.random() * LANES.length) | 0].map(function(q){ return [q[0], q[1]]; }); if (Math.random() < .5) ln.reverse();
+      var k = {p: ln.map(function(q){ return {x: q[0], y: q[1]}; }), L: [0], d: 0, v: rnd(7, 11), sz: rnd(.85, 1.2), ph: rnd(0, 6)};
+      for (var i = 1; i < k.p.length; i++) k.L.push(k.L[i - 1] + Math.hypot(k.p[i].x - k.p[i - 1].x, k.p[i].y - k.p[i - 1].y));
+      k.tot = k.L[k.L.length - 1]; if (stagger) k.d = rnd(0, k.tot * .8); return k;
+    }
+    function stepShips(dt, lt){
+      var want = lt ? 2 : 4; while (ships.length < want) ships.push(newShip(true)); if (ships.length > want) ships.length = want;
+      for (var i = 0; i < ships.length; i++){ var k = ships[i]; k.d += k.v * dt; if (k.d >= k.tot) ships[i] = newShip(false); }
+    }
+    function drawShips(t){
+      var s = view.s, sz = Math.max(2, Math.min(9, 13 * s));
+      for (var i = 0; i < ships.length; i++){
+        var k = ships[i], fade = Math.min(1, k.d / (k.tot * .06), (k.tot - k.d) / (k.tot * .06)); if (fade <= 0) continue;
+        var q = at(k, k.d), P = toScreen(q.x, q.y); if (P.x < -40 || P.y < -40 || P.x > vw + 40 || P.y > vh + 40) continue;
+        var z = sz * k.sz, bob = Math.sin(t * 1.4 + k.ph) * .06;
+        c.save(); c.translate(P.x, P.y); c.globalAlpha = fade;
+        // wake: faint white V behind the hull
+        c.rotate(q.ang); c.strokeStyle = 'rgba(230,245,250,.28)'; c.lineWidth = Math.max(.6, z * .12);
+        c.beginPath(); c.moveTo(-z * 2.6, -z * .7); c.lineTo(-z * .4, 0); c.lineTo(-z * 2.6, z * .7); c.stroke();
+        c.fillStyle = '#2b1a0e'; c.beginPath(); c.ellipse(0, 0, z * .62, z * .2, 0, 0, 6.283); c.fill();   // hull (top-down)
+        c.rotate(-q.ang + bob);                                                                         // sail stays upright on the painted map
+        c.fillStyle = '#efe6d2'; c.beginPath(); c.moveTo(-z * .05, -z * .15); c.lineTo(-z * .05, -z * 1.05); c.lineTo(z * .45, -z * .2); c.closePath(); c.fill();
+        c.strokeStyle = 'rgba(40,28,16,.6)'; c.lineWidth = Math.max(.4, z * .07); c.stroke();
+        c.restore();
+      }
+    }
+    // ---- chimney smoke (full mode) + ember glow
+    function drawSmoke(t, zf){
+      var s = view.s, a0 = Math.min(1, zf * 2.2); if (a0 <= .02) return;
+      for (var i = 0; i < SMOKE.length; i++){
+        var P = toScreen(SMOKE[i][0], SMOKE[i][1]); if (P.x < -80 || P.y < -120 || P.x > vw + 80 || P.y > vh + 40) continue;
+        for (var j = 0; j < 5; j++){
+          var ph = (t * .09 + j / 5 + i * .37) % 1, r = (4 + ph * 14) * s;
+          var x = P.x + (ph * 26 + Math.sin(t * .6 + j + i) * 3) * s, y = P.y - ph * 46 * s;
+          c.fillStyle = 'rgba(205,200,195,' + ((1 - ph) * ph * .55 * a0).toFixed(3) + ')';
+          c.beginPath(); c.arc(x, y, Math.max(.8, r), 0, 6.283); c.fill();
+        }
+      }
+    }
+    function drawGlow(t, lt){
+      var s = view.s; c.save(); c.globalCompositeOperation = 'lighter';
+      for (var i = 0; i < GLOW.length; i++){
+        var g0 = GLOW[i], P = toScreen(g0[0], g0[1]), R = g0[2] * s * 1.6; if (P.x + R < 0 || P.y + R < 0 || P.x - R > vw || P.y - R > vh) continue;
+        var fl = lt ? .8 : .62 + .2 * Math.sin(t * 2.3 + i * 1.9) + .12 * Math.sin(t * 5.7 + i) + .06 * Math.sin(t * 11.3 + i * 3);
+        var g = c.createRadialGradient(P.x, P.y, 0, P.x, P.y, R);
+        g.addColorStop(0, 'rgba(255,140,40,' + (.22 * fl).toFixed(3) + ')'); g.addColorStop(.5, 'rgba(255,80,20,' + (.08 * fl).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,60,10,0)');
+        c.fillStyle = g; c.fillRect(P.x - R, P.y - R, R * 2, R * 2);
+      }
+      c.restore();
+    }
     // ---- whirlpool
     function drawWhirl(t, lt){
       if (!wp || !wp.complete || !wp.naturalWidth) return;
@@ -590,10 +649,10 @@
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, vw, vh);
       if (!ready || reduce) return;
       var lt = lite();
-      stepCars(dt, lt); stepBirds(dt, lt);
-      drawWhirl(t, lt); drawCars(); drawBirds(lt);
+      stepCars(dt, lt); stepBirds(dt, lt); stepShips(dt, lt);
+      drawWhirl(t, lt); drawGlow(t, lt); drawShips(t); drawCars(); if (!lt) drawSmoke(t, zoomF()); drawBirds(lt);
     }
-    return {init: init, resize: resize, draw: draw, zoomF: zoomF, spawn: spawnFlock, stats: function(){ return {cars: cars.length, flocks: flocks.length, roads: roads().length, land: landPts.length, flockPos: flocks.map(function(f){ return [Math.round(f.sx + Math.cos(f.ang) * f.d), Math.round(f.sy + Math.sin(f.ang) * f.d)]; }), carPos: cars.map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
+    return {init: init, resize: resize, draw: draw, zoomF: zoomF, spawn: spawnFlock, stats: function(){ return {shipPos: ships.map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; }), ships: ships.length, cars: cars.length, flocks: flocks.length, roads: roads().length, land: landPts.length, flockPos: flocks.map(function(f){ return [Math.round(f.sx + Math.cos(f.ang) * f.d), Math.round(f.sy + Math.sin(f.ang) * f.d)]; }), carPos: cars.map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
   })();
 
   // ---------------------------------------------------------------- atmosphere (WebGL)
