@@ -78,16 +78,20 @@ function retrieve(q, prev){
 function esc(s){ return s.replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function fmt(s){ return esc(s).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>'); }
 // deep links [[kart:ID|Başlık]] / [[tag:slug|Ad]] -> buttons; ids that do not exist on the site are dropped (label kept as text)
+var LSEEN = {}, LN = 0;   // per message: each target linked once, at most 6 buttons
 var LINK = /\[\[\s*(kart|tag)\s*:\s*([^|\]]{1,80}?)\s*(?:\|([^\]]{1,120}))?\]\]/g;
 function linkHTML(kind, id, label){
   var N = window.__ulvNav, D = window.TIMELINE, TI = window.TAGINFO || {};
   if (kind === 'kart'){
     var o = parseInt(id, 10), e = null; if (D) for (var i = 0; i < D.events.length; i++) if (D.events[i].o === o){ e = D.events[i]; break; }
-    if (!e) return label ? fmt(label) : '';
+    if (!e || LSEEN['k' + o] || LN >= 6) return label ? fmt(label) : '';
+    LSEEN['k' + o] = 1; LN++;
     return '<button type="button" class="kp-link kp-l-kart" data-kart="' + o + '" title="Zaman çizelgesinde göster: ' + esc(e.title) + '"><i aria-hidden="true">✦</i>' + esc(label || e.title) + '</button>';
   }
-  var k = N && N.tagBySlug(id.toLowerCase()); if (!k && TI[id]) k = id;
-  if (!k) return label ? fmt(label) : '';
+  var k = N && (N.tagBySlug(id.toLowerCase()) || N.tagBySlug(N.slug(id))); if (!k && TI[id]) k = id;
+  if (!k){ try { var r = window.__ulv.TagCard.resolve(id); if (r && !r.via) k = r.key; } catch(e){} }
+  if (!k || LSEEN['t' + k] || LN >= 6) return label ? fmt(label) : fmt(k || '');
+  LSEEN['t' + k] = 1; LN++;
   return '<button type="button" class="kp-link kp-l-tag" data-tag="' + esc(k) + '" title="Bilgi kartını aç: ' + esc(k) + '"><i aria-hidden="true">☉</i>' + esc(label || k) + '</button>';
 }
 function inline(s){
@@ -96,6 +100,7 @@ function inline(s){
   return out + fmt(s.slice(last));
 }
 function md(src){
+  LSEEN = {}; LN = 0;
   src = src.replace(/\[\[[^\]\n]*\]?$/, '').replace(/⟦[^⟧\n]*⟧\s?/g, '');   // hide a link still being typed; never show raw markers
   var lines = src.replace(/\r/g,'').split('\n'), html = '', list = null, para = [];
   function flushP(){ if (para.length){ html += '<p>' + para.map(inline).join('<br>') + '</p>'; para = []; } }
