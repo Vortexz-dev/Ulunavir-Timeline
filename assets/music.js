@@ -5,7 +5,7 @@
    Site açılınca müzik kendiliğinden başlamayı dener; tarayıcı sesli otomatik
    oynatmayı engellerse ilk tıklama / dokunma / tuş / kaydırmada başlar.
    Kullanıcı müziği kapattıysa (tercih tarayıcıda saklanır) bir daha zorlamaz.
-   Dönem/kaydırma müziği DEĞİŞTİRMEZ; dönem ambiyansı ayrı bir katmandır (aşağıda 'eraAmbience').
+   Bazı olay/bölümlerde özel şarkı çalar (aşağıda 'eventMusic'); dönem ambiyansı ayrı bir katmandır ('eraAmbience').
    ========================================================================== */
 window.MUSIC = {
   volume: 35,      // varsayılan ses (0–100)
@@ -21,35 +21,69 @@ window.MUSIC = {
     { name:'Main Theme',                          src:'assets/music/08.mp3' }
   ],
   /* ------------------------------------------------------------------------
-     DÖNEM AMBİYANSI (ERA AMBIENCE) — şimdilik BOŞ: Phoenix kendi ambiyans
-     dosyalarını yıl aralıklarıyla gönderecek. Dosyaları assets/sfx/ içine koyup
-     aşağıdaki listeye ekle; liste boşken hiç ambiyans çalmaz (olay sesleri yine çalar).
-
-     Biçim (yukarıdan aşağı İLK eşleşen satır kullanılır):
-       { from: 1949, to: 2999, files: ['amb-kadim-1.mp3', 'amb-kadim-2.mp3'], gain: 1 }
-         from / to : yıl aralığı, iki uç dahil (ekrandaki olayın yılı).
-         files     : tek dosya = kesintisiz döngü; birden fazla = sırayla çalar,
-                     biri bitince yumuşak geçişle sıradakine geçer, sonra başa döner.
-         gain      : isteğe bağlı ses çarpanı (varsayılan 1).
-       { postgame: true, files: [...] }      oyun (kampanya) dönemi: 'Kampanya öncesi',
-                                             'Cilt I', festival, TimeSkip, Tahliye, Mital Alari...
-       { chapters: ['ch08','ch09'], files: [...] }  isteğe bağlı: belirli oyun bölümleri.
-     Yıl kuralı: oyun öncesi olaylarda tarihteki ilk yıl kullanılır ("8102–9072" -> 8102,
-     "tarihsiz, 9763 ile 9761 arası" -> 9763). Oyun dönemi olaylarının yılı 10000 sayılır,
-     yani { from: 9903, to: 99999 } de oyun dönemini kapsar.
-     Geçişler: dönem değişince crossfadeSec saniyelik eşit güçlü geçiş; aynı dönemde
-     kalınca ses yeniden başlamaz; hızlı kaydırmada dwellSec kadar beklenir.
+     OLAYA / BÖLÜME ÖZEL MÜZİK (Phoenix'in Drive'a yüklediği şarkılar, assets/music/event/)
+     Varsayılan 8 parça normal çalar. Ekrandaki olay aşağıdaki listede bir bölgeye
+     girince müzik yumuşak geçişle o şarkıya geçer (şarkı orada döngüde çalar).
+     Bölgeden çıkınca varsayılan parçaya geri dönülür: hangi parçada ve kaçıncı
+     saniyede kalındıysa oradan devam eder.
+       chapters: [...]  bölümün tamamı (başlık kartından son olayına kadar)
+       orders:   [...]  yalnızca bu olay(lar) — data.js'teki 'o' numaraları
+     Yukarıdan aşağı İLK eşleşen satır kullanılır (olay satırları bölüm satırlarından önce).
+     ------------------------------------------------------------------------ */
+  eventMusic: [
+    { name:'Güneş Savaşları',  src:'assets/music/event/gunes-savaslari.mp3',   orders:[42, 43] },
+    { name:'Serylda’nın Sesi', src:'assets/music/event/seryldanin-sesi.mp3',   orders:[130, 130.5] },
+    { name:'Sefer Hazırlığı',  src:'assets/music/event/sefer-hazirligi.mp3',   orders:[133, 134, 134.5] },
+    { name:'Jephcoats',        src:'assets/music/event/jephcoats.mp3',         orders:[161, 162] },
+    { name:'Girift Âlem',      src:'assets/music/event/girift-alem.mp3',       orders:[163] },
+    { name:'Kadim Çağ',        src:'assets/music/event/kadim-cag.mp3',         chapters:['kadim'] },
+    { name:'İmparatorluk Çağı',src:'assets/music/event/imparatorluk-cagi.mp3', chapters:['imparatorluk'] },
+    { name:'Boraldmir’in Dönüşü', src:'assets/music/event/boraldmirin-donusu.mp3', chapters:['donus'] },
+    { name:'Güney Seferi',     src:'assets/music/event/guney-seferi.mp3',      chapters:['ch04'] },
+    { name:'Balahnur’un Düşüşü', src:'assets/music/event/balahnurun-dususu.mp3', chapters:['ch08'] },
+    { name:'Mital Alari',      src:'assets/music/event/mital-alari.mp3',       chapters:['ch10'] }
+  ],
+  eventMusicFadeSec: 2.5,   // varsayılan <-> özel şarkı geçişi (saniye)
+  eventMusicDwellSec: 1.2,  // bölgeye girip/çıkınca geçmeden önce bekleme (hızlı kaydırmada müzik sürekli değişmesin)
+  /* ------------------------------------------------------------------------
+     DÖNEM AMBİYANSI (Phoenix'in numaralı ambiyans dosyaları, assets/amb/)
+     Her bölüm (çağ) kendi ambiyansını çalar; bölümler arası eşit güçlü yumuşak geçiş.
+       chapters: bölüm kimlikleri (data.js chapters[].id)
+       file:     normal ambiyans
+       war:      isteğe bağlı SAVAŞ sürümü; 'warOrders' listesindeki olaylar ekrandayken
+                 normal sürümle yumuşak geçişle yer değiştirir (ikisi de kaldığı yerden sürer).
+     Dosyalar web için kısaltıldı: orijinallerin ilk 1 dakikası atlandı (60. saniyeden
+     itibaren 6 dakika, 80 kbps). Bu yüzden startSec 0; tam dosya konursa startSec: 60 yap —
+     her döngü de startSec'ten yeniden başlar.
      ------------------------------------------------------------------------ */
   eraAmbience: [
-    // örnek: { from: 1949, to: 2999, files: ['amb-kadim.mp3'] },
-    // örnek: { postgame: true, files: ['amb-oyun-1.mp3', 'amb-oyun-2.mp3'] }
+    { chapters:['kadim'],        file:'01-kadim.mp3' },
+    { chapters:['kanunsuz'],     file:'02-kanunsuz.mp3' },
+    { chapters:['kurtulus'],     file:'03-kurtulus.mp3' },
+    { chapters:['gunes'],        file:'04-gunes.mp3',        war:'04-gunes-war.mp3',
+      warOrders:[42, 43, 46, 48, 50, 51, 56, 57, 58] },
+    { chapters:['imparatorluk'], file:'05-imparatorluk.mp3', war:'05-imparatorluk-war.mp3',
+      warOrders:[63, 67, 68, 73, 76, 77, 78, 79, 80, 81, 82, 87, 88, 89, 92, 94] },
+    { chapters:['donus'],        file:'06-donus.mp3',        war:'06-donus-war.mp3', warOrders:[101] },
+    { chapters:['ch01'],         file:'07-ch01.mp3' },
+    { chapters:['ch02'],         file:'08-ch02.mp3' },
+    { chapters:['ch03'],         file:'09-ch03.mp3' },
+    { chapters:['ch04'],         file:'10-ch04.mp3' },
+    { chapters:['ch05'],         file:'11-ch05.mp3' },
+    { chapters:['ch06'],         file:'12-ch06.mp3' },
+    { chapters:['ch07'],         file:'13-ch07.mp3' },
+    { chapters:['ch08'],         file:'14-ch08.mp3' },
+    { chapters:['ch09'],         file:'15-ch09.mp3' },
+    { chapters:['ch10', 'ch11'], file:'16-ch10-ch11.mp3' }
   ],
   ambience: {
-    volume: 24,          // ambiyans varsayılan sesi (0–100); eski varsayılan 30'un bir kademe altı, müzik önde kalır
+    volume: 24,          // ambiyans varsayılan sesi (0–100); müzik önde, ambiyans arka planda kalır
     on: true,            // ambiyans + olay sesleri açık/kapalı (sağ alttaki müzik panelinde)
-    crossfadeSec: 5,     // dönemler arası eşit güçlü geçiş (saniye)
-    loopXfadeSec: 1.5,   // dosya sonu -> başı (ya da sıradaki dosya) arası kısa geçiş, tık sesi olmasın
-    dwellSec: 2.5        // yeni döneme geçmeden önce o dönemde kalma süresi (hızlı kaydırmada sesler sürekli değişmesin)
+    startSec: 0,         // her dosya bu saniyeden başlar ve döngüde buraya döner (dosyalarda ilk dakika zaten atlandı)
+    crossfadeSec: 5,     // bölümler arası eşit güçlü geçiş (saniye)
+    warFadeSec: 4,       // normal <-> savaş sürümü geçişi (saniye)
+    loopXfadeSec: 6,     // dosya sonu -> başı arası geçiş (dikiş duyulmasın)
+    dwellSec: 2.5        // yeni bölüme / savaş sürümüne geçmeden önce bekleme (hızlı kaydırmada sesler sürekli değişmesin)
   },
   /* ------------------------------------------------------------------------
      OLAY SESLERİ — yalnızca bu 40 önemli olayda çalar (anahtar: data.js'teki olay 'o' numarası).

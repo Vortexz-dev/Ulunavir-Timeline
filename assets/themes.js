@@ -49,6 +49,25 @@ window.THEMES = {
     timestop: { name:'Durmuş zaman',     line:'#fff0b0', glow:'#3fb8c0', bgTop:'#0f1e22', bgBot:'#05090b', particles:{ motes:1, mist:.3 } },
     grief:    { name:'Yas',              line:'#8aa0c8', glow:'#2a3550', bgTop:'#0d1018', bgBot:'#040508', particles:{ rain:.65, mist:.2 } }
   },
+  /* HAVA EFEKTLERİ — arka plandaki uçuşan parçacıklar çağa/bölüme göre değişir.
+     İlk eşleşen kural kullanılır. orders: [ilk, son] olay 'o' aralığı, chapters: bölümler,
+     not: hariç tutulan olaylar. Bir hava modu, adını verdiği katmanları (0 dahil) belirler;
+     temanın diğer katmanları hafifçe (x0.4) kalır. Geçişler komşu olaylarla yumuşatılır.
+     'Efektler: Hafif' modunda ve yavaş cihazlarda parçacık sayısı otomatik azalır. */
+  weather: {
+    modes: {
+      rain: { rain:1, mist:.3, snow:0, embers:0, dust:0 },              // yağmur damlaları
+      snow: { snow:1, mist:.15, rain:0, embers:0, ash:0 },              // kar
+      burn: { ash:.95, embers:.9, smoke:.35, rain:0, snow:0, motes:0 }  // düşen kül + yükselen közler
+    },
+    rules: [
+      { orders:[6, 19], mode:'rain' },                       // Keder Yağışları (2001–3000)
+      { chapters:['ch05'], orders:[155, 158], mode:'snow' },  // Blood&Duty: karlı Balahnur kışı
+      { chapters:['ch06'], not:[163], mode:'snow' },          // Kış: Jephcoats, TimeSkip 2 (Girift Âlem hariç)
+      { orders:[176, 176], mode:'snow' },                     // Echoes of the Past: donmuş ev
+      { chapters:['ch08'], not:[192], mode:'burn' }           // Balahnur yanarken (Arrowhul uçuşu hariç)
+    ]
+  },
   rules: [
     // ===== OYUN SONRASI (chapters ch01–ch11): önce başlık kuralları, sonra bölüm varsayılanı =====
     // ch01 Geçmişler ve Büyük Savaş

@@ -120,9 +120,29 @@ itemsEl.innerHTML = html;
 document.getElementById('heroSub').textContent = D.count+' olay, en yeniden en eskiye — aşağı kaydırdıkça zamanda geriye inersin.';
 var EV_ELS = Array.prototype.slice.call(itemsEl.querySelectorAll('.ev'));
 
+// WEATHER (config: THEMES.weather in assets/themes.js): rain in the Sorrow Rains, snow in the
+// winter chapters, ash + embers while Balahnur burns. A weather mode sets its own particle
+// layers (keys it names, zeros included); the theme's other layers stay faintly (x0.4).
+var WX = TH.weather || {modes:{}, rules:[]};
+function weatherOf(e){
+  var R = WX.rules || [];
+  for (var i=0;i<R.length;i++){
+    var r = R[i];
+    if (r.chapters && r.chapters.indexOf(e.era) < 0) continue;
+    if (r.orders && (e.o < r.orders[0] || e.o > r.orders[1])) continue;
+    if (r.not && r.not.indexOf(e.o) >= 0) continue;
+    if (WX.modes[r.mode]) return r.mode;
+  }
+  return null;
+}
+var WEATHER_OF = {}; events.forEach(function(e){ WEATHER_OF[e.o] = weatherOf(e); });
 // smoothed per-event atmosphere vectors (display order)
 var VEC = (function(){
-  var raw = events.map(function(e){return themeVec(THEME_OF[e.o], e.age);});
+  var raw = events.map(function(e){
+    var v = themeVec(THEME_OF[e.o], e.age), w = WEATHER_OF[e.o];
+    if (w){ var m = WX.modes[w]; PTYPES.forEach(function(k){ v.p[k] = (k in m) ? m[k] : v.p[k]*0.4; }); }
+    return v;
+  });
   var k = Math.max(0, TH.smoothing|0), out = [];
   for (var i=0;i<raw.length;i++){
     var acc = null, wsum = 0;
@@ -144,20 +164,23 @@ var VEC = (function(){
 // =====================================================================
 function layout(){
   if (mqMobile.matches){ itemsEl.style.height=''; return; }
-  var y = {left:0,right:0}, lastTop = -1e9, MIN_STEP = 96, GAP = 44, first = true;
+  // t103: more air between cards (was MIN_STEP 96 / GAP 44): a card starts at least STAGGER x the previous
+  // (other-side) card's height below it, so neighbours only half-overlap instead of stacking 4 deep
+  var L = window.__ulvLayout || {}, MIN_STEP = L.step || 200, GAP = L.gap || 150, STAGGER = L.stagger != null ? L.stagger : 0.85;
+  var y = {left:0,right:0}, lastTop = -1e9, lastH = 0, first = true;
   var kids = itemsEl.children;
   for (var i=0;i<kids.length;i++){
     var el = kids[i], h = el.offsetHeight, top;
     if (el.classList.contains('era')){
       var post = el.classList.contains('post');
-      top = Math.max(y.left, y.right) + (first ? 30 : (post ? 150 : 90));
+      top = Math.max(y.left, y.right) + (first ? 30 : (post ? 190 : 130));
       el.style.top = top+'px';
-      y.left = y.right = top + h + (post ? 90 : 60); lastTop = top + h; first = false;
+      y.left = y.right = top + h + (post ? 110 : 80); lastTop = top + h; lastH = 0; first = false;
     } else {
       var s = el.classList.contains('left')?'left':'right';
-      top = Math.max(y[s], lastTop + MIN_STEP);
+      top = Math.max(y[s], lastTop + Math.max(MIN_STEP, lastH * STAGGER));
       el.style.top = top+'px';
-      y[s] = top + h + GAP; lastTop = top;
+      y[s] = top + h + GAP; lastTop = top; lastH = h;
     }
   }
   itemsEl.style.height = Math.max(y.left,y.right)+'px';
@@ -221,6 +244,45 @@ function computeAnchors(){
   if (lineEl){ var lr = lineEl.getBoundingClientRect(), tl = document.getElementById('timeline'); sparkGeo.top = lr.top + sy; sparkGeo.x = lr.left + lr.width/2; sparkGeo.h = tl ? tl.offsetHeight : lr.height; }
   anchors = EV_ELS.map(function(el){ var r = el.getBoundingClientRect(); return r.top + sy + Math.min(r.height, 400)/2; });
   if (window.Ambience_targets) window.Ambience_targets(sy);
+  computeSongRegions(sy);
+}
+// page-y spans of the event/chapter songs (MU.eventMusic): chapter = its title card .. its last event
+var SONG_REG = [], songWant = null;
+function computeSongRegions(sy){
+  SONG_REG = (MU.eventMusic||[]).filter(function(s){ return s && s.src; }).map(function(s){
+    var els = [];
+    (s.orders||[]).forEach(function(o){ var el = itemsEl.querySelector('.ev[data-o="'+o+'"]'); if (el) els.push(el); });
+    (s.chapters||[]).forEach(function(c){ var sec = itemsEl.querySelector('section.era[data-era="'+c+'"]'); if (sec) els.push(sec);
+      Array.prototype.forEach.call(itemsEl.querySelectorAll('.ev[data-era="'+c+'"]'), function(e){ els.push(e); }); });
+    if (!els.length) return null;
+    var top = 1e12, bot = -1e12;
+    els.forEach(function(el){ var r = el.getBoundingClientRect(); top = Math.min(top, r.top + sy); bot = Math.max(bot, r.bottom + sy); });
+    return {top:top, bot:bot};
+  });
+  musicRegion();
+}
+// FOCUS: the card nearest to the centre of the view (direction-independent) drives the era
+// ambience (normal/war) and the event songs. A song's own events win (event lists before chapter
+// lists); when the focus leaves a song for the default playlist the song is kept until the view
+// centre is 20% of a screen outside the song's span (no flapping at the edges).
+var focusIdx = -1;
+function songFor(e){
+  var L = (MU.eventMusic||[]).filter(function(s){ return s && s.src; });
+  for (var i=0;i<L.length;i++){ var s = L[i];
+    if (s.orders && s.orders.indexOf(e.o) >= 0) return i;
+    if (s.chapters && s.chapters.indexOf(e.era) >= 0) return i; }
+  return null;
+}
+var SONG_OF = {}; events.forEach(function(e){ SONG_OF[e.o] = songFor(e); });
+function musicRegion(){
+  var n = anchors.length; if (!n) return;
+  var y = window.scrollY + innerHeight*0.5, best = -1, bd = 1e12;
+  if (y >= anchors[0] - innerHeight*0.6){ for (var i=0;i<n;i++){ var d = Math.abs(anchors[i] - y); if (d < bd){ bd = d; best = i; } } }
+  if (best !== focusIdx){ focusIdx = best; if (best >= 0 && typeof Ambience !== 'undefined' && Ambience) Ambience.onEvent(events[best]); }
+  if (typeof Music === 'undefined' || !Music) return;
+  var pick = best >= 0 ? SONG_OF[events[best].o] : null;
+  if (pick == null && songWant != null){ var R = SONG_REG[songWant], m = innerHeight*0.2; if (R && y >= R.top - m && y <= R.bot + m) pick = songWant; }
+  songWant = pick; Music.region(pick);
 }
 var ATM = null, lastKey = '';
 function atmosphereAt(y){
@@ -420,7 +482,7 @@ var lastScrollY = window.scrollY, sparkAcc = 0, scrollDirty = true;
 window.addEventListener('scroll', function(){ scrollDirty = true; }, {passive:true});
 function tick(){
   var sy = window.scrollY, dy = sy - lastScrollY; lastScrollY = sy;
-  if (scrollDirty){ scrollDirty = false; applyAtmosphere(); if (ATM) FX.setTargets(ATM.p); }
+  if (scrollDirty){ scrollDirty = false; applyAtmosphere(); if (ATM) FX.setTargets(ATM.p); musicRegion(); }
   if (dy && ATM && !reduce){
     sparkAcc += Math.abs(dy);
     if (sparkAcc > 22){
@@ -482,7 +544,7 @@ function setCurrent(el){
   root.style.setProperty('--accent', rgbStr(v.line));
   root.style.setProperty('--accent2', rgbStr(v.glow));
   Music.onEvent(evByO[o], THEME_OF[o]);
-  Ambience.onEvent(evByO[o]);
+  if (EraTitle) EraTitle.enter(el.dataset.era);
   if (MiniMap && hud.classList.contains('mm-open')) MiniMap.mark();
 }
 
@@ -585,10 +647,14 @@ var Lightbox = (function(){
 })();
 
 // =====================================================================
-// MUSIC (local MP3s via one HTML5 <audio>, fixed looping playlist 1..N -> 1)
+// MUSIC (local MP3s via HTML5 <audio>, fixed looping playlist 1..N -> 1)
 // config: assets/music.js. Autoplay is attempted on load; if the browser
 // refuses (no user gesture yet) playback starts on the first click / touch /
 // key / scroll. Default ON unless the visitor switched it off before.
+// Event/chapter songs (MU.eventMusic): when the view enters such a region the
+// default track fades out (paused, so it keeps its exact position) and the
+// region's song fades in and loops; leaving the region fades back and the
+// default track continues from where it stopped.
 // =====================================================================
 var Music = (function(){
   var KEY = 'ulv-music', st = {on:true, vol:(MU.volume!=null?MU.volume:35), muted:false, idx:0};
@@ -598,71 +664,115 @@ var Music = (function(){
       muteB = mpEl.querySelector('.mp-mute'), vol = mpEl.querySelector('.mp-vol'), now = mpEl.querySelector('.mp-now');
   var tracks = (MU.playlist||[]).map(function(t){ t = typeof t === 'string' ? {src:t} : (t||{}); return {src:t.src||'', name:t.name||''}; }).filter(function(t){ return t.src; });
   var N = tracks.length;
+  var SONGS = (MU.eventMusic||[]).filter(function(s){ return s && s.src; });
+  var SFADE = (MU.eventMusicFadeSec || 2.5) * 1000, SDWELL = (MU.eventMusicDwellSec != null ? MU.eventMusicDwellSec : 1.2) * 1000;
   if (!(st.idx >= 0 && st.idx < N)) st.idx = 0;
-  var au = new Audio(); au.preload = 'none'; au.loop = false; au.volume = 0;
-  var isPlaying = false, blocked = false, pending = false, errStreak = 0, fadeR = 0, loadedIdx = -1, gain = 0;
-
+  function mk(){ var a = new Audio(); a.preload = 'none'; a.loop = false; a.volume = 0; a._mix = 0; a._fr = 0; return a; }
+  var au = mk(), sp = [mk(), mk()], spi = 0;   // au = default playlist; sp = event songs (two, so one song can crossfade into another)
+  sp.forEach(function(a){ a.loop = true; a._song = -1; });
+  var mode = null, want = null, dismissed = null, regT = 0, saved = null, switches = 0, songFailed = {};
+  var isPlaying = false, blocked = false, pending = false, errStreak = 0, loadedIdx = -1;
+  function active(){ return mode == null ? au : sp[spi]; }
   function title(i){ return tracks[i].name || 'Parça'; }
   function ui(){
     mpEl.classList.toggle('playing', st.on && isPlaying);
     mpEl.classList.toggle('on', st.on);
+    mpEl.classList.toggle('special', mode != null);
     playB.setAttribute('aria-label', st.on ? 'Durdur' : 'Çal'); playB.classList.toggle('is-on', st.on);
     muteB.classList.toggle('is-muted', st.muted || st.vol === 0); muteB.setAttribute('aria-label', st.muted ? 'Sesi aç' : 'Sesi kapat');
     vol.value = st.vol; vol.style.setProperty('--v', st.vol+'%');
-    var txt;
-    if (!N) txt = 'Henüz müzik eklenmedi';
-    else if (st.on && errStreak >= N) txt = 'Parçalar oynatılamadı';
-    else if (st.on && blocked && !isPlaying) txt = (st.idx+1)+'/'+N+' · '+title(st.idx)+' — başlatmak için kaydır ya da tıkla';
-    else txt = (st.idx+1)+'/'+N+' · '+title(st.idx);
-    now.textContent = txt; now.title = N ? (st.idx+1)+'/'+N+' — '+title(st.idx) : '';
+    var txt, name = mode != null ? '\u266A ' + SONGS[mode].name + ' · bu bölüme özel' : (N ? (st.idx+1)+'/'+N+' · '+title(st.idx) : '');
+    if (!N && mode == null) txt = 'Henüz müzik eklenmedi';
+    else if (st.on && errStreak >= N && mode == null) txt = 'Parçalar oynatılamadı';
+    else if (st.on && blocked && !isPlaying) txt = name + ' — başlatmak için kaydır ya da tıkla';
+    else txt = name;
+    now.textContent = txt;
+    now.title = mode != null ? SONGS[mode].name + ' — bu olay/bölüm için seçilmiş şarkı; çıkınca ' + (saved ? (saved.idx+1)+'/'+N+' '+title(saved.idx) : 'varsayılan liste') + ' kaldığı yerden sürer' : (N ? (st.idx+1)+'/'+N+' — '+title(st.idx) : '');
   }
   function target(){ return st.muted ? 0 : st.vol/100; }
-  function setG(g){ gain = g; au.volume = Math.max(0, Math.min(1, g)); }
-  function fadeTo(to, ms, done){
-    cancelAnimationFrame(fadeR); var from = gain, t0 = performance.now();
-    (function f(){ var k = Math.min(1, (performance.now()-t0)/Math.max(1,ms)); setG(from + (to-from)*smooth(k)); if (k < 1) fadeR = requestAnimationFrame(f); else if (done) done(); })();
+  function applyVol(a){ a.volume = Math.max(0, Math.min(1, a._mix * target())); }
+  function mixTo(a, to, ms, done){
+    cancelAnimationFrame(a._fr); var from = a._mix, t0 = performance.now();
+    (function f(){ var k = Math.min(1, (performance.now()-t0)/Math.max(1,ms)); a._mix = from + (to-from)*smooth(k); applyVol(a); if (k < 1) a._fr = requestAnimationFrame(f); else if (done) done(); })();
   }
   function load(i){ if (loadedIdx === i) return; loadedIdx = i; au.src = tracks[i].src; au.preload = 'auto'; }
-  // returns the play() promise result via callbacks
-  function play(fade){
-    if (!N || !st.on) return;
-    load(st.idx); au.muted = false;
-    if (fade) setG(0);
+  function refresh(){ var a = active(); isPlaying = !!(a && !a.paused && !a.ended); ui(); }
+  // plays the element of the current mode; reports autoplay refusal
+  function play(fade, ms){
+    if (!st.on) return;
+    var a = active();
+    if (mode == null){ if (!N) return; load(st.idx); }
+    else if (a._song !== mode){ a.src = SONGS[mode].src; a._song = mode; a.preload = 'auto'; }
+    a.muted = false;
+    if (fade){ a._mix = 0; applyVol(a); }
     pending = true;
-    var p; try { p = au.play(); } catch(e){ p = null; }
-    var ok = function(){ pending = false; blocked = false; errStreak = 0; if (fade) fadeTo(target(), MU.fadeMs||1200); else setG(target()); ui(); },
-        bad = function(err){ pending = false; if (err && err.name === 'NotAllowedError'){ blocked = true; armGesture(); } ui(); };
+    var p; try { p = a.play(); } catch(e){ p = null; }
+    var ok = function(){ pending = false; blocked = false; errStreak = 0; if (a !== active()) return; if (fade) mixTo(a, 1, ms || MU.fadeMs || 1200); else { a._mix = 1; applyVol(a); } refresh(); },
+        bad = function(err){ pending = false; if (err && err.name === 'NotAllowedError'){ blocked = true; armGesture(); } refresh(); };
     if (p && p.then) p.then(ok, bad); else ok();
+  }
+  function fadeOutEl(a, ms){ mixTo(a, 0, ms, function(){ if (a !== active()){ a.pause(); if (a === au && saved) saved.t = +(au.currentTime||0).toFixed(2); } }); }
+  // switch between the default playlist (m = null) and event song m
+  function switchTo(m){
+    if (m != null && songFailed[m]) m = null;
+    if (m === mode) return;
+    var from = active(), prev = mode, wasOn = st.on && (isPlaying || pending);
+    if (prev == null && m != null) saved = {idx:st.idx, t:+(au.currentTime||0).toFixed(2)};
+    if (m != null && prev != null) spi = 1 - spi;      // song -> song: use the other element
+    mode = m; switches++;
+    if (m != null && sp[spi]._song !== m){ sp[spi].src = SONGS[m].src; sp[spi]._song = m; sp[spi].preload = 'auto'; try { sp[spi].currentTime = 0; } catch(e){} }
+    // the default element was only paused, so it continues from exactly where it stopped; if its track was
+    // unloaded meanwhile, reload that track and seek to the saved second
+    if (m == null && saved && (loadedIdx !== saved.idx || !au.getAttribute('src'))){ st.idx = saved.idx; loadedIdx = -1; load(st.idx); var t0 = saved.t; au.addEventListener('loadedmetadata', function(){ try { au.currentTime = t0; } catch(e){} }, {once:true}); }
+    if (wasOn){ fadeOutEl(from, SFADE); play(true, SFADE); }
+    else { if (from !== active()) { from.pause(); from._mix = 0; applyVol(from); } }
+    ui();
+  }
+  // called on scroll with the song region under the view centre (index into SONGS, or null)
+  function region(m){
+    if (m === want) return;
+    want = m; clearTimeout(regT);
+    if (dismissed != null && dismissed !== m) dismissed = null;
+    regT = setTimeout(function(){ switchTo(want != null && want === dismissed ? null : want); }, mode == null && want != null && !isPlaying ? 0 : SDWELL);
   }
   function go(i, keepVol){
     if (!N) return;
     st.idx = ((i % N) + N) % N; save(); ui();
     loadedIdx = -1;
-    if (!st.on) return;
+    if (!st.on || mode != null) return;
     load(st.idx); play(!keepVol);
   }
-  au.addEventListener('playing', function(){ isPlaying = true; errStreak = 0; ui(); });
-  au.addEventListener('pause', function(){ isPlaying = false; ui(); });
-  au.addEventListener('ended', function(){ isPlaying = false; if (st.on) go(st.idx+1, true); });
-  au.addEventListener('error', function(){ if (loadedIdx < 0) return; isPlaying = false; errStreak++; ui(); if (st.on && errStreak < N) setTimeout(function(){ go(st.idx+1, true); }, 700); });
-  function stop(){ fadeTo(0, 700, function(){ au.pause(); }); isPlaying = false; ui(); }
+  [au, sp[0], sp[1]].forEach(function(a){
+    a.addEventListener('playing', function(){ if (a === active()){ errStreak = 0; } refresh(); });
+    a.addEventListener('pause', refresh);
+  });
+  au.addEventListener('ended', function(){ isPlaying = false; if (st.on && mode == null) go(st.idx+1, true); });
+  au.addEventListener('error', function(){ if (loadedIdx < 0) return; isPlaying = false; errStreak++; ui(); if (st.on && mode == null && errStreak < N) setTimeout(function(){ go(st.idx+1, true); }, 700); });
+  sp.forEach(function(a){ a.addEventListener('error', function(){ if (!a.getAttribute('src')) return; if (a._song >= 0) songFailed[a._song] = true; if (a === active()){ a._song = -1; switchTo(null); } }); });
+  function stop(){ var a = active(); mixTo(a, 0, 700, function(){ [au, sp[0], sp[1]].forEach(function(x){ x.pause(); }); }); isPlaying = false; ui(); }
   function setOn(on){ st.on = on; save(); errStreak = 0; if (on) play(true); else stop(); ui(); }
   // first real interaction unlocks audio when autoplay was refused
-  // only real activation events can unlock audio (wheel/scroll cannot, and a failed
-  // attempt from them used to swallow the next click while 'pending')
   var armed = false, EVS = ['pointerdown','pointerup','keydown','touchstart','touchend','click','wheel','scroll'];
   function onGesture(){ if (!st.on || isPlaying){ disarm(); return; } play(true); }
   function armGesture(){ if (armed) return; armed = true; EVS.forEach(function(t){ window.addEventListener(t, onGesture, {capture:true, passive:true}); }); }
   function disarm(){ if (!armed) return; armed = false; EVS.forEach(function(t){ window.removeEventListener(t, onGesture, {capture:true, passive:true}); }); }
-  au.addEventListener('playing', disarm);
+  [au, sp[0], sp[1]].forEach(function(a){ a.addEventListener('playing', disarm); });
   function setOpen(o){ mpEl.classList.toggle('open', o); btn.setAttribute('aria-expanded', o); document.body.classList.toggle('mp-open', o); }
-  function step(d){ errStreak = 0; if (st.on) go(st.idx+d, true); else { st.idx = ((st.idx+d) % N + N) % N; save(); loadedIdx = -1; ui(); } }
+  function step(d){
+    errStreak = 0;
+    if (mode != null){   // skipping during an event song = back to the playlist for the rest of this region
+      dismissed = mode; var f = active(); mode = null; st.idx = ((st.idx+d) % N + N) % N; save(); loadedIdx = -1;
+      if (st.on){ fadeOutEl(f, 700); play(true); } else f.pause(); ui(); return;
+    }
+    if (st.on) go(st.idx+d, true); else { st.idx = ((st.idx+d) % N + N) % N; save(); loadedIdx = -1; ui(); }
+  }
   btn.addEventListener('click', function(){ setOpen(!mpEl.classList.contains('open')); });
   playB.addEventListener('click', function(ev){ ev.stopPropagation(); setOn(!(st.on && (isPlaying || !blocked))); });
   if (prevB) prevB.addEventListener('click', function(){ step(-1); });
   if (nextB) nextB.addEventListener('click', function(){ step(1); });
-  muteB.addEventListener('click', function(){ st.muted = !st.muted; if (!st.muted && st.vol === 0) st.vol = 30; save(); cancelAnimationFrame(fadeR); setG(target()); ui(); });
-  vol.addEventListener('input', function(){ st.vol = +vol.value; st.muted = st.vol === 0; save(); cancelAnimationFrame(fadeR); setG(target()); ui(); });
+  function volAll(){ [au, sp[0], sp[1]].forEach(applyVol); }
+  muteB.addEventListener('click', function(){ st.muted = !st.muted; if (!st.muted && st.vol === 0) st.vol = 30; save(); volAll(); ui(); });
+  vol.addEventListener('input', function(){ st.vol = +vol.value; st.muted = st.vol === 0; save(); volAll(); ui(); });
   document.addEventListener('click', function(ev){ if (!mpEl.contains(ev.target) && mpEl.classList.contains('open')) setOpen(false); });
   document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && mpEl.classList.contains('open')) { setOpen(false); btn.focus(); } });
   if (!N) mpEl.classList.add('empty');
@@ -672,22 +782,24 @@ var Music = (function(){
   hint.innerHTML = '<span class="snd-ic">\u266A</span> Müzik için kaydır ya da herhangi bir yere tıkla';
   document.body.appendChild(hint);
   function hintUi(){ hint.classList.toggle('show', !!(st.on && N && blocked && !isPlaying)); }
-  au.addEventListener('playing', hintUi); au.addEventListener('pause', hintUi);
+  [au, sp[0], sp[1]].forEach(function(a){ a.addEventListener('playing', hintUi); a.addEventListener('pause', hintUi); });
   var _ui = ui; ui = function(){ _ui(); hintUi(); };
   if (st.on && N) { play(true); window.addEventListener('load', function(){ if (!isPlaying) play(true); }); } // try autoplay right away; falls back to first gesture
-  return {onEvent:function(){ /* music does not follow eras; ambience does */ }, next:function(){ step(1); }, prev:function(){ step(-1); },
-    state:function(){ return {st:st, idx:st.idx, n:N, title:N?title(st.idx):null, playing:isPlaying, blocked:blocked, t:Math.round(au.currentTime||0), vol:Math.round(au.volume*100), src:au.currentSrc, errStreak:errStreak}; }};
+  return {onEvent:function(){}, region:region, songs:SONGS, next:function(){ step(1); }, prev:function(){ step(-1); },
+    state:function(){ var a = active(); return {st:st, idx:st.idx, n:N, mode:mode, want:want, song:mode != null ? SONGS[mode].name : null, title:mode != null ? SONGS[mode].name : (N?title(st.idx):null),
+      playing:isPlaying, blocked:blocked, t:+(a.currentTime||0).toFixed(2), defT:+(au.currentTime||0).toFixed(2), defPaused:au.paused, vol:Math.round(a.volume*100), src:a.currentSrc,
+      saved:saved, switches:switches, errStreak:errStreak, now:now.textContent}; }};
 })();
 
 // =====================================================================
 // AMBIENCE + EVENT SOUNDS (one WebAudio graph)
-// - Era ambience: MU.eraAmbience = [{from,to,files,gain} | {postgame:true,...} |
-//   {chapters:[...],...}] (see assets/music.js). Empty list = no ambience at all.
-//   The event in view maps to a year; the first matching entry is the era.
-//   Era changes wait dwellSec (hysteresis for fast scrolling), then do an
-//   equal-power crossfade of crossfadeSec. Staying in the same era never
-//   restarts the loop. Each file loops with a short self-crossfade (no clicks);
-//   several files play in sequence.
+// - Era ambience: MU.eraAmbience = [{chapters:[...], file, war?, warOrders?}] (assets/music.js).
+//   Files STREAM through pooled <audio> elements (MediaElementSource -> gain -> ambBus),
+//   so a 6-minute ambience never has to be decoded into memory. Each file loops with a
+//   long self-crossfade (two elements), restarting at cfg.startSec. Era changes wait
+//   dwellSec, then do an equal-power crossfade of crossfadeSec. An era with a 'war' file
+//   layers it: while the event in view is a war event the war version fades in and the
+//   normal one fades out (warFadeSec); both keep their position.
 // - Event sounds: only the events listed in MU.eventSfx (keyed by event 'o').
 //   Fired when the moving timeline spark reaches the event's dot; skipped on
 //   fast scrolling and jumps; min gap MU.sfxMinGapMs. Fixed low level
@@ -696,24 +808,37 @@ var Music = (function(){
 //   Off = silent, event sounds included.
 // =====================================================================
 var Ambience = (function(){
-  var KEY = 'ulv-amb2', cfg = MU.ambience || {}, ERAS = (MU.eraAmbience || []).filter(function(r){ return r && r.files && r.files.length; });
+  var KEY = 'ulv-amb2', cfg = MU.ambience || {}, ERAS = (MU.eraAmbience || []).filter(function(r){ return r && r.file && r.chapters; });
   var EVSFX = MU.eventSfx || {}, GAP = MU.sfxMinGapMs != null ? MU.sfxMinGapMs : 3000;
   var st = {on: cfg.on !== false, vol: cfg.volume != null ? cfg.volume : 24};
   try { var sv = JSON.parse(localStorage.getItem(KEY)||'null'); if (sv){ st.on = sv.on !== false; if (sv.vol != null) st.vol = +sv.vol||0; } } catch(e){}
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){} }
   var ambB = mpEl.querySelector('.mp-amb'), avol = mpEl.querySelector('.mp-avol');
   var AC = window.AudioContext || window.webkitAudioContext;
-  var XF = cfg.crossfadeSec || 5, LXF = cfg.loopXfadeSec || 1.5, DWELL = (cfg.dwellSec != null ? cfg.dwellSec : 2.5) * 1000;
-  var POSTGAME_YEAR = 10000;
-  // no ambience configured yet: the slider has nothing to control (the toggle still switches the event sounds)
+  var XF = cfg.crossfadeSec || 5, WXF = cfg.warFadeSec || 4, LXF = cfg.loopXfadeSec || 6, START = +cfg.startSec || 0,
+      DWELL = (cfg.dwellSec != null ? cfg.dwellSec : 2.5) * 1000;
   if (!ERAS.length){ if (avol) avol.hidden = true; if (ambB){ ambB.title = 'Olay sesleri (önemli olaylar)'; ambB.setAttribute('aria-label', 'Olay sesleri'); } }
+  // chapter -> era index; per-era war flags (a single calm event between two war events stays 'war': no flapping)
+  var ERA_OF = {}, WAR = {};
+  ERAS.forEach(function(r, i){
+    r.chapters.forEach(function(c){ ERA_OF[c] = i; });
+    if (!r.war) return;
+    var set = {}; (r.warOrders || []).forEach(function(o){ set[String(o)] = 1; });
+    var evs = D.events.filter(function(e){ return r.chapters.indexOf(e.era) >= 0; }).sort(function(a, b){ return a.o - b.o; });
+    evs.forEach(function(e, k){
+      var w = !!set[String(e.o)];
+      if (!w && k > 0 && k < evs.length-1 && set[String(evs[k-1].o)] && set[String(evs[k+1].o)]) w = true;
+      if (w) WAR[String(e.o)] = 1;
+    });
+  });
   var ctx = null, gate = null, ambBus = null, sfxBus = null, comp = null;
   var bufs = {}, loading = {}, failed = {}, noFiles = location.protocol === 'file:';
   function ui(){
     if (ambB){ ambB.classList.toggle('is-off', !st.on); ambB.setAttribute('aria-pressed', st.on ? 'true' : 'false'); }
     if (avol){ avol.value = st.vol; avol.style.setProperty('--v', st.vol+'%'); }
   }
-  function ambLevel(){ return Math.pow(st.vol/100, 1.5) * 0.5 * 2.2; }
+  // ambience sits well under the music (files are normalised to -23 LUFS; default slider 24 => about -33 LUFS)
+  function ambLevel(){ return Math.pow(st.vol/100, 1.3) * 2.0; }
   var SFX_LEVEL = Math.pow(0.30, 1.5) * 0.5;   // = the old default master level: event sounds stay exactly as quiet as before
   function ensure(){
     if (ctx || !AC) return ctx;
@@ -727,7 +852,7 @@ var Ambience = (function(){
     return ctx;
   }
   function running(){ return ctx && ctx.state === 'running' && st.on; }
-  // ---------- file loading ----------
+  // ---------- one-shot buffers (event sounds) ----------
   function url(f){ return 'assets/sfx/' + (/\.(mp3|ogg|m4a|wav|opus)$/i.test(f) ? f : f + '.mp3'); }
   function load(id, cb){
     if (bufs[id]){ bufs[id].t = performance.now(); return cb && cb(bufs[id].b); }
@@ -739,87 +864,97 @@ var Ambience = (function(){
       .then(function(b){ bufs[id] = {b:b, t:performance.now()}; trim(); var l = loading[id]; delete loading[id]; l.forEach(function(f){ f(b); }); },
             function(){ failed[id] = true; var l = loading[id]; delete loading[id]; l.forEach(function(f){ f(null); }); });
   }
-  function inUse(id){ return (era && era.files.indexOf(id) >= 0); }
-  var AMBF = {}; ERAS.forEach(function(r){ r.files.forEach(function(f){ AMBF[f] = 1; }); });
-  function trim(){ // keep memory low: the current era's files + one other ambience file + at most 10 short event buffers
-    var old = Object.keys(bufs).filter(function(k){ return !inUse(k); }).sort(function(a, b){ return bufs[a].t - bufs[b].t; });
-    var amb = old.filter(function(k){ return AMBF[k]; }), ev = old.filter(function(k){ return !AMBF[k]; });
-    while (amb.length > 1) delete bufs[amb.shift()];
-    while (ev.length > 10) delete bufs[ev.shift()];
-  }
-  // ---------- era ambience ----------
-  function yearOf(e){
-    if (!e) return null;
-    if (e.sec === 'P') return POSTGAME_YEAR;
-    var m = String(e.date || e.big || '').match(/\d{3,5}/); return m ? +m[0] : null;
-  }
-  var lastYear = null;
-  function eraFor(e){
-    var y = yearOf(e); if (y == null) y = lastYear; else lastYear = y;
-    for (var i = 0; i < ERAS.length; i++){
-      var r = ERAS[i];
-      if (r.chapters && e && r.chapters.indexOf(e.era) >= 0) return i;
-      if (r.postgame && e && e.sec === 'P') return i;
-      if (y != null && r.from != null && y >= r.from && y <= (r.to != null ? r.to : Infinity)) return i;
-    }
-    return -1;
-  }
-  var era = null, wantIdx = -1, curIdx = -1, dwellT = 0;
-  function live(E){ return !!(E && (E._v || E._p)); }
+  function trim(){ var ev = Object.keys(bufs).sort(function(a, b){ return bufs[a].t - bufs[b].t; }); while (ev.length > 10) delete bufs[ev.shift()]; }
   // equal-power (sin/cos) gain ramps, starting from the current value
-  function ramp(g, up, t, dur, peak){
-    var P = g.gain, v0 = P.value, v1 = up ? peak : 0, n = 64, c = new Float32Array(n);
-    for (var i = 0; i < n; i++){ var x = i/(n-1); c[i] = up ? v0 + (v1 - v0)*Math.sin(x*Math.PI/2) : v1 + (v0 - v1)*Math.cos(x*Math.PI/2); }
-    try { if (P.cancelAndHoldAtTime) P.cancelAndHoldAtTime(t); else { P.cancelScheduledValues(t); P.setValueAtTime(v0, t); } P.setValueCurveAtTime(c, t + .001, Math.max(.05, dur)); }
-    catch(e){ try { P.cancelScheduledValues(0); P.setValueAtTime(v0, ctx.currentTime); P.linearRampToValueAtTime(v1, ctx.currentTime + dur); } catch(e2){ P.value = v1; } }
+  function ramp(P, to, dur){
+    var t = ctx.currentTime, v0 = P.value, up = to > v0, n = 48, c = new Float32Array(n);
+    for (var i = 0; i < n; i++){ var x = i/(n-1); c[i] = up ? v0 + (to - v0)*Math.sin(x*Math.PI/2) : to + (v0 - to)*Math.cos(x*Math.PI/2); }
+    try { if (P.cancelAndHoldAtTime) P.cancelAndHoldAtTime(t); else { P.cancelScheduledValues(t); P.setValueAtTime(v0, t); } P.setValueCurveAtTime(c, t + .01, Math.max(.05, dur)); }
+    catch(e){ try { P.cancelScheduledValues(0); P.setValueAtTime(v0, ctx.currentTime); P.linearRampToValueAtTime(to, ctx.currentTime + dur); } catch(e2){ P.value = to; } }
   }
-  // one playing file (the watcher below starts its successor: same file again = loop, or the next file)
-  function playFile(E, k, fadeIn){
-    var id = E.files[k % E.files.length]; E._p = true;
-    load(id, function(buf){
-      E._p = false;
-      if (!buf || era !== E || !running()){ return; }
-      var t = ctx.currentTime + .03, s = ctx.createBufferSource(), g = ctx.createGain(), peak = E.gain != null ? E.gain : 1;
-      s.buffer = buf; g.gain.value = 0; s.connect(g); g.connect(ambBus); s.start(t);
-      var lx = Math.min(LXF, buf.duration / 4);
-      ramp(g, true, fadeIn ? t : t + .25, fadeIn ? XF : lx, peak);
-      E._v = {s:s, g:g, E:E, peak:peak, k:k, lx:lx, end:t + buf.duration};   // the watcher below hands over before 'end'
-      if (E.files.length > 1) load(E.files[(k + 1) % E.files.length]);   // next file ready in time
-    });
+  // ---------- streaming slots (pooled <audio> elements) ----------
+  var POOL = [], SIL = 'assets/amb/silence.mp3';
+  function newSlot(){
+    var el = new Audio(); el.preload = 'auto'; el.crossOrigin = 'anonymous';
+    var s = {el:el, g:ctx.createGain(), busy:false};
+    try { s.src = ctx.createMediaElementSource(el); } catch(e){ return null; }
+    s.g.gain.value = 0; s.src.connect(s.g);
+    POOL.push(s); return s;
   }
-  // file end -> next file (or the same one again) with a short crossfade; driven by the audio clock so a
-  // suspended context (hidden tab) never breaks the loop
-  var loops = 0;
-  setInterval(function(){
-    var E = era, v = E && E._v;
-    if (!v || v.done || !running() || E._p) return;
-    if (ctx.currentTime >= v.end - v.lx - .6){ v.done = true; loops++; ramp(v.g, false, ctx.currentTime + .25, v.lx, v.peak); stopLater(v, v.lx + .3); playFile(E, v.k + 1, false); }
-  }, 200);
-  function stopLater(v, sec){ setTimeout(function(){ try { v.s.stop(); } catch(e){} try { v.g.disconnect(); } catch(e){} }, sec*1000 + 400); }
-  function fadeOutEra(E){
-    if (!E || !E._v || !ctx) return; var v = E._v; E._v = null;
-    ramp(v.g, false, ctx.currentTime, XF, v.peak); stopLater(v, XF);
+  function getSlot(){ for (var i = 0; i < POOL.length; i++) if (!POOL[i].busy) { POOL[i].busy = true; return POOL[i]; } var s = POOL.length < 12 ? newSlot() : null; if (s) s.busy = true; return s; }
+  function freeSlot(s){ if (!s) return; try { s.el.pause(); } catch(e){} try { s.g.disconnect(); } catch(e){} s.g.gain.cancelScheduledValues(0); s.g.gain.value = 0;
+    s.el.removeAttribute('src'); try { s.el.load(); } catch(e){} s.busy = false; s.voice = null; }
+  // iOS/Safari: elements may only start after they played once inside a user gesture -> prime the pool on unlock
+  function prime(){ if (POOL.length >= 6) return; while (POOL.length < 6){ var s = newSlot(); if (!s) break; (function(s){ s.el.src = SIL; var p; try { p = s.el.play(); } catch(e){} if (p && p.then) p.then(function(){ if (!s.busy){ s.el.pause(); } }, function(){}); })(s); } }
+  // ---------- a looping voice = one file on 1–2 slots ----------
+  var AMB_DIR = 'assets/amb/';
+  function Voice(file, level){
+    this.file = file; this.vg = ctx.createGain(); this.vg.gain.value = 0; this.vg.connect(ambBus);
+    this.a = null; this.b = null; this.dead = false; this.level = level; this.loops = 0; this.start(true);
   }
-  function applyEra(idx){
-    curIdx = idx;
-    var next = idx >= 0 ? ERAS[idx] : null;
-    if (next === era && (!era || live(era))) return;   // same era: never restart
-    var old = era; era = next;
-    if (old && old !== next) fadeOutEra(old);
-    if (next && running()) playFile(next, 0, true);
-  }
-  function onEvent(e){
-    if (!ERAS.length) return;
-    var idx = eraFor(e); wantIdx = idx; clearTimeout(dwellT);
+  Voice.prototype.start = function(first){
+    var self = this, s = getSlot(); if (!s) return;
+    s.voice = this; try { s.g.disconnect(); } catch(e){} s.g.connect(this.vg);
+    var el = s.el, seek = function(){ try { if (START && Math.abs(el.currentTime - START) > .5) el.currentTime = START; } catch(e){} };
+    el.loop = false;
+    if (el.getAttribute('src') !== AMB_DIR + this.file) el.src = AMB_DIR + this.file;
+    if (el.readyState >= 1) seek(); else el.addEventListener('loadedmetadata', seek, {once:true});
+    var p; try { p = el.play(); } catch(e){}
+    if (p && p.catch) p.catch(function(){});
+    if (first){ s.g.gain.value = 1; this.a = s; }
+    else { s.g.gain.value = 0; ramp(s.g.gain, 1, LXF); var old = this.a; ramp(old.g.gain, 0, LXF); this.a = s; this.loops++;
+           setTimeout(function(){ if (old.voice === self) freeSlot(old); }, LXF*1000 + 600); }
+  };
+  Voice.prototype.watch = function(){
+    if (this.dead || !this.a) return;
+    var el = this.a.el, d = el.duration;
+    if (el.ended){ this.start(false); return; }
+    if (d && isFinite(d) && el.currentTime >= d - LXF - .4 && !this.a.handing){ this.a.handing = true; this.start(false); }
+    if (st.on && !document.hidden && el.paused && !el.ended && el.readyState >= 2 && running()){ var p = el.play(); if (p && p.catch) p.catch(function(){}); }
+  };
+  Voice.prototype.fade = function(to, sec){ this.target = to; ramp(this.vg.gain, to * this.level, sec); };
+  Voice.prototype.stop = function(sec){
+    var self = this; this.dead = true; this.fade(0, sec);
+    setTimeout(function(){ POOL.forEach(function(s){ if (s.voice === self) freeSlot(s); }); try { self.vg.disconnect(); } catch(e){} }, sec*1000 + 500);
+  };
+  Voice.prototype.time = function(){ return this.a ? +this.a.el.currentTime.toFixed(1) : null; };
+  // ---------- era state ----------
+  var cur = null;   // {idx, n:Voice, w:Voice|null, war:bool}
+  var curIdx = -1, curWar = false, wantIdx = -1, wantWar = false, dwellT = 0, eraChanges = 0;
+  function applyState(idx, war){
     if (!running()) return;
-    if (idx === curIdx && (idx < 0 || live(era))) return;
-    if (curIdx === -1 && !era){ applyEra(idx); return; }   // first sound after load/unlock: no wait
-    dwellT = setTimeout(function(){ if (wantIdx === idx) applyEra(idx); }, DWELL);
+    var R = idx >= 0 ? ERAS[idx] : null, lvl = R && R.gain != null ? R.gain : 1;
+    war = !!(war && R && R.war);
+    if (!cur || cur.idx !== idx){
+      if (cur){ cur.n.stop(XF); if (cur.w) cur.w.stop(XF); }
+      cur = null; curIdx = idx; curWar = war; eraChanges++;
+      if (!R) return;
+      cur = {idx:idx, n:new Voice(R.file, lvl), w:null, war:war};
+      cur.n.fade(war ? 0 : 1, XF);
+      if (war){ cur.w = new Voice(R.war, lvl); cur.w.fade(1, XF); }
+      return;
+    }
+    if (cur.war === war) return;
+    cur.war = war; curWar = war;
+    if (war && !cur.w) cur.w = new Voice(R.war, lvl);
+    if (cur.w) cur.w.fade(war ? 1 : 0, WXF);
+    cur.n.fade(war ? 0 : 1, WXF);
   }
-  function applyLevel(){ if (!ctx) return; var t = ctx.currentTime; gate.gain.cancelScheduledValues(t); gate.gain.setTargetAtTime(st.on ? 1 : 0, t, .4); ambBus.gain.setTargetAtTime(ambLevel(), t, .3); }
+  setInterval(function(){ if (!cur || !running()) return; cur.n.watch(); if (cur.w) cur.w.watch(); }, 250);
+  function onEvent(e){
+    if (!ERAS.length || !e) return;
+    var idx = ERA_OF[e.era] != null ? ERA_OF[e.era] : -1, war = !!WAR[String(e.o)];
+    wantIdx = idx; wantWar = war; clearTimeout(dwellT);
+    if (!running()) return;
+    if (idx === curIdx && war === curWar && cur) return;
+    if (!cur){ applyState(idx, war); return; }   // first sound after load/unlock: no wait
+    dwellT = setTimeout(function(){ if (wantIdx === idx && wantWar === war) applyState(idx, war); }, DWELL);
+  }
+  function applyLevel(){ if (!ctx) return; var t = ctx.currentTime; gate.gain.cancelScheduledValues(t); gate.gain.setTargetAtTime(st.on ? 1 : 0, t, .4); ambBus.gain.cancelScheduledValues(t); ambBus.gain.setTargetAtTime(ambLevel(), t, .3); }
   function unlock(){
     if (!st.on || !ensure()) return;
-    var go = function(){ disarm(); applyLevel(); if (ERAS.length && wantIdx >= 0 && !live(era)){ era = null; curIdx = -1; applyEra(wantIdx); } };
+    if (ERAS.length) prime();
+    var go = function(){ disarm(); applyLevel(); if (ERAS.length && wantIdx >= 0 && !cur){ curIdx = -1; applyState(wantIdx, wantWar); } };
     if (ctx.state === 'suspended') ctx.resume().then(go, function(){});
     else if (ctx.state === 'running') go();
   }
@@ -829,7 +964,7 @@ var Ambience = (function(){
   function setOn(on){
     st.on = on; save(); ui();
     if (on){ unlock(); if (!ctx || ctx.state !== 'running') arm(); }
-    else { applyLevel(); clearTimeout(dwellT); if (ctx) setTimeout(function(){ if (!st.on && ctx.state === 'running'){ if (era) fadeOutEra(era); era = null; curIdx = -1; ctx.suspend(); } }, 900); }
+    else { applyLevel(); clearTimeout(dwellT); if (ctx) setTimeout(function(){ if (!st.on && ctx.state === 'running'){ if (cur){ cur.n.stop(.3); if (cur.w) cur.w.stop(.3); } cur = null; curIdx = -1; setTimeout(function(){ if (!st.on) ctx.suspend(); }, 900); } }, 900); }
   }
   // ---------- one-shot event sounds ----------
   var rr = {};
@@ -865,12 +1000,19 @@ var Ambience = (function(){
   }
   if (ambB) ambB.addEventListener('click', function(){ setOn(!st.on); });
   if (avol) avol.addEventListener('input', function(){ st.vol = +avol.value; if (st.vol > 0 && !st.on){ setOn(true); } save(); ui(); applyLevel(); });
-  document.addEventListener('visibilitychange', function(){ if (!ctx) return; if (document.hidden) ctx.suspend(); else if (st.on) ctx.resume(); });
+  document.addEventListener('visibilitychange', function(){
+    if (!ctx) return;
+    if (document.hidden){ ctx.suspend(); POOL.forEach(function(s){ if (s.busy) try { s.el.pause(); } catch(e){} }); }
+    else if (st.on) ctx.resume();   // the voice watcher restarts paused slots
+  });
   ui();
   if (AC && st.on) arm();
+  function vstate(v){ return v ? {file:v.file, t:v.time(), gain:+v.vg.gain.value.toFixed(3), target:v.target, loops:v.loops} : null; }
   return {onEvent:onEvent, setTargets:setTargets, spark:spark, play:function(o){ unlock(); playSfx(String(o)); },
-    eras:ERAS, yearOf:yearOf, eraFor:eraFor,
-    state:function(){ return {st:st, ctx:ctx && ctx.state, eras:ERAS.length, era:curIdx, want:wantIdx, playing:!!(era && era._v), loops:loops, cached:Object.keys(bufs), failed:Object.keys(failed), targets:targets.map(function(t){ return t.o; }), fired:fired.slice()}; }};
+    eras:ERAS, war:WAR, _seekEnd:function(sec){ if (cur && cur.n && cur.n.a){ var el = cur.n.a.el; try { el.currentTime = Math.max(0, el.duration - sec); } catch(e){} } },
+    state:function(){ return {st:st, ctx:ctx && ctx.state, eras:ERAS.length, era:curIdx, file:curIdx >= 0 ? ERAS[curIdx].file : null, war:curWar, want:wantIdx, wantWar:wantWar,
+      normal:cur && vstate(cur.n), warV:cur && vstate(cur.w), slots:POOL.filter(function(s){ return s.busy; }).length, eraChanges:eraChanges, bus:ambBus && +ambBus.gain.value.toFixed(3),
+      cached:Object.keys(bufs), failed:Object.keys(failed), targets:targets.map(function(t){ return t.o; }), fired:fired.slice()}; }};
 })();
 
 // =====================================================================
@@ -1109,6 +1251,54 @@ var MiniMap = (function(){
 })();
 
 // =====================================================================
+// CINEMATIC ERA TITLES: the first time (per visit, sessionStorage) the view
+// enters a chapter, its name and years rise in the centre for ~3.5s and fade.
+// Never blocks clicks; waits while scrolling very fast / a sheet is open and
+// shows it once things settle if the view is still in that chapter (a chapter
+// merely flown past is not marked as seen, so it still gets its title later).
+// =====================================================================
+var EraTitle = (function(){
+  var KEY = 'ulv-era-seen', seen = {};
+  try { seen = JSON.parse(sessionStorage.getItem(KEY)||'{}') || {}; } catch(e){ seen = {}; }
+  var el = document.createElement('div'); el.className = 'et'; el.setAttribute('aria-hidden','true');
+  el.innerHTML = '<div class="et-in"><div class="et-k"></div><div class="et-n"></div><div class="et-rule"><i></i><b>\u2726</b><i></i></div><div class="et-y"></div></div>';
+  document.body.appendChild(el);
+  var kEl = el.querySelector('.et-k'), nEl = el.querySelector('.et-n'), yEl = el.querySelector('.et-y');
+  var vel = 0, lastY = window.scrollY, lastT = performance.now(), cur = null, pend = null, pendT = 0, hideT = 0, log = [];
+  window.addEventListener('scroll', function(){ var t = performance.now(), dt = Math.max(8, t - lastT), v = Math.abs(window.scrollY - lastY) / dt * 1000; vel = vel*0.5 + v*0.5; lastY = window.scrollY; lastT = t; }, {passive:true});
+  function speed(){ return performance.now() - lastT > 220 ? 0 : vel; }
+  function years(id){
+    var evs = events.filter(function(e){ return e.era === id; });
+    var ys = []; evs.forEach(function(e){ if (e.num) (String(e.date).match(/\d{4}/g) || []).forEach(function(y){ ys.push(+y); }); });
+    if (ys.length){ var a = Math.min.apply(null, ys), b = Math.max.apply(null, ys); return a === b ? String(a) : a + ' – ' + b; }
+    var seenL = {}, labels = [];
+    evs.slice().sort(function(a, b){ return a.o - b.o; }).forEach(function(e){ if (!seenL[e.big]){ seenL[e.big] = 1; labels.push(e.big); } });
+    return labels.slice(0, 3).join(' · ');
+  }
+  function busy(){ var lb = document.querySelector('.lb'); return document.body.classList.contains('tc-open') || (lb && !lb.hidden); }
+  function show(id){
+    var c = chById[id] || {name:id}, no = chNo[id] || 0, nm = String(c.name).replace(/^\d{4}\s*[—–-]\s*/, '');
+    kEl.textContent = 'Bölüm ' + (ROMAN[no-1] || no); nEl.textContent = nm; yEl.textContent = years(id);
+    seen[id] = 1; try { sessionStorage.setItem(KEY, JSON.stringify(seen)); } catch(e){}
+    log.push(id);
+    clearTimeout(hideT); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    hideT = setTimeout(function(){ el.classList.remove('on'); }, 4200);
+  }
+  function check(){
+    if (!pend) return;
+    if (speed() > innerHeight * 2.2 || busy()){ pendT = setTimeout(check, 300); return; }
+    var id = pend; pend = null;
+    if (id === cur && !seen[id]) show(id);
+  }
+  function enter(id){
+    if (!id) return; cur = id;
+    if (seen[id]) return;
+    pend = id; clearTimeout(pendT); pendT = setTimeout(check, 260);
+  }
+  return {enter:enter, seen:function(){ return Object.keys(seen); }, log:function(){ return log.slice(); }, reset:function(){ seen = {}; try { sessionStorage.removeItem(KEY); } catch(e){} }};
+})();
+
+// =====================================================================
 // SCROLL ANIMATIONS (reversible: scrub)
 // =====================================================================
 function buildAnimations(){
@@ -1195,5 +1385,5 @@ var SFX_EVS = EV_ELS.map(function(el){ var o = String(el.dataset.o); return SFX_
 window.Ambience_targets = function(sy){ if (!lineEl) return;
   Ambience.setTargets(SFX_EVS.map(function(t){ var d = t.el.querySelector('.dot') || t.el, r = d.getBoundingClientRect(); return {y: r.top + sy + r.height/2 - sparkGeo.top - 13, o:t.o, fired:false}; })); };
 window.Ambience_targets(window.scrollY);
-window.__ulv = {Music:Music, Ambience:Ambience, FX:FX, Effects:Effects, Lightbox:Lightbox, TagCard:TagCard, MiniMap:MiniMap, kind:KIND_OF, burstCard:burstCard, theme:THEME_OF, atm:function(){return ATM;}};
+window.__ulv = {EraTitle:EraTitle, weatherOf:function(o){ return WEATHER_OF[o] || null; }, weather:function(){ var y = window.scrollY + innerHeight*0.55, n = anchors.length; if (!n) return null; var lo = 0; for (var i=0;i<n;i++){ if (Math.abs(anchors[i]-y) < Math.abs(anchors[lo]-y)) lo = i; } return WEATHER_OF[events[lo].o] || null; }, songRegions:function(){ return SONG_REG; }, focus:function(){ return focusIdx >= 0 ? events[focusIdx].o : null; }, Music:Music, Ambience:Ambience, FX:FX, Effects:Effects, Lightbox:Lightbox, TagCard:TagCard, MiniMap:MiniMap, kind:KIND_OF, burstCard:burstCard, theme:THEME_OF, atm:function(){return ATM;}};
 })();
