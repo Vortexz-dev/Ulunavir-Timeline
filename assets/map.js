@@ -594,7 +594,7 @@
       return fleet;
     }
     function stepShips(dt, lt){
-      var want = lt ? 12 : 40, guard = 0;
+      wLT = !!lt; var want = lt ? 12 : 40, guard = 0;
       while (ships.length < want && guard++ < 60) spawnShips(true, want - ships.length);
       if (ships.length > want + 4) ships.length = want;
       for (var i = ships.length - 1; i >= 0; i--){ var k = ships[i]; k.t += k.v * dt; if (k.t >= k.run) ships.splice(i, 1); }
@@ -602,8 +602,6 @@
     function drawShip(z, type, ang, t, ph){
       var T = TYPES[type], L = z * T.sc, B = L * T.beam;
       c.save(); c.rotate(ang);
-      c.strokeStyle = 'rgba(230,245,250,.30)'; c.lineWidth = Math.max(.6, L * .07);       // wake
-      c.beginPath(); c.moveTo(-L * 2.4, -L * .55); c.lineTo(-L * .45, 0); c.lineTo(-L * 2.4, L * .55); c.stroke();
       c.fillStyle = type === 'longship' ? '#3a2412' : '#2b1a0e';
       c.beginPath(); c.ellipse(0, 0, L * .62, B, 0, 0, 6.283); c.fill();                  // hull
       if (type === 'longship'){                                                             // oars
@@ -623,12 +621,66 @@
       else if (type === 'longship'){ sq(0, L * .8, L * .55, '#b23a2a'); c.fillStyle = 'rgba(245,235,215,.9)'; c.fillRect(-L * .275 + L * .11, -L * .78, L * .1, L * .56); c.fillRect(-L * .275 + L * .33, -L * .78, L * .1, L * .56); }
       else { tri(0, L * .75, L * .4); }
     }
+    // ---- detached ship wakes: points dropped in world space behind the stern; each point ages in place and is drawn as a
+    // kelvin-ish pair of diverging, broken foam arms + soft central turbulence. Pooled; length/width/lifetime scale with hull size.
+    var WAKE = {galleon: 3.4, cog: 2.4, longship: 2.8, sloop: 1.6, fishing: 1.3}, wakes = [], wPool = [], wLT = false;
+    function wPt(){ return wPool.pop() || {}; }
+    function wakeEmit(k, wx, wy, ang, Lw, t, fade){
+      var tr = k.wk;
+      if (!tr){ tr = k.wk = {pts: [], life: WAKE[k.type] * Lw / k.v, v: k.v, B: Lw * TYPES[k.type].beam, Lw: Lw, live: true}; wakes.push(tr); }
+      var sx = wx - Math.cos(ang) * Lw * .42, sy = wy - Math.sin(ang) * Lw * .42, P = tr.pts, last = P[P.length - 1];
+      var step = Lw * (wLT ? .45 : .26);
+      if (last && (sx - last.x) * (sx - last.x) + (sy - last.y) * (sy - last.y) < step * step) return;
+      var q = wPt(); q.x = sx; q.y = sy; q.a = ang; q.b = t; q.f = fade; q.gl = Math.random() < .12; q.gr = Math.random() < .12;
+      q.jl = rnd(-.06, .06); q.jr = rnd(-.06, .06); q.w = rnd(.75, 1.25); P.push(q);
+    }
+    function drawWakes(t){
+      var s = view.s;
+      for (var i = wakes.length - 1; i >= 0; i--){
+        var tr = wakes[i], P = tr.pts;
+        while (P.length && t - P[0].b > tr.life) wPool.push(P.shift());
+        if (!P.length){ if (!tr.live) wakes.splice(i, 1); continue; }
+        var H = toScreen(P[P.length - 1].x, P[P.length - 1].y), T0 = toScreen(P[0].x, P[0].y);
+        if (!vis(H, 120) && !vis(T0, 120)) continue;
+        var prev = null;
+        for (var j = 0; j < P.length; j++){
+          var p = P[j], a = (t - p.b) / tr.life; if (a < 0) a = 0;
+          var back = a * tr.life * tr.v, hw = tr.B * .45 + back * .2, nx = -Math.sin(p.a), ny = Math.cos(p.a);
+          var C = toScreen(p.x, p.y), cur = {C: C, a: a, f: p.f, hw: hw * s,
+            L: toScreen(p.x + nx * hw * (1 + p.jl), p.y + ny * hw * (1 + p.jl)), R: toScreen(p.x - nx * hw * (1 + p.jr), p.y - ny * hw * (1 + p.jr)), p: p};
+          if (prev){
+            var aa = (a + prev.a) / 2, al = .4 * Math.pow(1 - aa, 1.5) * Math.min(prev.f, cur.f);
+            if (al > .01){
+              c.strokeStyle = 'rgba(236,246,250,' + al.toFixed(3) + ')';
+              c.lineWidth = Math.max(.5, tr.Lw * s * (.022 + .03 * aa) * p.w);
+              c.beginPath();
+              if (!p.gl){ c.moveTo(prev.L.x, prev.L.y); c.lineTo(cur.L.x, cur.L.y); }
+              if (!p.gr){ c.moveTo(prev.R.x, prev.R.y); c.lineTo(cur.R.x, cur.R.y); }
+              c.stroke();
+              if (aa < .45 && (j & 1)){   // central churned water
+                c.fillStyle = 'rgba(225,240,246,' + (al * .22 * (1 - aa / .45)).toFixed(3) + ')';
+                c.beginPath(); c.arc(C.x, C.y, Math.max(.8, tr.B * s * (.4 + .9 * aa)), 0, 6.283); c.fill();
+              }
+            }
+          }
+          prev = cur;
+        }
+      }
+    }
     function drawShips(t){
       var s = view.s, base = clamp(40 * s, 7, 30);
+      for (var w = 0; w < wakes.length; w++) wakes[w].live = false;
       for (var i = 0; i < ships.length; i++){
-        var k = ships[i], fade = Math.min(1, k.t / 160, (k.run - k.t) / 160); if (fade <= 0) continue;
+        var k = ships[i], fade = Math.min(1, k.t / 160, (k.run - k.t) / 160); if (k.wk) k.wk.live = true; if (fade <= 0) continue;
         var d = k.d0 + k.dir * k.t, q = laneAt(k.ln, d), ang = q.ang + (k.dir < 0 ? Math.PI : 0);
-        var wx = q.x - Math.sin(ang) * k.lat, wy = q.y + Math.cos(ang) * k.lat, P = toScreen(wx, wy); if (!vis(P, 60)) continue;
+        var wx = q.x - Math.sin(ang) * k.lat, wy = q.y + Math.cos(ang) * k.lat;
+        wakeEmit(k, wx, wy, ang, base * k.sz * TYPES[k.type].sc / s, t, fade);
+      }
+      drawWakes(t);
+      for (i = 0; i < ships.length; i++){
+        k = ships[i]; fade = Math.min(1, k.t / 160, (k.run - k.t) / 160); if (fade <= 0) continue;
+        d = k.d0 + k.dir * k.t; q = laneAt(k.ln, d); ang = q.ang + (k.dir < 0 ? Math.PI : 0);
+        wx = q.x - Math.sin(ang) * k.lat; wy = q.y + Math.cos(ang) * k.lat; var P = toScreen(wx, wy); if (!vis(P, 60)) continue;
         c.save(); c.translate(P.x, P.y); c.globalAlpha = fade; drawShip(base * k.sz, k.type, ang, t, k.ph); c.restore();
       }
     }
@@ -782,7 +834,7 @@
       return {town: town, land: landF / n, coast: coastDist(x, y)};
     }
     return {init: init, resize: resize, draw: draw, zoomF: zoomF, spawn: spawnFlock, probe: probe, coastDist: coastDist,
-      stats: function(){ return {ships: ships.length, fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
+      stats: function(){ return {ships: ships.length, wakes: wakes.length, wakePts: wakes.reduce(function(n, w){ return n + w.pts.length; }, 0), galleon: (function(){ var g = ships.filter(function(k){ return k.type === "galleon" && k.t > 300; })[0]; if (!g) return null; var q = laneAt(g.ln, g.d0 + g.dir * g.t); return [Math.round(q.x), Math.round(q.y)]; })(), fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
         shipPos: ships.slice(0, 6).map(function(k){ var q = laneAt(k.ln, k.d0 + k.dir * k.t); return [Math.round(q.x), Math.round(q.y)]; }),
         cars: cars.length, carRoads: cars.reduce(function(o, k){ var j = roadGeo().indexOf(k.g); o[j] = (o[j] || 0) + 1; return o; }, {}), gates: cars.filter(function(k){ return k.gate; }).length, flocks: flocks.length, roads: roadGeo().length, lanes: lanes.length, smoke: smoke.length, land: landPts.length,
         carPos: cars.slice(0, 4).map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
