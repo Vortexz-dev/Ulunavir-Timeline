@@ -9,7 +9,8 @@
   var FILES = {windHi: 'map-wind-high.mp3', windLo: 'map-wind-low.mp3', nature: 'map-nature.mp3', breeze: 'map-breeze.mp3', town: 'map-town.mp3', surf: 'map-surf.mp3'};
   var BASE = {windHi: .85, windLo: .8, nature: .9, breeze: .7, town: .85, surf: .75};
   var ctx = null, master = null, lp = null, L = {}, loading = false, active = false, sleepT = 0, tgt = {}, nloaded = 0;
-  var on = true;
+  var on = true, vol = 50;   // vol 0..100; 100 = the original v3 level (LEVEL), default 50
+  try { var sv = localStorage.getItem('ulv-map-vol2'); if (sv != null && sv !== '' && isFinite(+sv)) vol = Math.max(0, Math.min(100, +sv)); } catch(e){}
   try {
     var pref = localStorage.getItem('ulv-map-snd');
     if (pref != null) on = pref !== '0';
@@ -38,7 +39,7 @@
         }).catch(function(e){ if (window.console) console.warn('map audio: ' + FILES[k] + ' failed', e); });
     });
   }
-  function setMaster(sec){ if (!master) return; var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(active && on ? LEVEL : 0, t, sec / 3); }
+  function setMaster(sec){ if (!master) return; var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(active && on ? LEVEL * vol / 100 : 0, t, sec / 3); }
   function open(){
     if (!AC) return; active = true; clearTimeout(sleepT);
     if (!ensure()) return;
@@ -67,7 +68,8 @@
     lp.frequency.cancelScheduledValues(t); lp.frequency.setTargetAtTime(650 + 5200 * far * far + 900 * mid, t, .6);   // wind character: dull/near -> airy/high
   }
   function setOn(v){ on = !!v; try { localStorage.setItem('ulv-map-snd', on ? '1' : '0'); } catch(e){} if (on && active) open(); setMaster(.6); }
-  window.__ulvMapAudio = {open: open, close: close, update: update, setOn: setOn, isOn: function(){ return on; },
-    state: function(){ return {ctx: ctx && ctx.state, on: on, active: active, loaded: nloaded, master: master && +master.gain.value.toFixed(3), lp: lp && Math.round(lp.frequency.value),
+  function setVol(v){ vol = Math.max(0, Math.min(100, Math.round(+v || 0))); try { localStorage.setItem('ulv-map-vol2', String(vol)); } catch(e){} setMaster(.15); }
+  window.__ulvMapAudio = {open: open, close: close, update: update, setOn: setOn, isOn: function(){ return on; }, setVol: setVol, getVol: function(){ return vol; },
+    state: function(){ return {ctx: ctx && ctx.state, on: on, vol: vol, active: active, loaded: nloaded, master: master && +master.gain.value.toFixed(3), lp: lp && Math.round(lp.frequency.value),
       layers: Object.keys(L).reduce(function(o, k){ o[k] = +L[k].g.gain.value.toFixed(3); return o; }, {}), target: tgt}; }};
 })();

@@ -52,7 +52,8 @@
         '<button type="button" class="mt-fit" title="Tüm harita">' + I.fit + '</button>' +
         '<i class="mt-sep"></i>' +
         '<button type="button" class="mt-cloud" aria-pressed="true" title="Bulutlar">' + I.cloud + '</button>' +
-        '<button type="button" class="mt-snd" aria-pressed="true" title="Harita sesleri">' + I.snd + '</button>' +
+        '<div class="mt-sndwrap"><button type="button" class="mt-snd" aria-pressed="true" title="Harita sesleri">' + I.snd + '</button>' +
+        '<div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div>' +
       '</div>' +
       '<div class="mapx-rt" hidden>' +
         '<div class="rt-main"><span class="rt-km">—</span><span class="rt-t"><b class="rt-walk">—</b> yaya · <b class="rt-horse">—</b> atlı</span></div>' +
@@ -358,7 +359,7 @@
   }, {passive: false});
   // keep the page under the overlay from scrolling / rubber-banding
   ov.addEventListener('wheel', function(ev){ ev.preventDefault(); }, {passive: false});
-  ov.addEventListener('touchmove', function(ev){ if (!ev.target.closest('.mapx-pop')) ev.preventDefault(); }, {passive: false});
+  ov.addEventListener('touchmove', function(ev){ if (!ev.target.closest('.mapx-pop, .mt-volpop')) ev.preventDefault(); }, {passive: false});
   ov.addEventListener('pointerdown', function(ev){ if (ev.target === ov) close(); });
 
   ov.querySelector('.mapx-tools').addEventListener('click', function(ev){
@@ -374,8 +375,22 @@
     var cb = ov.querySelector('.mt-cloud'), sb = ov.querySelector('.mt-snd'), so = !!(window.__ulvMapAudio && window.__ulvMapAudio.isOn());
     cb.classList.toggle('is-off', !cloudsOn); cb.setAttribute('aria-pressed', cloudsOn ? 'true' : 'false'); cb.title = cloudsOn ? 'Bulutları gizle' : 'Bulutları göster';
     sb.classList.toggle('is-off', !so); sb.setAttribute('aria-pressed', so ? 'true' : 'false'); sb.title = so ? 'Harita seslerini kapat' : 'Harita seslerini aç';
-    if (!window.__ulvMapAudio) sb.hidden = true;
+    if (!window.__ulvMapAudio) sb.parentNode.hidden = true;
+    else { var vv = window.__ulvMapAudio.getVol(), vr = ov.querySelector('.mt-vol'); vr.value = vv; vr.style.setProperty('--v', vv + '%'); ov.querySelector('.mt-volv').textContent = vv; }
   }
+  (function(){   // volume slider: slides out on hover/focus; on touch a long-press on the sound button opens it (tap still mutes)
+    var wrap = ov.querySelector('.mt-sndwrap'), sb = wrap.querySelector('.mt-snd'), vr = wrap.querySelector('.mt-vol'), lpT = 0, lpFired = false, hideT = 0;
+    vr.addEventListener('input', function(){ if (!window.__ulvMapAudio) return; var v = +vr.value; window.__ulvMapAudio.setVol(v);
+      if (v > 0 && !window.__ulvMapAudio.isOn()) window.__ulvMapAudio.setOn(true); syncToggles(); });
+    function show(){ clearTimeout(hideT); wrap.classList.add('show'); hideT = setTimeout(function(){ if (!wrap.matches(':hover') && !wrap.contains(document.activeElement)) wrap.classList.remove('show'); }, 4000); }
+    sb.addEventListener('pointerdown', function(ev){ if (ev.pointerType === 'mouse') return; lpFired = false; clearTimeout(lpT); lpT = setTimeout(function(){ lpFired = true; show(); }, 450); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(t){ sb.addEventListener(t, function(){ clearTimeout(lpT); }); });
+    sb.addEventListener('click', function(ev){ if (lpFired){ lpFired = false; ev.stopImmediatePropagation(); ev.preventDefault(); } }, true);
+    sb.addEventListener('contextmenu', function(ev){ ev.preventDefault(); });
+    vr.addEventListener('pointerdown', function(){ clearTimeout(hideT); });
+    vr.addEventListener('change', function(){ if (wrap.classList.contains('show')) show(); });
+    ov.addEventListener('pointerdown', function(ev){ if (!wrap.contains(ev.target)) wrap.classList.remove('show'); });
+  })();
   rt.querySelector('.rt-undo').addEventListener('click', undo);
   rt.querySelector('.rt-clear').addEventListener('click', clearRoute);
   ov.querySelector('.mapx-x').addEventListener('click', function(){ close(); });
@@ -512,7 +527,7 @@
       return null;
     }
     function stepCars(dt, lt){
-      var want = lt ? 8 : 24, guard = 0;
+      var want = lt ? 11 : 32, guard = 0;
       while (cars.length < want && guard++ < want){ var n = newCar(true); if (!n) break; cars.push(n); }
       if (cars.length > want) cars.length = want;
       for (var i = 0; i < cars.length; i++){
