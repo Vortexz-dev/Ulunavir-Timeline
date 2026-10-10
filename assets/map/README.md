@@ -9,3 +9,11 @@
 - `tiles/{z}/{x}_{y}.webp` — 512 px karo piramidi (z=0 en küçük 639 px … z=3 tam çözünürlük). `tiles.json` düzeyleri listeler. `base.webp` hızlı ilk görüntü.
 - `fogfield.png` — kıyıya uzaklık alanı (1/4 çözünürlük; 0 = kara, 255 = kıyıdan ≥512 px). Sis yoğunluğu buradan hesaplanır. `landmask.png` önizleme maskesi.
 - Kaynak üretim betikleri: /workspace/mapsrc/mask.py, tiles.py
+
+## roads_auto.json (v2)
+Hand-traced from visible painted roads/paths (automatic colour detection was too noisy against beige mountains/snow).
+Same schema as roads.json. Not drawn — used only as routes for the tiny animated caravans.
+As soon as roads.json has entries with 2+ points, caravans use roads.json instead.
+
+## whirlpool.webp (v2)
+Circular, de-squashed crop of the painted whirlpool (centre ~4503,1380 full-res px); rotated in place by map.js.

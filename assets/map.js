@@ -1,4 +1,4 @@
-/* Horaghfus — interactive 2D world map (v1)
+/* Horaghfus — interactive 2D world map (v2: birds, caravans, whirlpool, light sweep, tilt-shift)
    Tile pyramid on Canvas2D + WebGL atmosphere (fog from a precomputed coast-distance field,
    parallax clouds with shadows, sea shimmer) + SVG route tool. Self-contained: no app.js edits.
    Data: assets/map/{config,tiles,places,roads}.json */
@@ -6,6 +6,8 @@
   'use strict';
   var BASE = 'assets/map/';
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (/[?&]rm=1/.test(location.search)) reduce = true;   // test hook
+  var noAuto = /[?&]fxtest=1/.test(location.search);    // test hook: keep full FX in slow headless browsers
   var ICON_MAP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5l5.5-2.5 7 2.5L21 4v13.5L15.5 20l-7-2.5L3 20z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 4v13.5M15.5 6.5V20" fill="none" stroke="currentColor" stroke-width="1.3" stroke-opacity=".7"/></svg>';
   var I = {
     hand:'<svg viewBox="0 0 24 24"><path d="M12 2.5l2.6 3.2h-1.8v5.5h5.5V9.4L21.5 12l-3.2 2.6v-1.8h-5.5v5.5h1.8L12 21.5l-2.6-3.2h1.8v-5.5H5.7v1.8L2.5 12l3.2-2.6v1.8h5.5V5.7H9.4z" fill="currentColor"/></svg>',
@@ -33,8 +35,9 @@
     '<div class="mapx-panel">' +
       '<div class="mapx-stage">' +
         '<canvas class="mapx-tiles"></canvas>' +
+        '<canvas class="mapx-life"></canvas>' +
         '<canvas class="mapx-fx"></canvas>' +
-        '<svg class="mapx-svg" xmlns="http://www.w3.org/2000/svg"><g class="mapx-roads"></g><g class="mapx-route"><path class="r-glow"/><path class="r-ink"/><path class="r-dash"/><g class="r-segs"></g><g class="r-nodes"></g></g></svg>' +
+                '<svg class="mapx-svg" xmlns="http://www.w3.org/2000/svg"><g class="mapx-roads"></g><g class="mapx-route"><path class="r-glow"/><path class="r-ink"/><path class="r-dash"/><g class="r-segs"></g><g class="r-nodes"></g></g></svg>' +
         '<div class="mapx-labels"></div>' +
         '<div class="mapx-vig" aria-hidden="true"></div>' +
       '</div>' +
@@ -81,12 +84,12 @@
   function load(){
     if (loading) return loading;
     loading = Promise.all([getJSON('config.json'), getJSON('tiles.json'),
-      getJSON('places.json').catch(function(){ return []; }), getJSON('roads.json').catch(function(){ return []; })])
+      getJSON('places.json').catch(function(){ return []; }), getJSON('roads.json').catch(function(){ return []; }), getJSON('roads_auto.json').catch(function(){ return []; })])
     .then(function(r){
       CFG = r[0]; TL = r[1]; PLACES = Array.isArray(r[2]) ? r[2] : []; ROADS = Array.isArray(r[3]) ? r[3] : [];
       W = TL.width; H = TL.height; maxS = CFG.maxZoom || 2.5;
       rt.querySelector('.rt-est').hidden = !CFG.scaleIsEstimate;
-      buildPlaces(); buildRoads();
+      buildPlaces(); buildRoads(); LIFE.init(Array.isArray(r[4]) ? r[4] : []);
       return new Promise(function(res){ baseImg = new Image(); baseImg.decoding = 'async'; baseImg.onload = baseImg.onerror = function(){ res(); }; baseImg.src = BASE + 'base.webp'; });
     }).then(function(){ loaded = true; ov.classList.add('ready'); FXL.init(); resize(true); });
     return loading;
@@ -119,7 +122,7 @@
     minS = fitScale() * 0.92;
     if (first || !cw){ view.s = fitScale(); view.x = 0; view.y = 0; }
     else { view.s = Math.max(minS, view.s * (oldFit ? fitScale() / oldFit : 1)); view.x = vw / 2 - cw.x * view.s; view.y = vh / 2 - cw.y * view.s; }
-    clampView(); FXL.resize(); dirty = true; kick();
+    clampView(); FXL.resize(); LIFE.resize(); dirty = true; kick();
   }
 
   // ---------------------------------------------------------------- tiles
@@ -166,6 +169,28 @@
     // parent level underneath (already cached most of the time), then the sharp level
     if (lv.z > 1) drawLevel(L[lv.z - 1], a.x, a.y, b.x, b.y);
     if (lv.z > 0) drawLevel(lv, a.x, a.y, b.x, b.y);
+    tiltBlur();
+  }
+  // tilt-shift depth: blur the top/bottom bands of the map layer (only redrawn on view change; no-op where ctx.filter is unsupported)
+  var tiltCv = null;
+  function tiltBlur(){
+    if (!(tiltO > 0) || !('filter' in ctx)) return;
+    var w = cvT.width, h = cvT.height, bh = Math.round(h * .26), blur = (2.6 * dpr * tiltO).toFixed(2);
+    if (!tiltCv) tiltCv = document.createElement('canvas');
+    if (tiltCv.width !== w || tiltCv.height !== bh){ tiltCv.width = w; tiltCv.height = bh; }
+    var x = tiltCv.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    for (var k = 0; k < 2; k++){
+      var y0 = k ? h - bh : 0;
+      x.globalCompositeOperation = 'copy'; x.filter = 'blur(' + blur + 'px)';
+      x.drawImage(cvT, 0, y0, w, bh, 0, 0, w, bh);
+      x.filter = 'none'; x.globalCompositeOperation = 'destination-in';
+      var g = x.createLinearGradient(0, 0, 0, bh);
+      if (k){ g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)'); } else { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); }
+      x.fillStyle = g; x.fillRect(0, 0, w, bh);
+      ctx.drawImage(tiltCv, 0, y0);
+    }
+    x.globalCompositeOperation = 'source-over';
   }
 
   // ---------------------------------------------------------------- places & roads (data-driven; empty in v1)
@@ -366,7 +391,12 @@
   }, true);
 
   // ---------------------------------------------------------------- loop
-  var lastT = 0, fpsAcc = 0, fpsN = 0, slow = 0, fxLast = 0;
+  var lastT = 0, fpsAcc = 0, fpsN = 0, slow = 0, fxLast = 0, lifeLast = 0, tiltO = -1;
+  // tilt-shift style depth blur on the top/bottom bands, fades in as you zoom in (full mode only)
+  function tilt(){
+    var o = (lite() || reduce) ? 0 : Math.max(0, Math.min(1, (LIFE.zoomF() - .3) / .45)); o = Math.round(o * 20) / 20;
+    if (o === tiltO) return; tiltO = o; dirty = true;
+  }
   function kick(){ if (!raf && isOpen) raf = requestAnimationFrame(frame); }
   function frame(t){
     raf = 0; if (!isOpen) return;
@@ -381,14 +411,190 @@
       if (view.x === ox) vel.x = 0; if (view.y === oy) vel.y = 0;
       if (Math.abs(vel.x) + Math.abs(vel.y) < 0.15) inertia = false; dirty = true;
     }
-    if (dirty && loaded){ dirty = false; drawTiles(); layoutOverlay(); }
+    var moved = false;
+    if (loaded) tilt();
+    if (dirty && loaded){ dirty = false; drawTiles(); layoutOverlay(); moved = true; }
     // atmosphere: full ~60fps, light ~30fps, reduced-motion: only on view change
     var animFx = FXL.ok && !reduce, period = lite() ? 33 : 0;
-    if (FXL.ok && (t - fxLast >= period || reduce)){ FXL.draw(t / 1000); fxLast = t; }
+    if (FXL.ok && (t - fxLast >= period || reduce || moved)){ FXL.draw(t / 1000); fxLast = t; }
+    if (loaded && !reduce && (t - lifeLast >= period || moved)){ LIFE.draw(t / 1000); lifeLast = t; }
     // auto light: sustained < 32fps while open
-    if (!lite() && animFx){ fpsAcc += dt; fpsN++; if (fpsAcc > 2000){ var fps = fpsN * 1000 / fpsAcc; slow = fps < 32 ? slow + 1 : 0; if (slow >= 2){ autoLite = true; FXL.resize(); } fpsAcc = 0; fpsN = 0; } }
-    if (animFx || anim || inertia || dirty) kick();
+    if (!lite() && animFx){ fpsAcc += dt; fpsN++; if (fpsAcc > 2000){ var fps = fpsN * 1000 / fpsAcc; slow = fps < 32 ? slow + 1 : 0; if (slow >= 2 && !noAuto){ autoLite = true; FXL.resize(); } fpsAcc = 0; fpsN = 0; } }
+    if (animFx || (loaded && !reduce) || anim || inertia || dirty) kick();
   }
+
+
+  // ---------------------------------------------------------------- life layer (Canvas2D, between map and atmosphere)
+  // whirlpool swirl, caravans on roads, bird flocks with parallax + shadows. Disabled under reduced motion.
+  var LIFE = (function(){
+    var cv = ov.querySelector('.mapx-life'), c = cv.getContext('2d');
+    var land = null, landPts = [], roadsA = [], wp = null, wpIn = null;
+    var cars = [], flocks = [], nextFlock = 2, lastT = 0, ready = false;
+    var WP = {x: 4503, y: 1380, r: 132, sq: 0.68};
+    function rnd(a, b){ return a + Math.random() * (b - a); }
+    function init(autoRoads){
+      roadsA = autoRoads || [];
+      var m = new Image(); m.onload = function(){
+        var w = m.width, h = m.height, t = document.createElement('canvas'); t.width = w; t.height = h;
+        var x = t.getContext('2d'); x.drawImage(m, 0, 0); var d = x.getImageData(0, 0, w, h).data, a = new Uint8Array(w * h);
+        for (var i = 0; i < a.length; i++){ a[i] = d[i * 4] > 127 ? 1 : 0; }
+        // interior land points only (skip thin coast), for spawning flocks
+        for (var yy = 6; yy < h - 6; yy += 4) for (var xx = 6; xx < w - 6; xx += 4){
+          if (a[yy * w + xx] && a[yy * w + xx + 5] && a[yy * w + xx - 5] && a[(yy + 5) * w + xx] && a[(yy - 5) * w + xx]) landPts.push([(xx + .5) / w * W, (yy + .5) / h * H]);
+        }
+        land = {w: w, h: h, a: a}; kick();
+      }; m.src = BASE + 'landmask.png';
+      wp = new Image(); wp.onload = function(){
+        // inner core: same sprite masked to the centre, spun faster -> differential swirl
+        var s = wp.width, t = document.createElement('canvas'); t.width = t.height = s; var x = t.getContext('2d');
+        x.drawImage(wp, 0, 0); x.globalCompositeOperation = 'destination-in';
+        var g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, '#000'); g.addColorStop(.42, '#000'); g.addColorStop(.62, 'rgba(0,0,0,0)');
+        x.fillStyle = g; x.fillRect(0, 0, s, s); wpIn = t;
+      }; wp.src = BASE + 'whirlpool.webp';
+      ready = true;
+    }
+    function isLand(x, y){ if (!land || x < 0 || y < 0 || x >= W || y >= H) return false; return land.a[((y / H * land.h) | 0) * land.w + ((x / W * land.w) | 0)] === 1; }
+    function roads(){
+      var r = ROADS.filter(function(q){ return q.points && q.points.length > 1; });
+      return r.length ? r : roadsA.filter(function(q){ return q.points && q.points.length > 1; });
+    }
+    function zoomF(){ var f = fitScale(); return Math.max(0, Math.min(1, Math.log(view.s / f) / Math.log(maxS / f))); }
+    // ---- caravans
+    function newCar(stagger){
+      var R = roads(); if (!R.length) return null;
+      var rd = R[(Math.random() * R.length) | 0], p = rd.points.map(function(q){ return {x: q[0], y: q[1]}; });
+      if (Math.random() < .5) p.reverse();
+      var L = [0]; for (var i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y));
+      var tot = L[L.length - 1]; if (tot < 40) return null;
+      return {p: p, L: L, tot: tot, d: stagger ? rnd(0, tot * .7) : 0, v: rnd(5, 9), trail: [], tAcc: 0, size: rnd(.85, 1.15), carts: Math.random() < .4 ? 2 : 1};
+    }
+    function at(k, d){
+      var L = k.L, i = 1; while (i < L.length - 1 && L[i] < d) i++;
+      var a = k.p[i - 1], b = k.p[i], f = (d - L[i - 1]) / ((L[i] - L[i - 1]) || 1); f = Math.max(0, Math.min(1, f));
+      return {x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, ang: Math.atan2(b.y - a.y, b.x - a.x)};
+    }
+    function stepCars(dt, lt){
+      var want = lt ? 3 : 6;
+      while (cars.length < want){ var n = newCar(true); if (!n) break; cars.push(n); }
+      if (cars.length > want) cars.length = want;
+      for (var i = 0; i < cars.length; i++){
+        var k = cars[i]; k.d += k.v * dt; k.tAcc += dt;
+        if (k.tAcc > .5){ k.tAcc = 0; var q = at(k, k.d); k.trail.push({x: q.x, y: q.y}); if (k.trail.length > 16) k.trail.shift(); }
+        if (k.d >= k.tot){ var r = newCar(false); if (r) cars[i] = r; else k.d = 0; }
+      }
+    }
+    function drawCars(){
+      var s = view.s, sz = Math.max(1.3, Math.min(5.5, 9 * s));
+      for (var i = 0; i < cars.length; i++){
+        var k = cars[i], fade = Math.min(1, k.d / (k.tot * .07), (k.tot - k.d) / (k.tot * .07)); if (fade <= 0) continue;
+        var q = at(k, k.d), P = toScreen(q.x, q.y);
+        if (P.x < -40 || P.y < -40 || P.x > vw + 40 || P.y > vh + 40) continue;
+        // fading trail (dust)
+        if (k.trail.length > 1){
+          c.lineCap = 'round'; c.lineWidth = Math.max(.8, sz * .45);
+          for (var j = 1; j < k.trail.length; j++){
+            var A = toScreen(k.trail[j - 1].x, k.trail[j - 1].y), B = j === k.trail.length - 1 ? P : toScreen(k.trail[j].x, k.trail[j].y);
+            c.strokeStyle = 'rgba(70,52,30,' + (0.16 * j / k.trail.length * fade).toFixed(3) + ')';
+            c.beginPath(); c.moveTo(A.x, A.y); c.lineTo(B.x, B.y); c.stroke();
+          }
+        }
+        c.save(); c.translate(P.x, P.y); c.rotate(q.ang); c.globalAlpha = .85 * fade;
+        var z = sz * k.size;
+        if (z < 2.6){ c.fillStyle = '#1d140c'; c.beginPath(); c.arc(0, 0, z * .5, 0, 6.283); c.fill(); if (k.carts > 1){ c.beginPath(); c.arc(-z * 1.1, 0, z * .42, 0, 6.283); c.fill(); } }
+        else {
+          for (var m = 0; m < k.carts; m++){
+            var ox = -m * z * 1.5;
+            c.fillStyle = '#2a1d10'; c.fillRect(ox - z * .55, -z * .32, z * .75, z * .64);          // cart
+            c.fillStyle = '#d9cbb0'; c.fillRect(ox - z * .5, -z * .26, z * .6, z * .26);          // canvas cover
+            c.fillStyle = '#1a120a'; c.beginPath(); c.ellipse(ox + z * .45, 0, z * .28, z * .14, 0, 0, 6.283); c.fill(); // horse
+          }
+        }
+        c.restore();
+      }
+    }
+    // ---- birds
+    function spawnFlock(){
+      if (!landPts.length) return;
+      var a = toWorld(0, 0), b = toWorld(vw, vh), mid = null;
+      for (var i = 0; i < 40 && !mid; i++){ var x = rnd(Math.max(0, a.x), Math.min(W, b.x)), y = rnd(Math.max(0, a.y), Math.min(H, b.y)); if (isLand(x, y)) mid = {x: x, y: y}; }
+      if (!mid){ var p = landPts[(Math.random() * landPts.length) | 0]; mid = {x: p[0], y: p[1]}; }
+      var ang = rnd(0, 6.283), D = Math.max(260, Math.hypot(b.x - a.x, b.y - a.y) * rnd(.32, .45));
+      var v = Math.max(30, Math.min(120, 22 / view.s)) * rnd(.85, 1.15), n = 3 + ((Math.random() * 6) | 0);
+      var birds = []; for (var j = 0; j < n; j++){ var row = Math.ceil(j / 2), side = j % 2 ? 1 : -1; birds.push({row: row, side: j ? side : 0, ph: rnd(0, 10), fq: rnd(6, 9), jx: rnd(-.4, .4), jy: rnd(-.4, .4)}); }
+      flocks.push({sx: mid.x - Math.cos(ang) * D, sy: mid.y - Math.sin(ang) * D, ang: ang, len: 2 * D, d: 0, v: v, birds: birds,
+        white: Math.random() < .4, alt: rnd(1.09, 1.16), wob: rnd(0, 6), t: 0});
+    }
+    function stepBirds(dt, lt){
+      nextFlock -= dt;
+      var max = lt ? 1 : 3;
+      if (nextFlock <= 0){ if (flocks.length < max) spawnFlock(); nextFlock = rnd(5, 14); }
+      for (var i = flocks.length - 1; i >= 0; i--){ var f = flocks[i]; f.d += f.v * dt; f.t += dt; if (f.d > f.len) flocks.splice(i, 1); }
+    }
+    function drawBirds(lt){
+      if (!flocks.length) return;
+      var cw = toWorld(vw / 2, vh / 2), zf = zoomF(), span = 3 + 3.5 * zf, sp = span * 1.5;
+      for (var pass = 0; pass < 2; pass++){
+        if (pass === 0 && lt) continue;                       // shadows: full mode only
+        for (var i = 0; i < flocks.length; i++){
+          var f = flocks[i], fade = Math.min(1, f.d / (f.len * .12), (f.len - f.d) / (f.len * .12)); if (fade <= 0) continue;
+          var wob = Math.sin(f.t * .4 + f.wob) * .18, ang = f.ang + wob;
+          var wx = f.sx + Math.cos(f.ang) * f.d + Math.sin(f.t * .3 + f.wob) * 30, wy = f.sy + Math.sin(f.ang) * f.d + Math.cos(f.t * .25 + f.wob) * 30;
+          var P = pass ? {x: vw / 2 + (wx - cw.x) * view.s * f.alt, y: vh / 2 + (wy - cw.y) * view.s * f.alt} : toScreen(wx + 16, wy + 22);
+          if (P.x < -60 || P.y < -60 || P.x > vw + 60 || P.y > vh + 60) continue;
+          var ca = Math.cos(ang), sa = Math.sin(ang);
+          c.lineWidth = pass ? 1.1 : 1; c.lineCap = 'round'; c.lineJoin = 'round';
+          c.strokeStyle = pass ? (f.white ? 'rgba(244,242,236,' + (.95 * fade) + ')' : 'rgba(18,18,22,' + (.9 * fade) + ')') : 'rgba(0,0,0,' + (.16 * fade) + ')';
+          c.beginPath();
+          for (var j = 0; j < f.birds.length; j++){
+            var b = f.birds[j], back = -b.row * sp + Math.sin(f.t * 1.3 + b.ph) * b.jx * sp, lat = b.side * b.row * sp * .75 + Math.cos(f.t * 1.1 + b.ph) * b.jy * sp;
+            var x = P.x + ca * back - sa * lat, y = P.y + sa * back + ca * lat;
+            // flap in bursts, glide between: wingtip offset flickers 1-2px
+            var cyc = (f.t + b.ph) % 3, flap = cyc < 1.4 ? Math.sin((f.t + b.ph) * b.fq * 6.283 / 4) : .25;
+            var tip = span * .5, lift = (flap * .55) * span * .5, s = pass ? 1 : .9;
+            // wings perpendicular to heading, swept back
+            var lx = -sa * tip * s, ly = ca * tip * s, bx = -ca * span * .3 * s, by = -sa * span * .3 * s;
+            c.moveTo(x + lx + bx, y + ly + by - lift); c.lineTo(x, y); c.lineTo(x - lx + bx, y - ly + by - lift);
+          }
+          c.stroke();
+          if (pass && f.white){ c.strokeStyle = 'rgba(20,24,30,' + (.35 * fade) + ')'; c.lineWidth = .6; c.stroke(); }
+        }
+      }
+    }
+    // ---- whirlpool
+    function drawWhirl(t, lt){
+      if (!wp || !wp.complete || !wp.naturalWidth) return;
+      var P = toScreen(WP.x, WP.y), R = WP.r * view.s; if (P.x + R < 0 || P.y + R < 0 || P.x - R > vw || P.y - R > vh) return;
+      c.save(); c.translate(P.x, P.y); c.scale(1, WP.sq);
+      c.save(); c.rotate(-t * .12); c.globalAlpha = .9; c.drawImage(wp, -R, -R, R * 2, R * 2); c.restore();
+      if (!lt && wpIn){ c.save(); c.rotate(-t * .34); c.globalAlpha = .85; c.drawImage(wpIn, -R, -R, R * 2, R * 2); c.restore(); }
+      // glow
+      var pulse = .75 + .25 * Math.sin(t * .7), g = c.createRadialGradient(0, 0, R * .05, 0, 0, R);
+      g.addColorStop(0, 'rgba(10,30,45,' + (.35 * pulse) + ')'); g.addColorStop(.55, 'rgba(90,200,215,' + (.10 * pulse) + ')'); g.addColorStop(1, 'rgba(90,200,215,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, R, 0, 6.283); c.fill();
+      if (!lt){
+        // foam arcs: inner ones spin faster
+        c.lineCap = 'round';
+        for (var i = 0; i < 9; i++){
+          var rr = R * (.3 + i * .075), w = -t * (.5 / (.4 + i * .12)) + i * 2.1, len = .7 + (i % 3) * .35;
+          var al = (.16 + .12 * Math.sin(t * 1.3 + i * 1.7)) * (1 - i / 12);
+          c.strokeStyle = 'rgba(225,245,250,' + Math.max(0, al).toFixed(3) + ')'; c.lineWidth = Math.max(.6, R * .025);
+          c.beginPath(); c.arc(0, 0, rr, w, w + len); c.stroke();
+          c.beginPath(); c.arc(0, 0, rr * .97, w + 3.14, w + 3.14 + len * .6); c.stroke();
+        }
+      }
+      c.restore();
+    }
+    function resize(){ cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr); }
+    function draw(t){
+      var dt = lastT ? Math.min(.1, t - lastT) : .016; lastT = t;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, vw, vh);
+      if (!ready || reduce) return;
+      var lt = lite();
+      stepCars(dt, lt); stepBirds(dt, lt);
+      drawWhirl(t, lt); drawCars(); drawBirds(lt);
+    }
+    return {init: init, resize: resize, draw: draw, zoomF: zoomF, spawn: spawnFlock, stats: function(){ return {cars: cars.length, flocks: flocks.length, roads: roads().length, land: landPts.length, flockPos: flocks.map(function(f){ return [Math.round(f.sx + Math.cos(f.ang) * f.d), Math.round(f.sy + Math.sin(f.ang) * f.d)]; }), carPos: cars.map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
+  })();
 
   // ---------------------------------------------------------------- atmosphere (WebGL)
   var FXL = (function(){
@@ -424,17 +630,20 @@
       // clouds: two parallax layers above the map (layer coords shrink toward the view centre => appear closer, move faster)
       ' float thr=mix(.58,.70,uZoom);',
       ' vec2 c0=(uCenter+(w-uCenter)/1.45)/820.; vec2 c1=(uCenter+(w-uCenter)/2.1)/600.+vec2(7.3,2.1);',
-      ' float sh=cloud(c0+vec2(.07,.09),t*.012,thr);',
-      ' over(o,vec3(0.02,0.03,0.05),sh*.3*uCloud);',
+      ' float sh=cloud(c0+vec2(.07,.09),t*.03,thr);',
+      ' over(o,vec3(0.02,0.03,0.05),sh*.34*uCloud);',
       // sea shimmer: sparkles drifting on open water
       ' if(uLite<.5){float sea=smoothstep(6.,40.,dist)*(1.-fogA);',
-      '  float s1=n(w/38.+vec2(t*.35,t*.12)),s2=n(w/27.-vec2(t*.22,-t*.28));',
+      '  vec2 ws=uCenter+(w-uCenter)*1.06;',
+      '  float s1=n(ws/38.+vec2(t*.35,t*.12)),s2=n(ws/27.-vec2(t*.22,-t*.28));',
       '  float sp=pow(max(0.,s1*s2-.42)*3.,3.)*sea*.32; o.rgb+=vec3(.75,.9,1.)*sp;}',
       ' over(o,fogC,fogA);',
-      ' float a0=cloud(c0,t*.012,thr); float a0l=cloud(c0-vec2(.012,.016),t*.012,thr);',
+      // slow warm light sweep across the map (full mode)
+      ' if(uLite<.5){float sw=dot(uv,vec2(.857,.514));float ph=fract(t/46.)*2.4-.5;float band=exp(-pow((sw-ph)/.10,2.));o.rgb+=vec3(1.,.88,.66)*band*.05*(1.-fogA*.6);}',
+      ' float a0=cloud(c0,t*.03,thr); float a0l=cloud(c0-vec2(.012,.016),t*.03,thr);',
       ' vec3 cc0=mix(vec3(.50,.54,.62),vec3(1.,.98,.94),clamp(.6+(a0-a0l)*3.5,0.,1.));',
       ' over(o,cc0,a0*.8*uCloud);',
-      ' if(uLite<.5){float a1=cloud(c1,t*.02,thr+.05); float a1l=cloud(c1-vec2(.012,.016),t*.02,thr+.05);',
+      ' if(uLite<.5){float a1=cloud(c1,t*.05,thr+.05); float a1l=cloud(c1-vec2(.012,.016),t*.05,thr+.05);',
       '  vec3 cc1=mix(vec3(.55,.58,.66),vec3(1.),clamp(.6+(a1-a1l)*3.5,0.,1.)); over(o,cc1,a1*.55*uCloud);}',
       ' gl_FragColor=o;',
       '}'].join('\n');
@@ -548,7 +757,7 @@
     addNodeWorld: function(x, y){ route.push({x: x, y: y}); drawRoute(); updateReadout(); },
     view: function(){ return {s: view.s, x: view.x, y: view.y, fit: fitScale(), vw: vw, vh: vh}; },
     zoomTo: function(s, wx, wy){ var p = toScreen(wx, wy); view.x += vw / 2 - p.x; view.y += vh / 2 - p.y; zoomAt(s, vw / 2, vh / 2); kick(); },
-    stats: function(){ return {fx: FXL.ok, gl: !!(cvF.getContext && FXL.ok), lite: lite(), tiles: tileCount, loaded: loaded, km: km(totalPx()), places: PLACES.length, roads: ROADS.length}; },
-    cfg: function(){ return CFG; }, redraw: function(){ dirty = true; kick(); },
+    stats: function(){ return {fx: FXL.ok, gl: !!(cvF.getContext && FXL.ok), lite: lite(), tiles: tileCount, loaded: loaded, km: km(totalPx()), places: PLACES.length, roads: ROADS.length, life: LIFE.stats()}; },
+    cfg: function(){ return CFG; }, spawnFlock: function(){ LIFE.spawn(); }, redraw: function(){ dirty = true; kick(); },
     isOpen: function(){ return isOpen; }};
 })();
