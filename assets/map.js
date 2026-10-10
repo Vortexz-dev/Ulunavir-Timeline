@@ -519,12 +519,15 @@
       var G = roadGeo(); if (!G.length) return null;
       var gate = !stagger && Math.random() < .45, pool = gate ? G.filter(function(g){ return g.gA || g.gB; }) : G; if (!pool.length){ pool = G; gate = false; }
       var sum = 0, i; for (i = 0; i < pool.length; i++) sum += Math.sqrt(pool[i].tot) * pool[i].w;
-      for (var tries = 0; tries < 8; tries++){
+      for (var tries = 0; tries < 10; tries++){
         var r = Math.random() * sum, g = pool[0]; for (i = 0; i < pool.length; i++){ r -= Math.sqrt(pool[i].tot) * pool[i].w; if (r <= 0){ g = pool[i]; break; } }
+        // per-road crowding cap (~1 vehicle / 110px, main roads a bit more)
+        var onRoad = 0; for (var j0 = 0; j0 < cars.length; j0++) if (cars[j0] && cars[j0].g === g) onRoad++;
+        if (onRoad >= Math.max(2, Math.floor(g.tot / 110 * (g.w > 1 ? 1.25 : 1))) && tries < 9) continue;
         // gate start: leave from the settlement end of the road; otherwise start somewhere mid-road and fade in
         var rev = gate ? (g.gA && g.gB ? Math.random() < .5 : !g.gA) : Math.random() < .5, d = gate ? 0 : rnd(0, g.tot * .8), ok = true;
-        for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o && o.g === g && Math.abs((o.rev === rev ? o.d : o.tot - o.d) - d) < 70){ ok = false; break; } }
-        if (ok || tries === 7){
+        for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o && o.g === g && Math.abs((o.rev === rev ? o.d : o.tot - o.d) - d) < 60){ ok = false; break; } }
+        if (ok || tries === 9){
           var p = rev ? g.p.slice().reverse() : g.p, L = [0];
           for (i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y));
           return {g: g, rev: rev, p: p, L: L, tot: g.tot, d: d, d0: stagger ? d - 50 : d, gate: gate, arrive: rev ? g.gA : g.gB, v: rnd(5, 9) * (g.w > 1 ? 1 : .85), trail: [], tAcc: 0, size: rnd(.85, 1.2), carts: Math.random() < .45 ? 2 + (Math.random() < .3 ? 1 : 0) : 1};
@@ -533,20 +536,24 @@
       return null;
     }
     function stepCars(dt, lt){
-      var want = lt ? 12 : 40, guard = 0;
+      var want = lt ? 20 : 70, guard = 0;
       while (cars.length < want && guard++ < want){ var n = newCar(true); if (!n) break; cars.push(n); }
       if (cars.length > want) cars.length = want;
       for (var i = 0; i < cars.length; i++){
-        var k = cars[i]; k.d += k.v * dt; k.tAcc += dt;
+        var k = cars[i], sp = k.v;
+        // no overlaps: queue behind a slower vehicle ahead on the same road and direction
+        for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o !== k && o.g === k.g && o.rev === k.rev){ var gap = o.d - k.d; if (gap > 0 && gap < 40) sp = Math.min(sp, o.v * (gap < 22 ? .5 : 1)); } }
+        k.d += sp * dt; k.tAcc += dt;
         if (k.tAcc > .5){ k.tAcc = 0; var q = at(k, k.d); k.trail.push({x: q.x, y: q.y}); if (k.trail.length > 16) k.trail.shift(); }
         if (k.d >= k.tot){ var r = newCar(false); if (r) cars[i] = r; else k.d = 0; }
       }
     }
     function drawCars(){
-      var s = view.s, sz = clamp(13 * s, 2.4, 8);
+      var s = view.s, sz = clamp(16 * s, 2.9, 9.8);
       for (var i = 0; i < cars.length; i++){
         var k = cars[i], fade = Math.min(1, (k.d - k.d0) / (k.gate ? 14 : 45), (k.tot - k.d) / (k.arrive ? 18 : Math.max(30, k.tot * .07))); if (fade <= 0) continue;
         var q = at(k, k.d), P = toScreen(q.x, q.y); if (!vis(P, 40)) continue;
+        var off = sz * .45; P = {x: P.x - Math.sin(q.ang) * off, y: P.y + Math.cos(q.ang) * off};
         if (k.trail.length > 1){
           c.lineCap = 'round'; c.lineWidth = Math.max(.9, sz * .45);
           for (var j = 1; j < k.trail.length; j++){
