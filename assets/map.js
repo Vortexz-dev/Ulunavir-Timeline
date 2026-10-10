@@ -19,7 +19,14 @@
     trash:'<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
     cloud:'<svg viewBox="0 0 24 24"><path d="M7 18h10.5a3.8 3.8 0 00.4-7.6A5.6 5.6 0 007.3 9.2 4.4 4.4 0 007 18z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
     snd:'<svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="on" d="M15.5 9a4.2 4.2 0 010 6M18 6.5a7.6 7.6 0 010 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
-    x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+    x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    dn:'<svg viewBox="0 0 24 24"><g class="on"><circle cx="9" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 3.2v1.6M9 15.2v1.6M2.2 10h1.6M14.2 10h1.6M4.2 5.2l1.1 1.1M12.7 13.7l1.1 1.1M4.2 14.8l1.1-1.1M12.7 6.3l1.1-1.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M20.5 15.2a4.6 4.6 0 01-6.3 5.3 4.8 4.8 0 004-6.9 4.6 4.6 0 012.3 1.6z" fill="currentColor"/></g><g class="off"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></g></svg>',
+    pin:'<svg viewBox="0 0 24 24"><path d="M12 21.5s-6.5-6.2-6.5-11.2a6.5 6.5 0 0113 0c0 5-6.5 11.2-6.5 11.2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.3 7.6l5.4 5.4M14.7 7.6l-5.4 5.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+  };
+  var PIN_I = {
+    battle:'<svg viewBox="0 0 24 24"><path d="M5 4l9.5 9.5M19 4L9.5 13.5M4 17.5l3 3M20 17.5l-3 3M6.2 15.2l2.6 2.6M17.8 15.2l-2.6 2.6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>',
+    found:'<svg viewBox="0 0 24 24"><path d="M6 21V9l-1.5-2V4h3v1.5h2V4h5v1.5h2V4h3v3L18 9v12zM10.5 21v-4a1.5 1.5 0 013 0v4" fill="currentColor"/></svg>',
+    event:'<svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.1 6.6.4-5.1 4.2 1.7 6.4L12 16.6l-5.6 3.5 1.7-6.4L3 9.5l6.6-.4z" fill="currentColor"/></svg>'
   };
 
   // ---------------------------------------------------------------- DOM
@@ -39,7 +46,9 @@
         '<canvas class="mapx-tiles"></canvas>' +
         '<canvas class="mapx-life"></canvas>' +
         '<canvas class="mapx-fx"></canvas>' +
+        '<canvas class="mapx-night"></canvas>' +
                 '<svg class="mapx-svg" xmlns="http://www.w3.org/2000/svg"><g class="mapx-roads"></g><g class="mapx-route"><path class="r-glow"/><path class="r-ink"/><path class="r-dash"/><g class="r-segs"></g><g class="r-nodes"></g></g></svg>' +
+        '<div class="mapx-pins"></div>' +
         '<div class="mapx-labels"></div>' +
         '<div class="mapx-vig" aria-hidden="true"></div>' +
       '</div>' +
@@ -52,6 +61,8 @@
         '<button type="button" class="mt-fit" title="Tüm harita">' + I.fit + '</button>' +
         '<i class="mt-sep"></i>' +
         '<button type="button" class="mt-cloud" aria-pressed="true" title="Bulutlar">' + I.cloud + '</button>' +
+        '<button type="button" class="mt-dn" aria-pressed="true" title="Gece / gündüz döngüsü (kapalıyken hep gündüz)">' + I.dn + '</button>' +
+        '<button type="button" class="mt-pins" aria-pressed="true" title="Tarihî olay iğneleri">' + I.pin + '</button>' +
         '<div class="mt-sndwrap"><button type="button" class="mt-snd" aria-pressed="true" title="Harita sesleri">' + I.snd + '</button>' +
         '<div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div>' +
       '</div>' +
@@ -61,6 +72,7 @@
         '<div class="rt-btns"><button type="button" class="rt-undo" title="Son durağı geri al (Backspace)">' + I.undo + '</button><button type="button" class="rt-clear" title="Rotayı temizle">' + I.trash + '</button></div>' +
       '</div>' +
       '<div class="mapx-pop" hidden></div>' +
+      '<aside class="mapx-place" hidden role="dialog" aria-label="Yer bilgisi"><div class="mpl-roll" aria-hidden="true"></div><button type="button" class="mpl-x" aria-label="Kapat">' + I.x + '</button><div class="mpl-in"></div></aside>' +
       '<div class="mapx-load" aria-hidden="true"><i></i></div>' +
       '<button type="button" class="mapx-x" aria-label="Haritayı kapat" title="Kapat (Esc)">' + I.x + '</button>' +
     '</div>';
@@ -74,7 +86,7 @@
   var ctx = cvT.getContext('2d');
 
   // ---------------------------------------------------------------- state
-  var CFG = null, TL = null, PLACES = [], ROADS = [], loaded = false, loading = null;
+  var CFG = null, TL = null, PLACES = [], PINS = [], ROADS = [], loaded = false, loading = null;
   var W = 5112, H = 4920;
   var vw = 0, vh = 0, dpr = 1;
   var view = {s: 0.2, x: 0, y: 0}, minS = 0.1, maxS = 2.5;
@@ -90,12 +102,12 @@
   function load(){
     if (loading) return loading;
     loading = Promise.all([getJSON('config.json'), getJSON('tiles.json'),
-      getJSON('places.json').catch(function(){ return []; }), getJSON('roads.json').catch(function(){ return []; }), getJSON('roads_auto.json').catch(function(){ return []; }), getJSON('sealanes.json').catch(function(){ return []; }), getJSON('life.json').catch(function(){ return {}; })])
+      getJSON('places.json').catch(function(){ return []; }), getJSON('roads.json').catch(function(){ return []; }), getJSON('roads_auto.json').catch(function(){ return []; }), getJSON('sealanes.json').catch(function(){ return []; }), getJSON('life.json').catch(function(){ return {}; }), getJSON('roadnet.json').catch(function(){ return null; })])
     .then(function(r){
-      CFG = r[0]; TL = r[1]; PLACES = Array.isArray(r[2]) ? r[2] : []; ROADS = Array.isArray(r[3]) ? r[3] : [];
+      CFG = r[0]; TL = r[1]; PLACES = Array.isArray(r[2]) ? r[2] : ((r[2] && r[2].places) || []); PINS = (r[2] && r[2].pins) || []; ROADS = Array.isArray(r[3]) ? r[3] : [];
       W = TL.width; H = TL.height; maxS = CFG.maxZoom || 2.5;
       rt.querySelector('.rt-est').hidden = !CFG.scaleIsEstimate;
-      buildPlaces(); buildRoads(); LIFE.init(Array.isArray(r[4]) ? r[4] : [], Array.isArray(r[5]) ? r[5] : [], r[6] || {});
+      buildPlaces(); buildRoads(); LIFE.init(Array.isArray(r[4]) ? r[4] : [], Array.isArray(r[5]) ? r[5] : [], r[6] || {}, r[7]);
       return new Promise(function(res){ baseImg = new Image(); baseImg.decoding = 'async'; baseImg.onload = baseImg.onerror = function(){ res(); }; baseImg.src = BASE + 'base.webp'; });
     }).then(function(){ loaded = true; ov.classList.add('ready'); FXL.init(); resize(true); });
     return loading;
@@ -199,19 +211,41 @@
     x.globalCompositeOperation = 'source-over';
   }
 
-  // ---------------------------------------------------------------- places & roads (data-driven; empty in v1)
-  var placeEls = [];
+  // ---------------------------------------------------------------- places, history pins, info panel (data: places.json, generated by site-build/map_places.py)
+  var placeEls = [], pinEls = [], pinsOn = true, curPanel = null;
+  try { pinsOn = localStorage.getItem('ulv-map-pins') !== '0'; } catch(e){}
+  var pinsLayer = ov.querySelector('.mapx-pins'), plc = ov.querySelector('.mapx-place'), plcIn = plc.querySelector('.mpl-in');
+  // zoomF thresholds where each rank appears (regions fade out again when zoomed far in)
+  var RANK_Z = {capital: 0, city: 0, sea: 0, region: 0, town: .3, landmark: .34, district: .5};
+  var RANK_K = {capital: 'Başkent', city: 'Şehir', town: 'Yerleşim', landmark: 'Önemli yer', district: 'Şehir bölgesi', region: 'Bölge', sea: 'Deniz'};
+  var PIN_K = {battle: 'Savaş · çatışma', found: 'Kuruluş', event: 'Önemli olay'};
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function evByO(o){ var E = (window.TIMELINE && window.TIMELINE.events) || []; for (var i = 0; i < E.length; i++) if (E[i].o === o) return E[i]; return null; }
+  function placeById(id){ for (var i = 0; i < PLACES.length; i++) if (PLACES[i].id === id) return PLACES[i]; return null; }
   function buildPlaces(){
     labels.innerHTML = ''; placeEls = [];
     PLACES.forEach(function(p){
-      if (!p || p.x == null || p.y == null || !p.name) return;
+      if (!p || p.rank === 'hidden' || p.lx == null || !p.name) return;
       var b = document.createElement('button'); b.type = 'button';
-      b.className = 'mp-place t-' + (p.type || 'place'); b.innerHTML = '<i></i><span>' + esc(p.name) + '</span>';
+      b.className = 'mp-place r-' + p.rank; b.innerHTML = '<span>' + esc(p.name) + '</span>';
+      b.setAttribute('aria-label', p.name + ' — ' + (RANK_K[p.rank] || 'Yer') + ', bilgiyi aç');
       b.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); });
       b.addEventListener('click', function(ev){ ev.stopPropagation(); showPlace(p, b); });
-      labels.appendChild(b); placeEls.push({p: p, el: b});
+      labels.appendChild(b); placeEls.push({p: p, el: b, z: RANK_Z[p.rank] || 0});
     });
+    pinsLayer.innerHTML = ''; pinEls = [];
+    PINS.forEach(function(q){
+      var e = evByO(q.o); if (!e) return;
+      var b = document.createElement('button'); b.type = 'button';
+      b.className = 'mp-pin p-' + q.type + (q.est ? ' est' : '') + (e.major ? ' major' : '');
+      b.innerHTML = '<i>' + (PIN_I[q.type] || PIN_I.event) + '</i>';
+      b.title = e.big + ' · ' + e.title + (q.est ? ' (konum tahmini)' : '');
+      b.setAttribute('aria-label', e.title + ' — olay iğnesi');
+      b.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); });
+      b.addEventListener('click', function(ev){ ev.stopPropagation(); showPin(q, e, b); });
+      pinsLayer.appendChild(b); pinEls.push({q: q, el: b});
+    });
+    pinsLayer.classList.toggle('off', !pinsOn);
   }
   function buildRoads(){
     gRoads.innerHTML = '';
@@ -221,23 +255,105 @@
       gRoads.appendChild(pth); });
   }
   function layoutOverlay(){
+    var zf = LIFE.zoomF(), ls = Math.min(1.25, .82 + zf * .5);
+    labels.style.setProperty('--ls', ls.toFixed(3));
     placeEls.forEach(function(o){
-      var s = toScreen(o.p.x, o.p.y), hide = o.p.minZoom && view.s < o.p.minZoom;
+      var s = toScreen(o.p.lx, o.p.ly), r = o.p.rank;
+      var hide = zf < o.z - .001 || ((r === 'region' || r === 'sea') && zf > .72) || s.x < -160 || s.y < -40 || s.x > vw + 160 || s.y > vh + 40;
+      o.el.style.transform = 'translate(' + s.x.toFixed(1) + 'px,' + s.y.toFixed(1) + 'px) translate(-50%,-50%) scale(' + ls.toFixed(3) + ')';
+      o.el.classList.toggle('off', hide);
+    });
+    var pinVis = pinsOn && zf >= .16;
+    pinEls.forEach(function(o){
+      var s = toScreen(o.q.x, o.q.y);
       o.el.style.transform = 'translate(' + s.x.toFixed(1) + 'px,' + s.y.toFixed(1) + 'px)';
-      o.el.classList.toggle('off', !!hide || s.x < -80 || s.y < -40 || s.x > vw + 80 || s.y > vh + 40);
+      o.el.classList.toggle('off', !pinVis || s.x < -20 || s.y < -20 || s.x > vw + 20 || s.y > vh + 20);
     });
     Array.prototype.forEach.call(gRoads.children, function(p){
       p.setAttribute('d', p._pts.map(function(q, i){ var s = toScreen(q[0], q[1]); return (i ? 'L' : 'M') + s.x.toFixed(1) + ' ' + s.y.toFixed(1); }).join(''));
     });
     drawRoute();
   }
-  function showPlace(p, el){
-    var tag = p.tag && window.__ulv && window.__ulv.TagCard && window.__ulv.TagCard.resolve(p.tag);
-    pop.innerHTML = '<b>' + esc(p.name) + '</b>' + (p.description ? '<p>' + esc(p.description) + '</p>' : '') + (tag ? '<button type="button" class="pop-tag">Kayıtları aç</button>' : '');
-    pop.hidden = false;
-    var s = toScreen(p.x, p.y); pop.style.left = Math.min(vw - 240, Math.max(10, s.x + 14)) + 'px'; pop.style.top = Math.min(vh - 120, Math.max(10, s.y - 10)) + 'px';
-    var tb = pop.querySelector('.pop-tag'); if (tb) tb.onclick = function(){ window.__ulv.TagCard.open('p', p.tag, el); };
+  function TC(){ return window.__ulv && window.__ulv.TagCard; }
+  function mediaHtml(ph, auto){
+    if (!ph || !ph.length) return '';
+    var h = '<div class="mpl-media' + (ph.length > 1 ? ' multi' : '') + '" data-i="0"><div class="slides">';
+    ph.forEach(function(p, i){ h += '<figure class="slide' + (i ? '' : ' on') + '"><img ' + (i < 2 ? 'src' : 'data-src') + '="' + esc(p.f) + '" width="' + p.w + '" height="' + p.h + '" alt="' + esc(p.cap || '') + '" decoding="async">' + (p.cap ? '<figcaption>' + esc(p.cap) + '</figcaption>' : '') + '</figure>'; });
+    h += '</div>';
+    if (ph.length > 1) h += '<button type="button" class="mpl-nav prev" aria-label="Önceki görsel">‹</button><button type="button" class="mpl-nav next" aria-label="Sonraki görsel">›</button>';
+    if (auto) h += '<span class="mpl-auto">Bu yerde geçen olaylardan</span>';
+    return h + '</div>';
   }
+  function openPanel(html, el){
+    plcIn.innerHTML = html; plcIn.scrollTop = 0; pop.hidden = true;
+    var was = !plc.hidden; plc.hidden = false; curPanel = el || null;
+    if (!was){ plc.classList.remove('on'); void plc.offsetWidth; }
+    requestAnimationFrame(function(){ plc.classList.add('on'); });
+  }
+  function closePanel(){
+    if (plc.hidden) return; plc.classList.remove('on');
+    setTimeout(function(){ if (!plc.classList.contains('on')){ plc.hidden = true; plcIn.innerHTML = ''; } }, 320);
+    ov.querySelectorAll('.mp-place.sel,.mp-pin.sel').forEach(function(x){ x.classList.remove('sel'); });
+  }
+  function evList(os, title){
+    var E = os.map(evByO).filter(Boolean); if (!E.length) return '';
+    var h = '<div class="mpl-h">' + title + ' <span>' + E.length + '</span></div><ol class="mpl-evs">';
+    E.forEach(function(e){ h += '<li><button type="button" data-go="' + e.o + '"><b>' + esc(e.big) + '</b><span>' + esc(e.title) + '</span></button></li>'; });
+    return h + '</ol>';
+  }
+  function showPlace(p, el){
+    ov.querySelectorAll('.mp-place.sel,.mp-pin.sel').forEach(function(x){ x.classList.remove('sel'); }); if (el) el.classList.add('sel');
+    var h = mediaHtml(p.ph, p.phAuto) + '<div class="mpl-body"><div class="mpl-k">' + (RANK_K[p.rank] || 'Yer') + '</div><h2 class="mpl-t">' + esc(p.name) + '</h2>';
+    if (p.sub) h += '<div class="mpl-s">' + esc(p.sub) + '</div>';
+    h += '<div class="mpl-rule" aria-hidden="true"><i></i><b>✦</b><i></i></div>';
+    (p.desc || []).forEach(function(d){ h += '<p>' + esc(d).replace(/tahmin ediliyor/g, '<em class="mpl-est">tahmin ediliyor</em>') + '</p>'; });
+    if (!p.desc || !p.desc.length) h += '<p class="mpl-none">Arşivde bu yer için henüz ayrıntılı bir kayıt yok.</p>';
+    if (p.facts && p.facts.length){ h += '<dl class="mpl-facts">'; p.facts.forEach(function(f){ h += '<dt>' + esc(f[0]) + '</dt><dd>' + esc(f[1]) + '</dd>'; }); h += '</dl>'; }
+    if (p.links && p.links.length){
+      h += '<div class="mpl-h">Bağlantılı etiketler</div><ul class="mpl-tags">';
+      p.links.forEach(function(l){ h += '<li><button type="button" class="t-' + l[1] + '" data-tag="' + esc(l[0]) + '" data-tt="' + l[1] + '">' + esc(l[0]) + '</button></li>'; });
+      h += '</ul>';
+    }
+    if (p.ev && p.ev.length) h += evList(p.ev, 'Tarihçe · burada geçen olaylar');
+    var near = PINS.filter(function(q){ return q.pl === p.id; }).length;
+    if (near) h += '<p class="mpl-note">Haritada bu yerin çevresinde ' + near + ' olay iğnesi var' + (pinsOn ? '.' : ' (iğne katmanı kapalı).') + '</p>';
+    openPanel(h + '</div>', el);
+  }
+  function showPin(q, e, el){
+    ov.querySelectorAll('.mp-place.sel,.mp-pin.sel').forEach(function(x){ x.classList.remove('sel'); }); if (el) el.classList.add('sel');
+    var ph = (e.imgs || []).slice(0, 4).map(function(im){ return {f: im.c, w: im.w, h: im.h, cap: ''}; });
+    var p = placeById(q.pl);
+    var h = mediaHtml(ph) + '<div class="mpl-body"><div class="mpl-k">' + (PIN_K[q.type] || 'Olay') + ' · ' + esc(e.big) + '</div><h2 class="mpl-t">' + esc(e.title) + '</h2>';
+    h += '<div class="mpl-s">' + (p && p.rank !== 'hidden' ? '<button type="button" class="mpl-pl" data-pl="' + esc(p.id) + '">' + esc(p.name) + '</button>' : esc(p ? p.name : '')) +
+      (q.via ? ' · ' + esc(q.via) : '') + (q.est ? ' <em class="mpl-est">konum tahmini</em>' : '') + '</div>';
+    h += '<div class="mpl-rule" aria-hidden="true"><i></i><b>✦</b><i></i></div><p>' + esc(e.sum) + '</p>';
+    if (q.est) h += '<p class="mpl-note">İğne, olayın geçtiği yerden (' + esc(q.via || (p && p.name) || '') + ') yola çıkılarak yaklaşık olarak yerleştirildi; kesin konum arşivde yok.</p>';
+    h += '<button type="button" class="mpl-go" data-go="' + e.o + '">Zaman çizelgesinde göster</button>';
+    openPanel(h + '</div>', el);
+  }
+  function goCard(o){
+    closePanel(); close();
+    setTimeout(function(){
+      var t = document.querySelector('.ev[data-o="' + o + '"]'); if (!t) return;
+      var y = t.getBoundingClientRect().top + window.scrollY - innerHeight * 0.22;
+      window.scrollTo({top: y, behavior: reduce ? 'auto' : 'smooth'});
+      t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash'); setTimeout(function(){ t.classList.remove('flash'); }, 2600);
+    }, reduce ? 0 : 480);
+  }
+  plc.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); });
+  plc.addEventListener('wheel', function(ev){ ev.stopPropagation(); }, {passive: true});
+  plc.addEventListener('click', function(ev){
+    if (ev.target.closest('.mpl-x')) return closePanel();
+    var m = ev.target.closest('.mpl-media');
+    if (m){ var nb = ev.target.closest('.mpl-nav'); if (nb){ var sl = m.querySelectorAll('.slide'), n = sl.length, i = ((+m.dataset.i + (nb.classList.contains('next') ? 1 : -1)) % n + n) % n;
+      sl.forEach(function(x, j){ x.classList.toggle('on', j === i); if (Math.abs(j - i) <= 1){ var im = x.querySelector('img'); if (im && im.dataset.src && !im.getAttribute('src')) im.src = im.dataset.src; } }); m.dataset.i = i; return; } }
+    var g = ev.target.closest('[data-go]'); if (g) return goCard(+g.dataset.go);
+    var t = ev.target.closest('[data-tag]'); if (t){ var tc = TC(); if (tc) tc.open(t.dataset.tt, t.dataset.tag, t); return; }
+    var pl = ev.target.closest('[data-pl]'); if (pl){ var p = placeById(pl.dataset.pl); if (p){ var o = placeEls.filter(function(x){ return x.p === p; })[0]; showPlace(p, o && o.el); } }
+  });
+  // tag card opened from the map: its own "jump to event" buttons must close the map first
+  document.addEventListener('click', function(ev){ if (isOpen && ev.target.closest && ev.target.closest('.tc [data-go]')){ closePanel(); close(); } }, true);
+
 
   // ---------------------------------------------------------------- route tool
   function km(px){ return px * (CFG ? CFG.kmPerPixel : 0.5); }
@@ -370,9 +486,14 @@
     else if (b.classList.contains('mt-fit')) smoothZoom(fitScale(), vw / 2, vh / 2);
     else if (b.classList.contains('mt-cloud')){ cloudsOn = !cloudsOn; try { localStorage.setItem('ulv-map-clouds', cloudsOn ? '1' : '0'); } catch(e){} syncToggles(); kick(); }
     else if (b.classList.contains('mt-snd')){ if (window.__ulvMapAudio){ window.__ulvMapAudio.setOn(!window.__ulvMapAudio.isOn()); } syncToggles(); }
+    else if (b.classList.contains('mt-dn')){ DN.setRun(!DN.run); syncToggles(); kick(); }
+    else if (b.classList.contains('mt-pins')){ pinsOn = !pinsOn; try { localStorage.setItem('ulv-map-pins', pinsOn ? '1' : '0'); } catch(e){} pinsLayer.classList.toggle('off', !pinsOn); syncToggles(); dirty = true; kick(); }
   });
   function syncToggles(){
     var cb = ov.querySelector('.mt-cloud'), sb = ov.querySelector('.mt-snd'), so = !!(window.__ulvMapAudio && window.__ulvMapAudio.isOn());
+    var db = ov.querySelector('.mt-dn'), pb = ov.querySelector('.mt-pins');
+    db.classList.toggle('is-off', !DN.run); db.setAttribute('aria-pressed', DN.run ? 'true' : 'false'); db.title = DN.run ? 'Gece/gündüz döngüsünü durdur (gündüze sabitle)' : 'Gece/gündüz döngüsünü başlat';
+    pb.classList.toggle('is-off', !pinsOn); pb.setAttribute('aria-pressed', pinsOn ? 'true' : 'false'); pb.title = pinsOn ? 'Tarihî olay iğnelerini gizle' : 'Tarihî olay iğnelerini göster';
     cb.classList.toggle('is-off', !cloudsOn); cb.setAttribute('aria-pressed', cloudsOn ? 'true' : 'false'); cb.title = cloudsOn ? 'Bulutları gizle' : 'Bulutları göster';
     sb.classList.toggle('is-off', !so); sb.setAttribute('aria-pressed', so ? 'true' : 'false'); sb.title = so ? 'Harita seslerini kapat' : 'Harita seslerini aç';
     if (!window.__ulvMapAudio) sb.parentNode.hidden = true;
@@ -400,7 +521,7 @@
     var k = ev.key, tgt = ev.target, typing = tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable);
     if (typing) return;
     var U2 = window.__ulv; if (U2 && ((U2.TagCard && U2.TagCard.isOpen && U2.TagCard.isOpen()) || document.querySelector('.lb:not([hidden])'))) return;  // a card opened on top of the map handles its own keys
-    if (k === 'Escape'){ ev.preventDefault(); ev.stopImmediatePropagation(); if (!pop.hidden) pop.hidden = true; else close(); return; }
+    if (k === 'Escape'){ ev.preventDefault(); ev.stopImmediatePropagation(); if (!pop.hidden) pop.hidden = true; else if (!plc.hidden) closePanel(); else close(); return; }
     var handled = true, step = 120;
     if (k === 'Backspace' || k === 'Delete'){ if (tool === 'route') undo(); }
     else if (k === '+' || k === '=') smoothZoom((anim ? anim.s : view.s) * 1.5, vw / 2, vh / 2);
@@ -443,6 +564,7 @@
     if (loaded) tilt();
     if (dirty && loaded){ dirty = false; drawTiles(); layoutOverlay(); moved = true; }
     // atmosphere: full ~60fps, light ~30fps, reduced-motion: only on view change
+    DN.step(t / 1000);
     var animFx = FXL.ok && !reduce, period = lite() ? 33 : 0;
     if (FXL.ok && (t - fxLast >= period || reduce || moved)){ FXL.draw(t / 1000); fxLast = t; }
     if (loaded && !reduce && (t - lifeLast >= period || moved)){ LIFE.draw(t / 1000); lifeLast = t; }
@@ -457,7 +579,7 @@
   // whirlpool, ships/fleets on coastal sea lanes, caravans on roads, chimney smoke, ember glow, bird flocks.
   // Disabled under reduced motion; Light mode = fewer of everything.
   var LIFE = (function(){
-    var cv = ov.querySelector('.mapx-life'), c = cv.getContext('2d');
+    var cv = ov.querySelector('.mapx-life'), c = cv.getContext('2d'), cvN = ov.querySelector('.mapx-night'), cN = cvN.getContext('2d');
     var land = null, field = null, landPts = [], roadsA = [], lanes = [], wp = null, wpIn = null, DATA = {smoke: [], settlements: []};
     var cars = [], flocks = [], ships = [], nextFlock = 1, lastT = 0, ready = false;
     var WP = {x: 4503, y: 1380, r: 132, sq: 0.68};
@@ -466,8 +588,8 @@
     function clamp(v, a, b){ return v < a ? a : v > b ? b : v; }
     function sstep(a, b, x){ var t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
     function imgData(src, cb){ var m = new Image(); m.onload = function(){ var t = document.createElement('canvas'); t.width = m.width; t.height = m.height; var x = t.getContext('2d'); x.drawImage(m, 0, 0); cb(x.getImageData(0, 0, m.width, m.height).data, m.width, m.height); }; m.src = src; }
-    function init(autoRoads, seaLanes, life){
-      roadsA = autoRoads || []; DATA = life || DATA; if (!DATA.smoke) DATA.smoke = []; if (!DATA.settlements) DATA.settlements = [];
+    function init(autoRoads, seaLanes, life, net){
+      roadsA = autoRoads || []; setNet(net); DATA = life || DATA; if (!DATA.smoke) DATA.smoke = []; if (!DATA.settlements) DATA.settlements = [];
       lanes = (seaLanes || []).map(function(l){ var p = l.points.map(function(q){ return {x: q[0], y: q[1]}; }), L = [0];
         for (var i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y));
         var tot = L[L.length - 1], closed = Math.hypot(p[0].x - p[p.length - 1].x, p[0].y - p[p.length - 1].y) < 60; return {p: p, L: L, tot: tot, closed: closed}; });
@@ -501,81 +623,149 @@
       return {x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, ang: Math.atan2(b.y - a.y, b.x - a.x)};
     }
     function vis(P, m){ return !(P.x < -m || P.y < -m || P.x > vw + m || P.y > vh + m); }
-    // ---- caravans (spread over all routes, weighted by length, not bunched)
-    var roadCache = null, roadSrc = null;
-    function roadGeo(){
-      var R = roads(); if (roadSrc === R.length + ':' + ROADS.length && roadCache) return roadCache;
-      roadSrc = R.length + ':' + ROADS.length;
-      roadCache = R.map(function(rd){ var p = rd.points.map(function(q){ return {x: q[0], y: q[1]}; }), L = [0];
-        for (var i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y));
-        var a = p[0], b = p[p.length - 1];
-        return {p: p, L: L, tot: L[L.length - 1], w: +rd.w || (rd.main ? 3 : 1), gA: nearTown(a.x, a.y), gB: nearTown(b.x, b.y)}; })
-        .filter(function(g){ return g.tot > 40; });
-      return roadCache;
+    // ---- caravans on the road network (roadnet.json: royal roads / trade routes / side roads between named places & villages)
+    // carts & wagons, lone riders, rare army columns with banners; city-to-city journeys chained across junctions; anti-overlap queueing.
+    var NET = null, netEdges = [], netAdj = {};
+    function setNet(n){
+      NET = n && n.edges && n.edges.length ? n : null; netEdges = []; netAdj = {};
+      if (!NET){   // fallback: hand-traced painted roads as standalone edges
+        roads().forEach(function(rd){ var p = rd.points; netEdges.push(geoEdge(p, -1, -1, (+rd.w || 1) > 1 ? 1 : 2)); });
+        return;
+      }
+      NET.edges.forEach(function(e){ var g = geoEdge(e.p, e.a, e.b, e.t); netEdges.push(g); (netAdj[e.a] = netAdj[e.a] || []).push(g); (netAdj[e.b] = netAdj[e.b] || []).push(g); });
     }
-    function nearTown(x, y){ var S = DATA.settlements || []; for (var i = 0; i < S.length; i++) if (Math.hypot(S[i][0] - x, S[i][1] - y) < S[i][2] * 1.3) return true; return false; }
-    // traffic weight: road length (sqrt, so long roads don't hog everything) x importance (main roads w=3, side roads w=1)
+    function geoEdge(pts, a, b, t){
+      var p = pts.map(function(q){ return {x: q[0], y: q[1]}; }), L = [0];
+      for (var i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y));
+      var rp = p.slice().reverse(), RL = [0]; for (i = 1; i < rp.length; i++) RL.push(RL[i - 1] + Math.hypot(rp[i].x - rp[i - 1].x, rp[i].y - rp[i - 1].y));
+      return {p: p, L: L, rp: rp, RL: RL, tot: L[L.length - 1], a: a, b: b, t: t, w: t === 0 ? 3 : t === 1 ? 2 : 1, n: 0};
+    }
+    function roadGeo(){ return netEdges; }
+    function edgeCap(g){ return Math.max(2, Math.floor(g.tot / 95 * (g.t === 0 ? 1.4 : 1))); }
+    var KINDS = ['wagon', 'ox', 'merchant', 'rider', 'army'], armies = 0;
+    function pickKind(g){
+      var r = Math.random();
+      if (g.t < 2 && armies < (lite() ? 1 : 3) && r < .035) return 'army';
+      r = Math.random(); return r < .22 ? 'rider' : r < .52 ? 'wagon' : r < .74 ? 'merchant' : 'ox';
+    }
+    function carOnEdge(k, g, rev, d){
+      k.g = g; k.rev = rev; k.p = rev ? g.rp : g.p; k.L = rev ? g.RL : g.L; k.tot = g.tot; k.d = d; k.to = rev ? g.a : g.b;
+      k.cont = (netAdj[k.to] || []).length > 1 && (k.hops || 0) < 5 && Math.random() > .28;   // decided up front so the fade-out is known
+    }
     function newCar(stagger){
-      var G = roadGeo(); if (!G.length) return null;
-      var gate = !stagger && Math.random() < .45, pool = gate ? G.filter(function(g){ return g.gA || g.gB; }) : G; if (!pool.length){ pool = G; gate = false; }
-      var sum = 0, i; for (i = 0; i < pool.length; i++) sum += Math.sqrt(pool[i].tot) * pool[i].w;
-      for (var tries = 0; tries < 10; tries++){
-        var r = Math.random() * sum, g = pool[0]; for (i = 0; i < pool.length; i++){ r -= Math.sqrt(pool[i].tot) * pool[i].w; if (r <= 0){ g = pool[i]; break; } }
-        // per-road crowding cap (~1 vehicle / 110px, main roads a bit more)
-        var onRoad = 0; for (var j0 = 0; j0 < cars.length; j0++) if (cars[j0] && cars[j0].g === g) onRoad++;
-        if (onRoad >= Math.max(2, Math.floor(g.tot / 110 * (g.w > 1 ? 1.25 : 1))) && tries < 9) continue;
-        // gate start: leave from the settlement end of the road; otherwise start somewhere mid-road and fade in
-        var rev = gate ? (g.gA && g.gB ? Math.random() < .5 : !g.gA) : Math.random() < .5, d = gate ? 0 : rnd(0, g.tot * .8), ok = true;
-        for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o && o.g === g && Math.abs((o.rev === rev ? o.d : o.tot - o.d) - d) < 60){ ok = false; break; } }
-        if (ok || tries === 9){
-          var p = rev ? g.p.slice().reverse() : g.p, L = [0];
-          for (i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y));
-          return {g: g, rev: rev, p: p, L: L, tot: g.tot, d: d, d0: stagger ? d - 50 : d, gate: gate, arrive: rev ? g.gA : g.gB, v: rnd(5, 9) * (g.w > 1 ? 1 : .85), trail: [], tAcc: 0, size: rnd(.85, 1.2), carts: Math.random() < .45 ? 2 + (Math.random() < .3 ? 1 : 0) : 1};
-        }
+      var G = netEdges; if (!G.length) return null;
+      var sum = 0, i; for (i = 0; i < G.length; i++) sum += Math.sqrt(G[i].tot) * G[i].w;
+      for (var tries = 0; tries < 12; tries++){
+        var r = Math.random() * sum, g = G[0]; for (i = 0; i < G.length; i++){ r -= Math.sqrt(G[i].tot) * G[i].w; if (r <= 0){ g = G[i]; break; } }
+        if (g.n >= edgeCap(g) && tries < 11) continue;
+        var gate = !stagger && Math.random() < .5, rev = Math.random() < .5, d = gate ? 0 : rnd(0, g.tot * .85), ok = true;
+        for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o && o.g === g && Math.abs((o.rev === rev ? o.d : o.tot - o.d) - d) < 55 + (o.clen || 0)){ ok = false; break; } }
+        if (!ok && tries < 11) continue;
+        var kind = pickKind(g), k = {kind: kind, d0: 0, gate: gate || !stagger, trail: [], tAcc: 0, size: rnd(.88, 1.15), hops: 0,
+          v: rnd(5, 8.5) * (g.t < 2 ? 1 : .85), carts: 1, hue: (Math.random() * 4) | 0, ph: rnd(0, 9)};
+        if (kind === 'rider') k.v *= 1.9;
+        else if (kind === 'army'){ k.v *= .62; k.n = 12 + ((Math.random() * 14) | 0); armies++; k.clen = k.n * 3.4; }
+        else k.carts = Math.random() < .4 ? 2 + (Math.random() < .3 ? 1 : 0) : 1;
+        if (!k.clen) k.clen = k.carts * 9;
+        carOnEdge(k, g, rev, d); k.d0 = stagger ? d - 50 : d; g.n++;
+        return k;
       }
       return null;
     }
+    function retire(k){ if (k.g) k.g.n = Math.max(0, k.g.n - 1); if (k.kind === 'army') armies = Math.max(0, armies - 1); }
+    function nextHop(k){   // arrived at a junction / settlement: continue the journey on another road, or end here
+      if (!k.cont) return false;
+      var opts = (netAdj[k.to] || []).filter(function(g){ return g !== k.g && g.n < edgeCap(g); });
+      if (!opts.length) opts = (netAdj[k.to] || []).filter(function(g){ return g !== k.g; });
+      if (!opts.length) return false;
+      var sum = 0; opts.forEach(function(g){ sum += g.w; }); var r = Math.random() * sum, g = opts[0];
+      for (var i = 0; i < opts.length; i++){ r -= opts[i].w; if (r <= 0){ g = opts[i]; break; } }
+      k.g.n = Math.max(0, k.g.n - 1); var rev = g.b === k.to; k.hops++; carOnEdge(k, g, rev, 0); g.n++; k.d0 = -1e9; return true;
+    }
     function stepCars(dt, lt){
-      var want = lt ? 20 : 70, guard = 0;
+      var want = lt ? 28 : 100, guard = 0;
       while (cars.length < want && guard++ < want){ var n = newCar(true); if (!n) break; cars.push(n); }
-      if (cars.length > want) cars.length = want;
+      while (cars.length > want){ retire(cars.pop()); }
       for (var i = 0; i < cars.length; i++){
         var k = cars[i], sp = k.v;
-        // no overlaps: queue behind a slower vehicle ahead on the same road and direction
-        for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o !== k && o.g === k.g && o.rev === k.rev){ var gap = o.d - k.d; if (gap > 0 && gap < 40) sp = Math.min(sp, o.v * (gap < 22 ? .5 : 1)); } }
+        for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o !== k && o.g === k.g && o.rev === k.rev){ var gap = o.d - k.d, need = 26 + o.clen; if (gap > 0 && gap < need + 16) sp = Math.min(sp, o.v * (gap < need ? .45 : 1)); } }
         k.d += sp * dt; k.tAcc += dt;
-        if (k.tAcc > .5){ k.tAcc = 0; var q = at(k, k.d); k.trail.push({x: q.x, y: q.y}); if (k.trail.length > 16) k.trail.shift(); }
-        if (k.d >= k.tot){ var r = newCar(false); if (r) cars[i] = r; else k.d = 0; }
+        if (k.tAcc > .5){ k.tAcc = 0; var q = at(k, k.d); k.trail.push({x: q.x, y: q.y}); if (k.trail.length > 14) k.trail.shift(); }
+        if (k.d >= k.tot && !nextHop(k)){ retire(k); var r = newCar(false); if (r) cars[i] = r; else { cars.splice(i, 1); i--; } }
       }
     }
-    function drawCars(){
-      var s = view.s, sz = clamp(16 * s, 2.9, 9.8);
+    var CART = [['#e9dfc6', '#6b4a28'], ['#c9b48a', '#5a3a1e'], ['#a83a2a', '#4a2c16'], ['#2f5a8a', '#3d2a18']], BAN = ['#b3262a', '#d9a62e', '#2c5aa0', '#1f6b3a'];
+    function drawCars(t, nightV, N){
+      var s = view.s, sz = clamp(19.5 * s, 3.5, 12), lamps = nightV > .02 && N;
+      if (lamps){ N.save(); N.globalCompositeOperation = 'lighter'; }
       for (var i = 0; i < cars.length; i++){
-        var k = cars[i], fade = Math.min(1, (k.d - k.d0) / (k.gate ? 14 : 45), (k.tot - k.d) / (k.arrive ? 18 : Math.max(30, k.tot * .07))); if (fade <= 0) continue;
-        var q = at(k, k.d), P = toScreen(q.x, q.y); if (!vis(P, 40)) continue;
+        var k = cars[i], fin = k.d0 > -1e8 ? Math.min(1, (k.d - k.d0) / (k.gate ? 14 : 45)) : 1, fade = Math.min(fin, k.cont ? 1 : (k.tot - k.d) / 18); if (fade <= 0) continue;
+        var q = at(k, k.d), P = toScreen(q.x, q.y); if (!vis(P, 60)) continue;
         var off = sz * .45; P = {x: P.x - Math.sin(q.ang) * off, y: P.y + Math.cos(q.ang) * off};
-        if (k.trail.length > 1){
+        if (k.trail.length > 1 && k.kind !== 'rider'){
           c.lineCap = 'round'; c.lineWidth = Math.max(.9, sz * .45);
           for (var j = 1; j < k.trail.length; j++){
             var A = toScreen(k.trail[j - 1].x, k.trail[j - 1].y), B = j === k.trail.length - 1 ? P : toScreen(k.trail[j].x, k.trail[j].y);
-            c.strokeStyle = 'rgba(70,52,30,' + (0.18 * j / k.trail.length * fade).toFixed(3) + ')';
+            c.strokeStyle = 'rgba(70,52,30,' + (0.16 * j / k.trail.length * fade).toFixed(3) + ')';
             c.beginPath(); c.moveTo(A.x, A.y); c.lineTo(B.x, B.y); c.stroke();
           }
         }
-        c.save(); c.translate(P.x, P.y); c.rotate(q.ang); c.globalAlpha = .9 * fade;
         var z = sz * k.size;
-        if (z < 3){ c.fillStyle = '#1d140c'; for (var m0 = 0; m0 < k.carts; m0++){ c.beginPath(); c.arc(-m0 * z * 1.2, 0, z * (m0 ? .42 : .52), 0, 6.283); c.fill(); } }
-        else {
-          for (var m = 0; m < k.carts; m++){
-            var ox = -m * z * 1.55;
-            c.fillStyle = '#2a1d10'; c.fillRect(ox - z * .55, -z * .32, z * .75, z * .64);
-            c.fillStyle = '#e2d4b8'; c.fillRect(ox - z * .5, -z * .27, z * .62, z * .3);
-            c.fillStyle = '#1a120a'; c.beginPath(); c.ellipse(ox + z * .45, 0, z * .28, z * .14, 0, 0, 6.283); c.fill();
-          }
-        }
+        c.save(); c.translate(P.x, P.y); c.rotate(q.ang); c.globalAlpha = .92 * fade;
+        if (k.kind === 'army') drawArmy(k, z, t);
+        else if (z < 3.6){ c.fillStyle = '#1d140c'; var nn = k.kind === 'rider' ? 1 : k.carts; for (var m0 = 0; m0 < nn; m0++){ c.beginPath(); c.arc(-m0 * z * 1.2, 0, z * (m0 ? .42 : .52), 0, 6.283); c.fill(); } }
+        else if (k.kind === 'rider') drawRider(k, z, t);
+        else for (var m = 0; m < k.carts; m++) drawCart(k, z, -m * z * 1.75, t);
         c.restore();
+        if (lamps){   // lanterns (night canvas, additive)
+          var la = nightV * fade, lr = Math.max(2.2, z * .55);
+          if (k.kind === 'army'){ for (var u = 0; u < k.n; u += 5){ var ox = -u * z * .36; lampAt(N, P.x + Math.cos(q.ang) * ox, P.y + Math.sin(q.ang) * ox, lr * 1.1, la * .9, t + u); } }
+          else lampAt(N, P.x + Math.cos(q.ang) * z * .7, P.y + Math.sin(q.ang) * z * .7, lr, la, t + k.ph);
+        }
+      }
+      if (lamps) N.restore();
+    }
+    function horse(z, x, col){
+      c.fillStyle = col || '#4a2e18'; c.beginPath(); c.ellipse(x, 0, z * .34, z * .13, 0, 0, 6.283); c.fill();
+      c.beginPath(); c.ellipse(x + z * .36, 0, z * .12, z * .07, 0, 0, 6.283); c.fill();
+    }
+    function drawCart(k, z, ox, t){
+      var C = CART[k.kind === 'merchant' ? 2 + (k.hue & 1) : k.kind === 'ox' ? 1 : 0];
+      if (ox === 0) horse(z, z * .78, k.kind === 'ox' ? '#7a5a3a' : '#3e2614');
+      c.fillStyle = C[1]; c.fillRect(ox - z * .55, -z * .3, z * .82, z * .6);                    // bed
+      c.fillStyle = '#1a120a'; c.fillRect(ox - z * .4, -z * .36, z * .14, z * .72); c.fillRect(ox + z * .02, -z * .36, z * .14, z * .72);   // wheels
+      if (k.kind === 'ox'){ c.fillStyle = '#8a6a3a'; c.fillRect(ox - z * .5, -z * .22, z * .7, z * .44); }   // hay/load
+      else { c.fillStyle = C[0]; c.beginPath(); c.ellipse(ox - z * .14, 0, z * .42, z * .27, 0, 0, 6.283); c.fill();    // canvas cover / canopy
+        c.strokeStyle = 'rgba(40,25,12,.35)'; c.lineWidth = Math.max(.5, z * .04); c.beginPath(); c.moveTo(ox - z * .3, -z * .25); c.lineTo(ox - z * .3, z * .25); c.moveTo(ox, -z * .25); c.lineTo(ox, z * .25); c.stroke(); }
+    }
+    function drawRider(k, z, t){
+      var b = Math.sin(t * 9 + k.ph) * z * .03;
+      horse(z * 1.05, 0, '#3b2414');
+      c.fillStyle = ['#7a1e1e', '#1e3d6a', '#2f4a22', '#5a4a2a'][k.hue]; c.beginPath(); c.arc(-z * .02, b, z * .17, 0, 6.283); c.fill();    // rider cloak
+      c.fillStyle = '#e0c9a0'; c.beginPath(); c.arc(z * .06, b, z * .07, 0, 6.283); c.fill();
+    }
+    function drawArmy(k, z, t){
+      var u = Math.max(1.2, z * .2), stepX = z * .36;
+      for (var m = 0; m < k.n; m++){
+        var x = -m * stepX, w = Math.sin(t * 6 + m * .9) * u * .12;
+        c.fillStyle = m % 6 === 0 ? '#3a2a1a' : '#2a2a30';
+        c.fillRect(x - u * .5, -u * 1.1 + w, u, u * .9); c.fillRect(x - u * .5, u * .2 + w, u, u * .9);   // two files
+        if (z > 3.6 && m % 2 === 0){ c.fillStyle = 'rgba(200,205,215,.55)'; c.fillRect(x - u * .2, -u * .9 + w, u * .4, u * .3); }   // helmets glint
+      }
+      for (var b = 0; b < k.n; b += 6){   // banners
+        var bx = -b * stepX, fl = Math.sin(t * 4 + b) * .25;
+        c.strokeStyle = '#2a1a0c'; c.lineWidth = Math.max(.6, z * .05); c.beginPath(); c.moveTo(bx, 0); c.lineTo(bx, -z * 1.1); c.stroke();
+        c.fillStyle = BAN[(k.hue + b / 6) & 3]; c.beginPath(); c.moveTo(bx, -z * 1.1); c.lineTo(bx - z * (.55 + fl * .2), -z * (1 - fl * .1)); c.lineTo(bx, -z * .78); c.closePath(); c.fill();
       }
     }
+    var LAMP = null;
+    function lampSprite(){
+      if (LAMP) return LAMP; var S = 64, t = document.createElement('canvas'); t.width = t.height = S; var x = t.getContext('2d');
+      var g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+      g.addColorStop(0, 'rgba(255,236,190,1)'); g.addColorStop(.12, 'rgba(255,200,110,.85)'); g.addColorStop(.35, 'rgba(255,150,50,.28)'); g.addColorStop(1, 'rgba(255,120,30,0)');
+      x.fillStyle = g; x.fillRect(0, 0, S, S); LAMP = t; return t;
+    }
+    function lampAt(N, x, y, r, a, ph){ var f = .85 + .15 * Math.sin(ph * 7.3); N.globalAlpha = Math.min(1, a * f); N.drawImage(lampSprite(), x - r * 2.4, y - r * 2.4, r * 4.8, r * 4.8); }
     // ---- ships: several types, some in fleets; only on coastal sea lanes (contours of the coast-distance field => never cross land)
     var TYPES = {
       galleon: {sc: 1.55, v: 5.5, beam: .3, w: 2}, cog: {sc: 1.1, v: 6.5, beam: .32, w: 1}, sloop: {sc: .8, v: 9, beam: .26, w: 1},
@@ -674,7 +864,7 @@
         }
       }
     }
-    function drawShips(t){
+    function drawShips(t, nv){
       var s = view.s, base = clamp(40 * s, 7, 30);
       for (var w = 0; w < wakes.length; w++) wakes[w].live = false;
       for (var i = 0; i < ships.length; i++){
@@ -689,6 +879,13 @@
         d = k.d0 + k.dir * k.t; q = laneAt(k.ln, d); ang = q.ang + (k.dir < 0 ? Math.PI : 0);
         wx = q.x - Math.sin(ang) * k.lat; wy = q.y + Math.cos(ang) * k.lat; var P = toScreen(wx, wy); if (!vis(P, 60)) continue;
         c.save(); c.translate(P.x, P.y); c.globalAlpha = fade; drawShip(base * k.sz, k.type, ang, t, k.ph); c.restore();
+        if (nv > .02){   // stern lantern + masthead light
+          var L0 = base * k.sz * TYPES[k.type].sc, lr = Math.max(1.8, L0 * .09);
+          cN.save(); cN.globalCompositeOperation = 'lighter';
+          lampAt(cN, P.x - Math.cos(ang) * L0 * .5, P.y - Math.sin(ang) * L0 * .5, lr, nv * fade, t + k.ph);
+          if (L0 > 9) lampAt(cN, P.x, P.y - L0 * .85, lr * .7, nv * fade * .8, t * 1.3 + k.ph);
+          cN.restore();
+        }
       }
     }
     // ---- chimney smoke: soft noise-textured sprite particles (rise, expand, drift with the wind, fade)
@@ -718,17 +915,17 @@
         spr: e[3] ? SPRD[(Math.random() * SPRD.length) | 0] : SPR[(Math.random() * SPR.length) | 0], a: rnd(.8, 1)};
     }
     function stepSmoke(dt, lt, zf){
-      var vis0 = sstep(.1, .26, zf), A = toWorld(-120, -160), B = toWorld(vw + 120, vh + 60), E = DATA.smoke;
+      var vis0 = sstep(.02, .14, zf), farF = sstep(.03, .32, zf), A = toWorld(-120, -160), B = toWorld(vw + 120, vh + 60), E = DATA.smoke;
       if (vis0 <= 0){ if (smoke.length) smoke.length = 0; smokeOn = {}; return 0; }
       for (var i = 0; i < E.length; i++){
-        if (lt && i % 2) continue;
+        if ((lt && i % 2) || (farF < .5 && i % 2) || (farF < .2 && i % 4 === 1)) continue;   // far zoom: fewer emitters
         var e = E[i], on = e[0] > A.x && e[0] < B.x && e[1] > A.y && e[1] < B.y;
         if (!on){ if (smokeOn[i]) smokeOn[i] = 0; continue; }
-        var rate = (lt ? 1.1 : 2.6) * (.6 + e[2] * .5);
+        var rate = (lt ? 1.1 : 2.6) * (.6 + e[2] * .5) * (.45 + .55 * farF);
         if (!smokeOn[i]){ smokeOn[i] = 1; var n0 = Math.round(rate * 9); for (var q = 0; q < n0; q++) smoke.push(puff(e, rnd(0, 9))); }   // pre-warm
         e._acc = (e._acc || 0) + dt * rate; while (e._acc >= 1){ e._acc -= 1; smoke.push(puff(e)); }
       }
-      var cap = lt ? 300 : 950; if (smoke.length > cap) smoke.splice(0, smoke.length - cap);
+      var cap = Math.round((lt ? 300 : 950) * (.5 + .5 * farF)); if (smoke.length > cap) smoke.splice(0, smoke.length - cap);
       for (var j = smoke.length - 1; j >= 0; j--){
         var p = smoke[j]; p.age += dt; if (p.age >= p.life){ smoke.splice(j, 1); continue; }
         var u = p.age / p.life; p.y += p.vy * dt * (1 - u * .45); p.x += (4.5 * u + 1.2 + Math.sin(p.age * .8 + p.seed) * 1.4) * dt;
@@ -736,9 +933,9 @@
       return vis0;
     }
     function drawSmoke(vis0, zf){
-      if (vis0 <= 0) return; var s = view.s, k0 = vis0 * (.75 + .25 * sstep(.35, .8, zf));
+      if (vis0 <= 0) return; var s = view.s, k0 = vis0 * (.75 + .25 * sstep(.35, .8, zf)), grow = 1 + (1 - sstep(.03, .32, zf)) * .9;
       for (var j = 0; j < smoke.length; j++){
-        var p = smoke[j], u = p.age / p.life, r = p.r0 * (1 + u * 3.8) * s; if (r < .6) continue;
+        var p = smoke[j], u = p.age / p.life, r = p.r0 * (1 + u * 3.8) * s * grow; if (r < .6) continue;
         var P = toScreen(p.e[0] + p.x, p.e[1] + p.y); if (!vis(P, r)) continue;
         var a = sstep(0, .08, u) * Math.pow(1 - u, 1.25) * p.a * k0; if (a < .01) continue;
         c.globalAlpha = a; c.drawImage(p.spr, P.x - r, P.y - r, r * 2, r * 2);
@@ -824,14 +1021,62 @@
       }
       c.restore();
     }
-    function resize(){ cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr); }
+    function resize(){ cv.width = cvN.width = Math.round(vw * dpr); cv.height = cvN.height = Math.round(vh * dpr); }
+    // ---- night lights: thousands of tiny twinkling warm points (denser in big cities, faint along main roads) + soft city halos
+    var LX = null, LY, LS, LP, LF, LT, LB, LW, LN = 0, halos = [], lightsLite = null;
+    function buildLights(){
+      if (!land) return false;
+      var lt = lite(), f = lt ? .4 : 1, X = [], Y = [], S = [], P = [], F = [], T = [], B = [], Wc = [];
+      halos = [];
+      function add(x, y, sz, br, thr){ if (!isLand(x, y)) return; X.push(x); Y.push(y); S.push(sz); P.push(rnd(0, 6.283)); F.push(rnd(.8, 3.6)); T.push(thr); B.push(br); Wc.push(Math.random() < .3 ? 1 : 0); }
+      function cluster(x, y, R, n, br){
+        n = Math.round(n * f);
+        for (var i = 0; i < n; i++){ var u = Math.max(1e-4, Math.random()), r = Math.min(R * 1.5, R * .5 * Math.sqrt(-2 * Math.log(u))), a = rnd(0, 6.283);
+          add(x + Math.cos(a) * r, y + Math.sin(a) * r * .85, rnd(.6, 1.35), rnd(.45, 1) * br, rnd(0, .55)); }
+      }
+      var RK = {capital: [190, 1100, 1, .55], city: [130, 420, .95, .42], town: [75, 140, .85, .3], district: [110, 260, .9, .3], landmark: [40, 30, .7, .15]};
+      PLACES.forEach(function(p){ var k = RK[p.rank]; if (!k) return; cluster(p.x, p.y, k[0], k[1], k[2]); halos.push([p.x, p.y, k[0] * 1.5, k[3]]); });
+      DATA.settlements.forEach(function(st){ var big = st[2] >= 200; cluster(st[0], st[1], st[2] * .7, big ? 170 : 95, .9); halos.push([st[0], st[1], st[2] * 1.1, big ? .3 : .2]); });
+      DATA.smoke.forEach(function(e){ cluster(e[0], e[1], 18, 9, 1); });
+      netEdges.forEach(function(g){ if (g.t > 1) return; var step = g.t === 0 ? 22 : 34, pr = (g.t === 0 ? .55 : .35) * f;
+        for (var d = 12; d < g.tot - 12; d += step){ if (Math.random() > pr) continue; var q = at(g, d); add(q.x + rnd(-4, 4), q.y + rnd(-4, 4), rnd(.5, .9), rnd(.25, .55), rnd(.2, .7)); } });
+      LN = X.length; LX = new Float32Array(X); LY = new Float32Array(Y); LS = new Float32Array(S); LP = new Float32Array(P); LF = new Float32Array(F); LT = new Float32Array(T); LB = new Float32Array(B); LW = new Uint8Array(Wc);
+      lightsLite = lt; return true;
+    }
+    var LCOL = ['rgba(255,214,140,', 'rgba(255,170,80,'];
+    function drawLights(t, nv){
+      if (nv <= .01) return;
+      if (!LX || lightsLite !== lite()){ if (!buildLights()) return; }
+      var s = view.s, A = toWorld(-10, -10), Bw = toWorld(vw + 10, vh + 10), sz0 = .9 + Math.min(s, .7) * 1.7, zf = zoomF();
+      cN.save(); cN.globalCompositeOperation = 'lighter';
+      // city halos (orbit-style glow, strongest when zoomed out)
+      var spr = lampSprite(), hk = nv * (.12 + .88 * Math.pow(1 - zf, 1.6));
+      for (var h = 0; h < halos.length; h++){ var H0 = halos[h], P0 = toScreen(H0[0], H0[1]), R = H0[2] * s; if (P0.x + R < 0 || P0.y + R < 0 || P0.x - R > vw || P0.y - R > vh) continue;
+        cN.globalAlpha = Math.min(1, H0[3] * hk); cN.drawImage(spr, P0.x - R, P0.y - R, R * 2, R * 2); }
+      cN.globalAlpha = 1;
+      var paths = [], dk = 1 - .4 * sstep(.45, 1, zf);
+      for (var b = 0; b < 12; b++) paths.push(new Path2D());
+      for (var i = 0; i < LN; i++){
+        var x = LX[i], y = LY[i]; if (x < A.x || y < A.y || x > Bw.x || y > Bw.y) continue;
+        var on = nv - LT[i]; if (on <= 0) continue; on = on > .25 ? 1 : on / .25;
+        var a = LB[i] * on * dk * (.68 + .32 * Math.sin(t * LF[i] + LP[i])); if (a < .05) continue;
+        var px = x * s + view.x, py = y * s + view.y, z = Math.min(3.4, LS[i] * sz0);
+        var bk = Math.min(5, (a * 6) | 0) + LW[i] * 6; paths[bk].rect(px - z / 2, py - z / 2, z, z);
+      }
+      for (b = 0; b < 12; b++){ cN.fillStyle = LCOL[b >= 6 ? 1 : 0] + ((b % 6 + 1) / 6 * nv).toFixed(3) + ')'; cN.fill(paths[b]); }
+      // forges / lava glow brighter at night
+      for (var g = 0; g < GLOW.length; g++){ var G = GLOW[g], PG = toScreen(G[0], G[1]), RG = G[2] * s * 2.2; cN.globalAlpha = .45 * nv; cN.drawImage(spr, PG.x - RG, PG.y - RG, RG * 2, RG * 2); }
+      cN.restore();
+    }
     function draw(t){
       var dt = lastT ? Math.min(.1, t - lastT) : .016; lastT = t;
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, vw, vh);
+      cN.setTransform(dpr, 0, 0, dpr, 0, 0); cN.clearRect(0, 0, vw, vh);
       if (!ready || reduce) return;
-      var lt = lite(), zf = zoomF();
+      var lt = lite(), zf = zoomF(), nv = DN.v.lights;
       stepCars(dt, lt); stepBirds(dt, lt); stepShips(dt, lt); var sv = stepSmoke(dt, lt, zf);
-      drawWhirl(t, lt); drawGlow(t, lt); drawShips(t); drawCars(); drawSmoke(sv, zf); drawBirds(lt);
+      drawLights(t, nv);
+      drawWhirl(t, lt); drawGlow(t, lt); drawShips(t, nv); drawCars(t, nv, cN); drawSmoke(sv, zf); drawBirds(lt);
     }
     // what is around a world point (for the soundscape)
     function probe(x, y){
@@ -843,6 +1088,7 @@
     return {init: init, resize: resize, draw: draw, zoomF: zoomF, spawn: spawnFlock, probe: probe, coastDist: coastDist,
       stats: function(){ return {ships: ships.length, wakes: wakes.length, wakePts: wakes.reduce(function(n, w){ return n + w.pts.length; }, 0), galleon: (function(){ var g = ships.filter(function(k){ return k.type === "galleon" && k.t > 300; })[0]; if (!g) return null; var q = laneAt(g.ln, g.d0 + g.dir * g.t); return [Math.round(q.x), Math.round(q.y)]; })(), fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
         shipPos: ships.slice(0, 6).map(function(k){ var q = laneAt(k.ln, k.d0 + k.dir * k.t); return [Math.round(q.x), Math.round(q.y)]; }),
+        net: !!NET, netEdges: netEdges.length, armies: armies, lights: LN, kinds: cars.reduce(function(o, k){ o[k.kind] = (o[k.kind] || 0) + 1; return o; }, {}), hops: cars.filter(function(k){ return k.hops; }).length,
         cars: cars.length, carRoads: cars.reduce(function(o, k){ var j = roadGeo().indexOf(k.g); o[j] = (o[j] || 0) + 1; return o; }, {}), gates: cars.filter(function(k){ return k.gate; }).length, flocks: flocks.length, roads: roadGeo().length, lanes: lanes.length, smoke: smoke.length, land: landPts.length,
         carPos: cars.slice(0, 4).map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
   })();
@@ -872,15 +1118,34 @@
     return {cells: cells, step: step};
   })();
   var cloudsOn = true; try { cloudsOn = localStorage.getItem('ulv-map-clouds') !== '0'; } catch(e){}
+  // ---------------------------------------------------------------- day/night cycle: 1 min day + 1 min night; paused = eases back to noon
+  var DN = (function(){
+    var run = true; try { run = localStorage.getItem('ulv-map-dn') !== '0'; } catch(e){}
+    var PERIOD = 120, ph = .03, last = 0, v = {day: 1, dusk: 0, night: 0, elev: 1, sx: 0, sy: .5, lights: 0, ph: .25};
+    function ss(a, b, x){ var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+    function step(t){
+      var dt = last ? Math.min(.25, t - last) : 0; last = t;
+      if (run && !reduce) ph = (ph + dt / PERIOD) % 1;
+      else { var d = .25 - ph; if (d > .5) d -= 1; if (d < -.5) d += 1; ph = reduce ? .25 : (ph + d * Math.min(1, dt * 1.4) + 1) % 1; }
+      var a = ph * 6.2832, e = Math.sin(a);
+      v.ph = ph; v.day = ss(-.12, .2, e); v.night = 1 - v.day; v.dusk = Math.exp(-Math.pow(e / .2, 2)); v.elev = Math.abs(e);
+      var la = e >= 0 ? a : a - Math.PI; v.sx = Math.cos(la); v.sy = .55 * Math.sin(la) + .15;
+      v.lights = ss(.18, .8, v.night);
+      return v;
+    }
+    function setRun(r){ run = !!r; try { localStorage.setItem('ulv-map-dn', run ? '1' : '0'); } catch(e){} }
+    return {step: step, v: v, setRun: setRun, setPhase: function(p){ ph = ((p % 1) + 1) % 1; }, get run(){ return run && !reduce; }};
+  })();
 
   // ---------------------------------------------------------------- atmosphere (WebGL)
   var FXL = (function(){
-    var gl = null, prog = null, U = {}, tex = null, ok = false, ratio = 0.5, tried = false, fallback = null;
+    var gl = null, prog = null, U = {}, tex = null, tex2 = null, hasBase = false, ok = false, ratio = 0.5, tried = false, fallback = null;
     var VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
     var FS = [
       'precision mediump float;',
       'uniform sampler2D uField;uniform vec2 uRes;uniform float uK;uniform vec3 uView;uniform vec2 uMap;uniform vec2 uCenter;',
       'uniform float uTime;uniform float uZoom;uniform float uLite;uniform vec4 uFogP;uniform float uCloud;uniform vec2 uWind;uniform vec4 uSt0;uniform vec4 uSt1;uniform vec2 uFl;',
+      'uniform sampler2D uBase;uniform float uHasBase;uniform vec4 uDN;uniform vec2 uSun;',
       'float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
       'float fbm(vec2 p){float v=0.,a=.5,s=0.;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int i=0;i<5;i++){if(uLite>.5&&i>2)break;v+=a*n(p);s+=a;p=m*p;a*=.5;}return v/s;}',
@@ -935,13 +1200,30 @@
       '  float rn=n(vec2((w.x+w.y*.28)/1.7,(w.y-t*260.)/24.)); over(o,vec3(.72,.76,.82),smoothstep(.78,.93,rn)*m*.24*smoothstep(.1,.4,uZoom)*smoothstep(.2,.6,m));',
       '  o.rgb+=vec3(.85,.9,1.)*fl*m*.55;}}',
       ' over(o,fogC,fogA);',
+      // ---- day/night: relief relighting from the moving sun (luminance of the painted map as height), warm low sun, blue night
+      ' float day=uDN.x,dusk=uDN.y,night=uDN.z,elev=uDN.w; vec3 L3=normalize(vec3(uSun,.35+elev*.9));',
+      ' float landM=1.-smoothstep(.5,3.,dist);',
+      ' if(uHasBase>.5){vec2 tx=vec2(1.6)/vec2(639.,615.); vec3 lw=vec3(.3,.59,.11);',
+      '  float hl=dot(texture2D(uBase,uv-vec2(tx.x,0.)).rgb,lw),hr=dot(texture2D(uBase,uv+vec2(tx.x,0.)).rgb,lw),hu=dot(texture2D(uBase,uv-vec2(0.,tx.y)).rgb,lw),hd=dot(texture2D(uBase,uv+vec2(0.,tx.y)).rgb,lw);',
+      '  vec3 nn=normalize(vec3((hl-hr)*3.2,(hu-hd)*3.2,1.)); float lam=dot(nn,L3)-L3.z;',
+      '  float rs=landM*(1.-fogA*.8)*mix(.55,1.,day);',
+      '  o.rgb+=mix(vec3(1.,.9,.7),vec3(1.,.62,.32),dusk)*max(0.,lam)*.55*rs*day;',
+      '  over(o,mix(vec3(.05,.03,.08),vec3(.01,.02,.06),night),clamp(-lam,0.,1.)*.75*rs);}',
+      // broad sun-side gradient (far side a little darker) + low-sun warmth
+      ' vec2 sd=uv-.5; float side=dot(sd,normalize(uSun+vec2(1e-4)));',
+      ' over(o,vec3(.04,.02,.05),clamp(.10-side*.22,0.,.2)*day*(.5+dusk));',
+      ' over(o,vec3(1.,.48,.20),.15*dusk*(.55+side*.6+.25));',
+      ' o.rgb+=vec3(1.,.55,.25)*.05*dusk*max(0.,side+.3);',
+      ' over(o,vec3(.012,.026,.075),.60*night);',
+      ' o.rgb+=vec3(.02,.04,.09)*night*(1.-landM*.5);',
       // slow warm light sweep across the map (full mode)
-      ' if(uLite<.5){float sw=dot(uv,vec2(.857,.514));float ph=fract(t/46.)*2.4-.5;float band=exp(-pow((sw-ph)/.10,2.));o.rgb+=vec3(1.,.88,.66)*band*.05*(1.-fogA*.6);}',
+      ' if(uLite<.5){float sw=dot(uv,vec2(.857,.514));float ph=fract(t/46.)*2.4-.5;float band=exp(-pow((sw-ph)/.10,2.));o.rgb+=vec3(1.,.88,.66)*band*.05*(1.-fogA*.6)*day*(1.-dusk);}',
+      ' vec3 cTint=mix(mix(vec3(1.),vec3(1.12,.74,.52),dusk),vec3(.20,.26,.42),night);',
       ' float a0=cloud(c0,t*.03,thr); float a0l=cloud(c0-vec2(.012,.016),t*.03,thr);',
       ' vec3 cc0=mix(vec3(.50,.54,.62),vec3(1.,.98,.94),clamp(.6+(a0-a0l)*3.5,0.,1.));',
-      ' over(o,cc0,min(a0*.8,.78)*uCloud*cap);',
+      ' over(o,cc0*cTint,min(a0*.8,.78)*uCloud*cap*(1.-.25*night));',
       ' if(uLite<.5){float a1=cloud(c1,t*.05,thr+.05); float a1l=cloud(c1-vec2(.012,.016),t*.05,thr+.05);',
-      '  vec3 cc1=mix(vec3(.55,.58,.66),vec3(1.),clamp(.6+(a1-a1l)*3.5,0.,1.)); over(o,cc1,a1*.55*uCloud*cap);}',
+      '  vec3 cc1=mix(vec3(.55,.58,.66),vec3(1.),clamp(.6+(a1-a1l)*3.5,0.,1.)); over(o,cc1*cTint,a1*.55*uCloud*cap*(1.-.25*night));}',
       ' gl_FragColor=o;',
       '}'].join('\n');
     function init(){
@@ -956,13 +1238,21 @@
       gl.useProgram(prog);
       var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['uField','uRes','uK','uView','uMap','uCenter','uTime','uZoom','uLite','uFogP','uCloud','uWind','uSt0','uSt1','uFl'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
+      ['uField','uRes','uK','uView','uMap','uCenter','uTime','uZoom','uLite','uFogP','uCloud','uWind','uSt0','uSt1','uFl','uBase','uHasBase','uDN','uSun'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
       tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 1, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, new Uint8Array([255]));
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       var img = new Image(); img.onload = function(){ gl.bindTexture(gl.TEXTURE_2D, tex); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, gl.LUMINANCE, gl.UNSIGNED_BYTE, img); ok = true; ov.classList.add('fx-on'); kick(); };
       img.src = BASE + 'fogfield.png';
+      // painted map (low-res base) as a height source for the moving-sun relief shading
+      tex2 = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex2);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 128]));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      var upB = function(){ try { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex2); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, baseImg); hasBase = true; } catch(e){} gl.activeTexture(gl.TEXTURE0); };
+      if (baseImg && baseImg.complete && baseImg.naturalWidth) upB(); else if (baseImg) baseImg.addEventListener('load', upB);
+      gl.activeTexture(gl.TEXTURE0);
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       cvF.addEventListener('webglcontextlost', function(e){ e.preventDefault(); ok = false; }, false);
     }
@@ -1005,6 +1295,8 @@
       STORM.step(time); var S0 = STORM.cells[0], S1 = STORM.cells[1];
       gl.uniform4f(U.uSt0, S0.x, S0.y, S0.r, lt || reduce ? 0 : S0.a); gl.uniform4f(U.uSt1, S1.x, S1.y, S1.r, lt || reduce ? 0 : S1.a); gl.uniform2f(U.uFl, S0.fl, S1.fl);
       var wd = C.wind || [1, 0.35]; gl.uniform2f(U.uWind, wd[0], wd[1]);
+      gl.uniform1i(U.uBase, 1); gl.uniform1f(U.uHasBase, hasBase && !lt ? 1 : 0);
+      var dv = DN.v; gl.uniform4f(U.uDN, dv.day, dv.dusk, dv.night, dv.elev); gl.uniform2f(U.uSun, dv.sx, dv.sy);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     return {init: init, resize: resize, draw: draw, get ok(){ return ok; }};
@@ -1037,7 +1329,7 @@
   var openedOnce = false;
   function close(){
     if (!isOpen) return;
-    isOpen = false; btn.setAttribute('aria-expanded', 'false'); pop.hidden = true;
+    isOpen = false; btn.setAttribute('aria-expanded', 'false'); pop.hidden = true; closePanel();
     if (window.__ulvMapAudio) window.__ulvMapAudio.close();
     setTimeout(function(){ if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
     var fin = function(){ ov.hidden = true; closing = null; document.body.classList.remove('map-open'); };
@@ -1063,5 +1355,7 @@
     zoomTo: function(s, wx, wy){ var p = toScreen(wx, wy); view.x += vw / 2 - p.x; view.y += vh / 2 - p.y; zoomAt(s, vw / 2, vh / 2); kick(); },
     stats: function(){ return {fx: FXL.ok, gl: !!(cvF.getContext && FXL.ok), lite: lite(), tiles: tileCount, loaded: loaded, km: km(totalPx()), places: PLACES.length, roads: ROADS.length, life: LIFE.stats()}; },
     cfg: function(){ return CFG; }, clouds: function(){ return cloudsOn; }, spawnFlock: function(){ LIFE.spawn(); }, redraw: function(){ dirty = true; kick(); },
-    isOpen: function(){ return isOpen; }};
+    isOpen: function(){ return isOpen; }, dn: function(p, run){ if (run != null) DN.setRun(run); if (p != null) DN.setPhase(p); kick(); return DN.v; },
+    places: function(){ return {places: PLACES.length, pins: PINS.length, labels: placeEls.length}; }, showPlace: function(id){ var p = placeById(id); if (p) showPlace(p, null); },
+    showPin: function(i){ var q = PINS[i]; if (q) showPin(q, evByO(q.o), null); }};
 })();
