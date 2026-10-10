@@ -1,0 +1,13 @@
+{
+  "_note": "Harita ayarları. Ölçek (kmPerPixel) şimdilik TAHMİNİ: tam çözünürlüklü haritada (5112x4920 px) 1 pikselin kaç km olduğu. Gerçek ölçek gelince sadece bu sayıyı değiştir ve scaleIsEstimate'i false yap. Hızlar km/gün.",
+  "image": "Horaghfus.jpg",
+  "width": 5112,
+  "height": 4920,
+  "kmPerPixel": 0.5,
+  "scaleIsEstimate": true,
+  "walkKmPerDay": 30,
+  "horseKmPerDay": 60,
+  "maxZoom": 2,
+  "fog": { "clearPx": 70, "densePx": 420, "edge": 0.14, "strength": 1.0 },
+  "clouds": { "strength": 1.0, "wind": [1.0, 0.35] }
+}

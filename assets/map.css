@@ -1,0 +1,101 @@
+/* Horaghfus world map (map.js) */
+.map-btn{position:fixed;top:18px;right:18px;z-index:31;width:40px;height:40px;padding:0;border-radius:50%;border:1px solid #e2b45a66;background:#0d0912b8;backdrop-filter:blur(6px);color:#e8d3a4;display:grid;place-items:center;cursor:pointer;opacity:.55;transition:opacity .25s,transform .25s,box-shadow .3s;box-shadow:0 4px 18px #0008}
+.map-btn svg{width:19px;height:19px}
+.map-btn .map-btn-ring{position:absolute;inset:-4px;border-radius:50%;border:1px solid #e2b45a00;transition:border-color .3s,transform .4s;pointer-events:none}
+.map-btn:hover,.map-btn:focus-visible,body.map-open .map-btn{opacity:1;transform:translateY(1px);box-shadow:0 0 16px #e2b45a66,0 4px 18px #000a}
+.map-btn:hover .map-btn-ring,.map-btn:focus-visible .map-btn-ring{border-color:#e2b45a55;transform:rotate(45deg) scale(1.04)}
+.map-btn:focus-visible{outline:2px solid #f0cf86;outline-offset:3px}
+body.fx-lite .map-btn{backdrop-filter:none}
+
+.mapx{position:fixed;inset:0;z-index:70;background:rgba(6,4,10,.72);backdrop-filter:blur(3px);overscroll-behavior:contain;touch-action:none}
+.mapx[hidden]{display:none}
+body.fx-lite .mapx{backdrop-filter:none}
+.mapx-panel{position:absolute;inset:3.2vh 2.6vw;border-radius:18px;overflow:hidden;background:#081c26;border:1px solid #e2b45a59;box-shadow:0 30px 90px #000d,0 0 0 1px #0008,inset 0 0 0 1px #ffffff0d;will-change:clip-path,transform}
+.mapx-stage{position:absolute;inset:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.mapx.grabbing .mapx-stage{cursor:grabbing}
+.mapx.t-route .mapx-stage{cursor:crosshair}
+.mapx-tiles,.mapx-fx,.mapx-svg{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+.mapx-fx,.mapx-svg{pointer-events:none}
+.mapx-fx{opacity:0;transition:opacity .9s ease}
+.mapx.fx-on .mapx-fx{opacity:1}
+.mapx-vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,#02060acc 100%);box-shadow:inset 0 0 60px #000a}
+.mapx-labels{position:absolute;inset:0;pointer-events:none}
+.mapx-load{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;transition:opacity .5s}
+.mapx.ready .mapx-load{opacity:0}
+.mapx-load i{width:34px;height:34px;border-radius:50%;border:2px solid #e2b45a33;border-top-color:#e2b45a;animation:mapspin 1s linear infinite}
+.mapx-load.err i{animation:none;border-color:#c55}
+@keyframes mapspin{to{transform:rotate(360deg)}}
+
+/* toolbar */
+.mapx-tools{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:4px;padding:5px;border-radius:14px;background:#0d0912c4;border:1px solid #e2b45a40;backdrop-filter:blur(6px);box-shadow:0 8px 26px #0009}
+.mapx-tools button,.mapx-x,.rt-btns button{width:34px;height:34px;padding:0;border:1px solid transparent;border-radius:10px;background:transparent;color:#e8dcc6;display:grid;place-items:center;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.mapx-tools button svg,.rt-btns svg{width:18px;height:18px}
+.mapx-tools button:hover,.rt-btns button:hover:not(:disabled){background:#e2b45a1f;color:#fff}
+.mapx-tools button.on{background:linear-gradient(180deg,#e2b45a3a,#e2b45a1a);border-color:#e2b45a77;color:#ffe2a6;box-shadow:0 0 12px #e2b45a33 inset}
+.mapx-tools .mt-sep{display:block;height:1px;margin:3px 4px;background:#e2b45a33}
+.mapx-tools button:focus-visible,.mapx-x:focus-visible,.rt-btns button:focus-visible{outline:2px solid #f0cf86;outline-offset:1px}
+.mapx-x{position:absolute;right:14px;top:14px;width:40px;height:40px;border-radius:50%;background:#0d0912c4;border-color:#e2b45a55;backdrop-filter:blur(6px);box-shadow:0 6px 20px #0009}
+.mapx-x svg{width:18px;height:18px}
+.mapx-x:hover{background:#2a1a10;color:#fff;box-shadow:0 0 14px #e2b45a55}
+
+/* route readout */
+.mapx-rt{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;column-gap:14px;align-items:center;padding:9px 10px 9px 16px;border-radius:14px;background:linear-gradient(180deg,#f3e3bfee,#e2cc9aee);color:#2b1a0b;border:1px solid #8a6328;box-shadow:0 10px 30px #000a,inset 0 0 18px #a8782f44;font-family:Georgia,'Times New Roman',serif;min-width:260px;animation:rtin .35s cubic-bezier(.3,.8,.25,1)}
+.mapx-rt[hidden]{display:none}
+@keyframes rtin{from{opacity:0;transform:translate(-50%,10px)}}
+.rt-main{display:flex;align-items:baseline;gap:12px;white-space:nowrap}
+.rt-km{font:700 19px Cinzel,Georgia,serif;letter-spacing:.04em;color:#3b200a}
+.rt-t{font-size:13.5px}.rt-t b{font-weight:700;color:#5a2f0c}
+.rt-sub{grid-column:1;display:flex;gap:10px;font-size:11.5px;color:#5b4425;font-style:italic;white-space:nowrap}
+.rt-est{font-style:normal;font:700 9.5px Cinzel,serif;letter-spacing:.14em;text-transform:uppercase;color:#8a2f12;border:1px solid #8a2f1266;border-radius:20px;padding:1px 7px;align-self:center}
+.rt-est[hidden]{display:none}
+.rt-btns{grid-column:2;grid-row:1/3;display:flex;gap:2px}
+.rt-btns button{color:#4a2c10}
+.rt-btns button:hover:not(:disabled){background:#7a52201f;color:#2b1a0b}
+.rt-btns button:disabled{opacity:.35;cursor:default}
+
+/* route ink on the map */
+.mapx-route path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mapx-route .r-glow{stroke:#f6e7c1;stroke-opacity:.55;stroke-width:7;filter:drop-shadow(0 1px 2px #0009)}
+.mapx-route .r-ink{stroke:#4a230b;stroke-width:3.2;stroke-dasharray:1 7.5;stroke-opacity:.9}
+.mapx-route .r-dash{stroke:#8a1e0e;stroke-width:2.6;stroke-dasharray:10 9;animation:inkflow 1.1s linear infinite}
+@keyframes inkflow{to{stroke-dashoffset:-19}}
+.r-node{pointer-events:all;cursor:grab}
+.r-node .n-hit{fill:transparent}
+.r-node .n-ring{fill:#f3e3bf;stroke:#4a230b;stroke-width:2;filter:drop-shadow(0 2px 3px #000b);transition:r .2s}
+.r-node .n-dot{fill:#8a1e0e}
+.r-node.first .n-ring{fill:#e2b45a}
+.r-node.last .n-dot{fill:#4a230b}
+.r-node:hover .n-ring{stroke:#8a1e0e}
+.r-node.pop .n-ring{animation:npop .4s cubic-bezier(.3,1.6,.5,1)}
+@keyframes npop{from{transform:scale(.2)}}
+.r-seg{pointer-events:none}
+.r-seg .s-hit{stroke:transparent;stroke-width:16;pointer-events:stroke}
+.r-seg text{font:700 12px Georgia,serif;fill:#2b1a0b;paint-order:stroke;stroke:#f3e3bf;stroke-width:3.5px;text-anchor:middle;opacity:0;transition:opacity .2s;pointer-events:none}
+.r-seg:hover text,.r-seg.cur text{opacity:1}
+.mapx-svg .r-seg{pointer-events:auto}
+.mapx:not(.t-route) .r-node{pointer-events:none}
+
+/* roads & places (data-driven; empty in v1) */
+.road{fill:none;stroke:#5a3512;stroke-width:2;stroke-dasharray:6 5;stroke-opacity:.8;stroke-linecap:round}
+.road.t-sea{stroke:#e8f4ff;stroke-opacity:.5;stroke-dasharray:2 7}
+.mp-place{position:absolute;left:0;top:0;pointer-events:auto;display:flex;align-items:center;gap:6px;transform-origin:0 0;padding:0;border:0;background:none;cursor:pointer;color:#fff3d6;font:700 13px Cinzel,serif;letter-spacing:.06em;text-shadow:0 1px 3px #000,0 0 10px #000c;white-space:nowrap;transition:opacity .25s}
+.mp-place i{width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#e2b45a;box-shadow:0 0 0 2px #2b1a0b,0 0 10px #e2b45a}
+.mp-place span{margin-top:-4px}
+.mp-place.off{opacity:0;pointer-events:none}
+.mapx-pop{position:absolute;max-width:230px;padding:10px 13px;border-radius:12px;background:linear-gradient(180deg,#f3e3bf,#e2cc9a);color:#2b1a0b;border:1px solid #8a6328;box-shadow:0 10px 30px #000a;font:13px/1.45 Georgia,serif}
+.mapx-pop b{font:700 14px Cinzel,serif}.mapx-pop p{margin:4px 0 0}
+.mapx-pop button{margin-top:8px;font:700 11px Cinzel,serif;letter-spacing:.08em;padding:4px 10px;border-radius:20px;border:1px solid #8a6328;background:#2b1a0b;color:#f3e3bf;cursor:pointer}
+
+@media (max-width:700px),(max-height:500px){
+  .map-btn{top:12px;right:12px;width:36px;height:36px}
+  .mapx-panel{inset:0;border-radius:0;border:0}
+  .mapx-tools{left:10px;top:max(10px,env(safe-area-inset-top))}
+  .mapx-tools button{width:38px;height:38px}
+  .mapx-x{right:10px;top:max(10px,env(safe-area-inset-top))}
+  .mapx-rt{bottom:max(12px,env(safe-area-inset-bottom));min-width:0;width:calc(100% - 24px);box-sizing:border-box;padding:8px 8px 8px 12px}
+  .mapx-rt{grid-template-columns:1fr auto;column-gap:6px}
+  .rt-main{gap:2px 8px;flex-wrap:wrap}.rt-km{font-size:17px}.rt-t{font-size:12.5px}
+  .rt-sub{flex-wrap:wrap;white-space:normal;gap:3px 8px}
+  .rt-btns button{width:34px;height:34px}
+}
+@media (prefers-reduced-motion:reduce){.mapx-route .r-dash{animation:none}}
