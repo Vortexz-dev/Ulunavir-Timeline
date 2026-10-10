@@ -7,7 +7,7 @@ var API = 'https://katip-pirdeviz.ulunavir.workers.dev/chat';
 var KB_URL = 'assets/katip/kb.json';
 var AV = 'assets/katip/pirdeviz.webp';
 var STORE = 'ulv-katip', MAXQ = 1500, CTX_CHARS = 14000, MAX_IDS = 12, SEND_TURNS = 6;
-var GREET = 'Hoş geldiniz efendim. Ben **Kâtip Pirdeviz**; çağların büyük defterini tutarım. Kadim Çağ’dan Mital Alari günlerine dek ne kayda geçmişse sorunuz, mürekkebim kurumadan arz edeyim. Defterde yazmayanı ise uydurmam, “kayıtlı değil” derim.';
+var GREET = 'Demek kumlarıma bir ölümlü daha ulaştı. Ben **Kâtip Pirdeviz**; güneyin mühürlü piramidinde ölümü aştım ve bildiğim her şeyi kum tanelerine yazıp bir çöl ettim. Kadim Çağ’dan bugüne ne yaşandıysa sor evlat; kumlarda yazılı olanı söylerim, yazılı olmayanı uydurmam.';
 
 // ---------------------------------------------------------------- retrieval
 var FOLD = {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','â':'a','î':'i','û':'u','é':'e','ë':'e','ä':'a'};
@@ -87,7 +87,7 @@ function md(src){
     if ((m = l.match(/^\s*[-*•]\s+(.*)/))){ flushP(); if (list !== 'ul'){ flushL(); html += '<ul>'; list = 'ul'; } html += '<li>' + inline(m[1]) + '</li>'; return; }
     if ((m = l.match(/^\s*\d+[.)]\s+(.*)/))){ flushP(); if (list !== 'ol'){ flushL(); html += '<ol>'; list = 'ol'; } html += '<li>' + inline(m[1]) + '</li>'; return; }
     if ((m = l.match(/^\s*#{1,4}\s+(.*)/))){ flushP(); flushL(); html += '<p><b>' + inline(m[1]) + '</b></p>'; return; }
-    if (/^\s*[—–-]{1,2}\s*Defter/i.test(l)){ flushP(); flushL(); html += '<p class="kp-cite">' + inline(l.trim()) + '</p>'; return; }
+    if (/^\s*[—–-]{1,2}\s*(Defter|Kumlarda)/i.test(l)){ flushP(); flushL(); html += '<p class="kp-cite">' + inline(l.trim()) + '</p>'; return; }
     flushL(); para.push(l);
   });
   flushP(); flushL();
@@ -103,18 +103,18 @@ function save(){ try { localStorage.setItem(STORE, JSON.stringify({msgs: st.msgs
 var lite = function(){ return document.body.classList.contains('fx-lite') || matchMedia('(prefers-reduced-motion: reduce)').matches; };
 var btn = document.createElement('button');
 btn.className = 'kp-btn'; btn.type = 'button'; btn.setAttribute('aria-expanded','false'); btn.setAttribute('aria-controls','kpPanel');
-btn.setAttribute('aria-label','Kâtip Pirdeviz ile konuş'); btn.title = 'Kâtip Pirdeviz — Çağlar Defteri’ne sor';
+btn.setAttribute('aria-label','Kâtip Pirdeviz ile konuş'); btn.title = 'Kâtip Pirdeviz — kumlara yazılanı sor';
 btn.innerHTML = '<img src="' + AV + '" alt="" width="44" height="44" decoding="async"><i class="kp-ring" aria-hidden="true"></i>';
 var panel = document.createElement('section');
 panel.className = 'kp-panel'; panel.id = 'kpPanel'; panel.hidden = true;
 panel.setAttribute('role','dialog'); panel.setAttribute('aria-label','Kâtip Pirdeviz sohbeti');
 panel.innerHTML =
   '<header class="kp-head"><img class="kp-hav" src="' + AV + '" alt="" width="34" height="34">' +
-  '<div class="kp-ht"><b>Kâtip Pirdeviz</b><span>Çağlar Defteri’nin kâtibi</span></div>' +
+  '<div class="kp-ht"><b>Kâtip Pirdeviz</b><span>Güney çölünün ölümsüz kâtibi</span></div>' +
   '<button type="button" class="kp-new" title="Yeni sayfa (sohbeti temizle)" aria-label="Yeni sayfa"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z M14 3v5h5 M12 11v6 M9 14h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>' +
   '<button type="button" class="kp-min" title="Küçült" aria-label="Küçült"><svg viewBox="0 0 24 24"><path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></header>' +
   '<div class="kp-log" aria-live="polite"></div>' +
-  '<form class="kp-form" autocomplete="off"><textarea class="kp-in" rows="1" maxlength="' + MAXQ + '" placeholder="Kâtibe sorunu yaz…" aria-label="Sorunuz"></textarea>' +
+  '<form class="kp-form" autocomplete="off"><textarea class="kp-in" rows="1" maxlength="' + MAXQ + '" placeholder="Sorunu kumlara yaz…" aria-label="Sorunuz"></textarea>' +
   '<button type="submit" class="kp-send" title="Gönder (Enter)" aria-label="Gönder"><svg viewBox="0 0 24 24"><path d="M20 3C12 4 7 9 5 17l-1 4 4-1c1-3 2-5 4-7l-3 1c2-4 5-7 11-11z" fill="currentColor"/></svg></button></form>';
 document.body.appendChild(panel); document.body.appendChild(btn);
 var log = panel.querySelector('.kp-log'), inp = panel.querySelector('.kp-in'), form = panel.querySelector('.kp-form'), sendB = panel.querySelector('.kp-send');
@@ -135,15 +135,15 @@ function render(){
 }
 function typing(){
   var row = document.createElement('div'); row.className = 'kp-msg kp-m kp-typing';
-  row.innerHTML = '<img class="kp-av" src="' + AV + '" alt="" width="30" height="30"><div class="kp-b"><svg class="kp-quill" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 3C12 4 7 9 5 17l-1 4 4-1c1-3 2-5 4-7l-3 1c2-4 5-7 11-11z" fill="currentColor"/></svg><span class="kp-dots"><i></i><i></i><i></i></span><span class="sr">Kâtip yazıyor…</span></div>';
+  row.innerHTML = '<img class="kp-av" src="' + AV + '" alt="" width="30" height="30"><div class="kp-b"><svg class="kp-quill" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 3C12 4 7 9 5 17l-1 4 4-1c1-3 2-5 4-7l-3 1c2-4 5-7 11-11z" fill="currentColor"/></svg><span class="kp-dots"><i></i><i></i><i></i></span><span class="sr">Kâtip kumları okuyor…</span></div>';
   log.appendChild(row); scroll(); return row;
 }
 function errText(code){
-  return {rate:'Mürekkebim tükendi efendim; kalemimi biraz dinlendireyim, birazdan yeniden sorunuz.',
-          quota:'Bugünlük hokkam kurudu efendim. Defterin sayfaları yarın yeniden açılır; o vakit tekrar sorunuz.',
-          long:'Efendim, bu sual bir sayfaya sığmaz; biraz kısaltıp yeniden yazınız.',
-          net:'Ulak yolda kayboldu efendim; mektubunuz bana ulaşmadı. Bir daha deneyiniz.'}[code] ||
-         'Kalemim kırıldı efendim, bir aksilik oldu. Birazdan yeniden deneyiniz.';
+  return {rate:'Sabırsızsın ölümlü. Kumlar bir solukta okunmaz; biraz bekle, sonra yeniden sor.',
+          quota:'Bugünlük çölün rüzgârı dindi, kumlar konuşmuyor. Yarın yeniden gel evlat.',
+          long:'Sözlerin bir kum tanesine sığmayacak kadar uzun, ölümlü. Kısalt ve yeniden sor.',
+          net:'Sesin çölün öte yakasında kayboldu, evlat; bana ulaşmadı. Yeniden seslen.'}[code] ||
+         'Kumlarda bir fırtına koptu; sözlerim dağıldı. Az sonra yeniden sor, ölümlü.';
 }
 
 // typewriter that follows the incoming stream
