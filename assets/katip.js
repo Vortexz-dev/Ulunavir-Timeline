@@ -76,8 +76,27 @@ function retrieve(q, prev){
 
 // ---------------------------------------------------------------- markdown (escaped)
 function esc(s){ return s.replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-function inline(s){ return esc(s).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>'); }
+function fmt(s){ return esc(s).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>'); }
+// deep links [[kart:ID|Başlık]] / [[tag:slug|Ad]] -> buttons; ids that do not exist on the site are dropped (label kept as text)
+var LINK = /\[\[\s*(kart|tag)\s*:\s*([^|\]]{1,80}?)\s*(?:\|([^\]]{1,120}))?\]\]/g;
+function linkHTML(kind, id, label){
+  var N = window.__ulvNav, D = window.TIMELINE, TI = window.TAGINFO || {};
+  if (kind === 'kart'){
+    var o = parseInt(id, 10), e = null; if (D) for (var i = 0; i < D.events.length; i++) if (D.events[i].o === o){ e = D.events[i]; break; }
+    if (!e) return label ? fmt(label) : '';
+    return '<button type="button" class="kp-link kp-l-kart" data-kart="' + o + '" title="Zaman çizelgesinde göster: ' + esc(e.title) + '"><i aria-hidden="true">✦</i>' + esc(label || e.title) + '</button>';
+  }
+  var k = N && N.tagBySlug(id.toLowerCase()); if (!k && TI[id]) k = id;
+  if (!k) return label ? fmt(label) : '';
+  return '<button type="button" class="kp-link kp-l-tag" data-tag="' + esc(k) + '" title="Bilgi kartını aç: ' + esc(k) + '"><i aria-hidden="true">☉</i>' + esc(label || k) + '</button>';
+}
+function inline(s){
+  var out = '', last = 0, m; LINK.lastIndex = 0;
+  while ((m = LINK.exec(s))){ out += fmt(s.slice(last, m.index)) + linkHTML(m[1], m[2], m[3] && m[3].trim()); last = LINK.lastIndex; }
+  return out + fmt(s.slice(last));
+}
 function md(src){
+  src = src.replace(/\[\[[^\]\n]*\]?$/, '').replace(/⟦[^⟧\n]*⟧\s?/g, '');   // hide a link still being typed; never show raw markers
   var lines = src.replace(/\r/g,'').split('\n'), html = '', list = null, para = [];
   function flushP(){ if (para.length){ html += '<p>' + para.map(inline).join('<br>') + '</p>'; para = []; } }
   function flushL(){ if (list){ html += '</' + list + '>'; list = null; } }
@@ -245,6 +264,12 @@ function grow(){ inp.style.height = 'auto'; inp.style.height = Math.min(inp.scro
 inp.addEventListener('input', grow);
 panel.addEventListener('keydown', function(ev){ if (ev.key === 'Escape'){ ev.stopPropagation(); setOpen(false); btn.focus(); } });
 document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && !panel.hidden && panel.contains(document.activeElement) === false && document.activeElement === btn){ setOpen(false); } });
+log.addEventListener('click', function(ev){
+  var a = ev.target.closest && ev.target.closest('.kp-link'); if (!a || !window.__ulvNav) return;
+  ev.preventDefault();
+  if (a.dataset.kart){ var small = innerWidth <= 860; if (small) setOpen(false); window.__ulvNav.card(+a.dataset.kart, {keepKatip: !small}); }
+  else if (a.dataset.tag) window.__ulvNav.tag(a.dataset.tag, a);
+});
 // keep wheel/touch scrolling inside the log from scrolling the timeline
 log.addEventListener('wheel', function(ev){ ev.stopPropagation(); }, {passive:true});
 

@@ -64,3 +64,8 @@ body.fx-lite .kp-b.kp-ink{box-shadow:0 1px 3px #6b4a2022}
   .kp-panel{right:8px!important;left:8px;width:auto;max-width:none;bottom:96px;height:min(62vh,500px);height:min(62dvh,500px)}
   .kp-b{font-size:16px}
 }
+/* deep links in Kâtip's answers */
+.kp-link{display:inline-flex;align-items:center;gap:4px;margin:1px 2px;padding:1px 8px 1px 6px;border:1px solid #b58a3c;border-radius:11px;background:linear-gradient(180deg,#f6e7c3,#e9d3a1);color:#4a2c10;font:600 .92em/1.35 Cormorant,Georgia,serif;cursor:pointer;vertical-align:baseline;box-shadow:0 1px 0 #fff8 inset,0 1px 3px #5a3a1430;transition:transform .15s,box-shadow .2s,background .2s}
+.kp-link i{font-style:normal;font-size:.8em;color:#9a6a1e}
+.kp-link:hover,.kp-link:focus-visible{background:linear-gradient(180deg,#fff2d2,#f0dcab);box-shadow:0 0 0 1px #e2b45a,0 2px 8px #b58a3c66;transform:translateY(-1px)}
+.kp-l-tag i{color:#6a4aa0}
