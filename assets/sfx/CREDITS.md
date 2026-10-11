@@ -82,3 +82,7 @@ All loops: 40 s, mono MP3 64 kbps, trimmed and loop-crossfaded (3 s), loudness-n
 | `map-desert.mp3` | Southern Lands / near a sandstorm: dry desert wind with gusts | Wikimedia Commons — “Howling wind.ogg” by Tvabutzku1234 — CC0 — https://commons.wikimedia.org/wiki/File:Howling_wind.ogg (another section, lowpassed) plus synthesised sand hiss (no external source) |
 | `sfx-cannon.mp3` | one-shot: pirate fight cannon (only when the camera is near) | synthesised (no external source) |
 | `sfx-clash.mp3` | one-shot: boarding sword clash (only when the camera is near) | OpenGameArt — “20 sword sound effects (attacks and clashes)” by starninjas (`sword_clash.1`) — CC0 — https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes |
+| `map-eerie.mp3` | Blavinken at night, zoomed close: low eerie wind/drone bed (40 s seamless loop) | synthesised (no external source) — `frp-timeline/site-build/map/t127/synth_blavinken.py` |
+| `sfx-howl.mp3` | one-shot: distant werewolf howl (Blavinken, night, close zoom; every ~10–28 s) | synthesised (no external source) — same script |
+| `sfx-bats.mp3` | one-shot: a flutter of bats with faint squeaks (Blavinken, night; rare) | synthesised (no external source) — same script |
+| `sfx-creature.mp3` | one-shot: low growl/snarl of an unseen creature (Blavinken, night; rarer) | synthesised (no external source) — same script |

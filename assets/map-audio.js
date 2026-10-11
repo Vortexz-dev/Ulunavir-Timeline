@@ -3,16 +3,17 @@
    by zoom and by what is under the view centre: high wind (lowpass opens with altitude) -> lighter wind + birds
    -> birdsong, breeze, rustling leaves; town murmur near settlements (nature ducks), soft surf near coasts; at night crickets/owls replace birds; rain+thunder near storms, snowstorm wind in the snowy north/peaks,
    ship creaks/lapping near ships and hooves/wheels near caravans when zoomed close; harbour water/bells/gulls, forge hammering,
-   waterfalls, temple drone + gong, desert wind in the Southern Lands (all lazy); cannon/sword one-shots for the pirate fights. */
+   waterfalls, temple drone + gong, desert wind in the Southern Lands (all lazy); cannon/sword one-shots for the pirate fights;
+   Blavinken at night: eerie low wind bed + werewolf howls, now and then bats or a creature growl (one-shots). */
 (function(){
   'use strict';
   var AC = window.AudioContext || window.webkitAudioContext;
   var DIR = 'assets/sfx/map/', LEVEL = 0.5;
   var FILES = {windHi: 'map-wind-high.mp3', windLo: 'map-wind-low.mp3', nature: 'map-nature.mp3', breeze: 'map-breeze.mp3', town: 'map-town.mp3', surf: 'map-surf.mp3',
     night: 'map-night.mp3', storm: 'map-storm.mp3', snow: 'map-snow.mp3', ship: 'map-ship.mp3', hooves: 'map-hooves.mp3',
-    harbor: 'map-harbor.mp3', forge: 'map-forge.mp3', waterfall: 'map-waterfall.mp3', temple: 'map-temple.mp3', desert: 'map-desert.mp3'};
-  var LAZY = {night: 1, storm: 1, snow: 1, ship: 1, hooves: 1, harbor: 1, forge: 1, waterfall: 1, temple: 1, desert: 1};   // fetched only the first time they become audible
-  var BASE = {windHi: .46, windLo: .8, nature: .9, breeze: .7, town: .85, surf: .75, night: .85, storm: .9, snow: .7, ship: .8, hooves: .7, harbor: .8, forge: .7, waterfall: .8, temple: .7, desert: .75};
+    harbor: 'map-harbor.mp3', forge: 'map-forge.mp3', waterfall: 'map-waterfall.mp3', temple: 'map-temple.mp3', desert: 'map-desert.mp3', eerie: 'map-eerie.mp3'};
+  var LAZY = {night: 1, storm: 1, snow: 1, ship: 1, hooves: 1, harbor: 1, forge: 1, waterfall: 1, temple: 1, desert: 1, eerie: 1};   // fetched only the first time they become audible
+  var BASE = {windHi: .46, windLo: .8, nature: .9, breeze: .7, town: .85, surf: .75, night: .85, storm: .9, snow: .7, ship: .8, hooves: .7, harbor: .8, forge: .7, waterfall: .8, temple: .7, desert: .75, eerie: .75};
   var ctx = null, master = null, lp = null, L = {}, loading = false, active = false, sleepT = 0, tgt = {}, nloaded = 0;
   var on = true, vol = 50;   // vol 0..100; 100 = the original v3 level (LEVEL), default 50
   try { var sv = localStorage.getItem('ulv-map-vol2'); if (sv != null && sv !== '' && isFinite(+sv)) vol = Math.max(0, Math.min(100, +sv)); } catch(e){}
@@ -85,16 +86,29 @@
     tgt.harbor = (p.harbor || 0) * nearZ; tgt.forge = (p.forge || 0) * nearZ; tgt.waterfall = (p.waterfall || 0) * nearZ; tgt.temple = (p.temple || 0) * nearZ * (1 - .3 * nt);
     tgt.desert = (p.desert || 0) * (.35 + .65 * (1 - far)) * (1 - .5 * town); tgt.nature *= 1 - .8 * (p.desert || 0); tgt.breeze *= 1 - .7 * (p.desert || 0); tgt.night *= 1 - .5 * (p.desert || 0);
     tgt.surf *= 1 - .5 * tgt.harbor; tgt.town *= 1 - .3 * Math.max(tgt.forge, tgt.temple);
+    // Blavinken, city of witch & monster hunters: at night, zoomed near -> eerie bed, werewolf howls, rarely bats / a creature
+    var eer = (p.eerie || 0) * nt * nearZ; tgt.eerie = eer; tgt.night *= 1 - .45 * eer; tgt.town *= 1 - .4 * eer;
+    eerie(eer);
     Object.keys(LAZY).forEach(function(k){ if (tgt[k] > .01) loadOne(k); });
     var t = ctx.currentTime;
     Object.keys(tgt).forEach(function(k){ var g = L[k].g.gain; g.cancelScheduledValues(t); g.setTargetAtTime(tgt[k] * BASE[k], t, .5); });
     lp.frequency.cancelScheduledValues(t); lp.frequency.setTargetAtTime(520 + 2300 * far * far + 600 * mid, t, .6);   // wind character: dull/near -> airy/high (kept soft, no hiss)
   }
-  // one-shots (pirate battle): cannon + sword clash; decoded on first use, spatialised by a simple stereo pan
-  var SFX = {cannon: 'sfx-cannon.mp3', clash: 'sfx-clash.mp3'}, sbuf = {}, sbusy = {}, lastS = {};
+  // one-shots (pirate battle: cannon + sword clash; Blavinken nights: howl, bats, creature); decoded on first use, spatialised by a simple stereo pan
+  var SFX = {cannon: 'sfx-cannon.mp3', clash: 'sfx-clash.mp3', howl: 'sfx-howl.mp3', bats: 'sfx-bats.mp3', creature: 'sfx-creature.mp3'}, sbuf = {}, sbusy = {}, lastS = {};
+  function sload(name){ if (sbuf[name] || sbusy[name] || !ctx) return; sbusy[name] = 1; fetch(DIR + SFX[name]).then(function(r){ return r.arrayBuffer(); }).then(function(ab){ return new Promise(function(res, rej){ var q = ctx.decodeAudioData(ab, res, rej); if (q && q.then) q.then(res, rej); }); }).then(function(b){ sbuf[name] = b; }).catch(function(){ sbusy[name] = 0; }); }
+  var EER = {howl: 0, bats: 0, creature: 0, in: false};
+  function eerie(e){
+    if (e < .06){ EER.in = false; return; }
+    var now = ctx.currentTime; sload('howl'); sload('bats'); sload('creature');
+    if (!EER.in){ EER.in = true; EER.howl = now + 2 + Math.random() * 4; EER.bats = now + 14 + Math.random() * 20; EER.creature = now + 25 + Math.random() * 30; }
+    if (now > EER.howl){ EER.howl = now + 10 + Math.random() * 18; sfx('howl', e * (.6 + .4 * Math.random()), (Math.random() - .5) * 1.3); }
+    if (now > EER.bats){ EER.bats = now + 28 + Math.random() * 40; sfx('bats', e * (.5 + .4 * Math.random()), (Math.random() - .5) * 1.6); }
+    if (now > EER.creature){ EER.creature = now + 40 + Math.random() * 50; sfx('creature', e * (.55 + .35 * Math.random()), (Math.random() - .5) * 1.2); }
+  }
   function sfx(name, g, pan){
     if (!ctx || !active || !on || !SFX[name]) return;
-    if (!sbuf[name]){ if (!sbusy[name]){ sbusy[name] = 1; fetch(DIR + SFX[name]).then(function(r){ return r.arrayBuffer(); }).then(function(ab){ return new Promise(function(res, rej){ var q = ctx.decodeAudioData(ab, res, rej); if (q && q.then) q.then(res, rej); }); }).then(function(b){ sbuf[name] = b; }).catch(function(){}); } return; }
+    if (!sbuf[name]){ sload(name); return; }
     var now = ctx.currentTime; if (lastS[name] && now - lastS[name] < .12) return; lastS[name] = now;
     var src = ctx.createBufferSource(), gn = ctx.createGain(); src.buffer = sbuf[name]; src.playbackRate.value = .9 + Math.random() * .2; gn.gain.value = Math.max(0, Math.min(1, g || 0)) * .9;
     var out = gn; if (ctx.createStereoPanner){ var pn = ctx.createStereoPanner(); pn.pan.value = Math.max(-1, Math.min(1, pan || 0)); gn.connect(pn); out = pn; }
@@ -104,5 +118,5 @@
   function setVol(v){ vol = Math.max(0, Math.min(100, Math.round(+v || 0))); try { localStorage.setItem('ulv-map-vol2', String(vol)); } catch(e){} setMaster(.15); }
   window.__ulvMapAudio = {open: open, close: close, update: update, sfx: sfx, setOn: setOn, isOn: function(){ return on; }, setVol: setVol, getVol: function(){ return vol; },
     state: function(){ return {ctx: ctx && ctx.state, on: on, vol: vol, active: active, loaded: nloaded, master: master && +master.gain.value.toFixed(3), lp: lp && Math.round(lp.frequency.value),
-      layers: Object.keys(L).reduce(function(o, k){ o[k] = +L[k].g.gain.value.toFixed(3); return o; }, {}), target: tgt}; }};
+      layers: Object.keys(L).reduce(function(o, k){ o[k] = +L[k].g.gain.value.toFixed(3); return o; }, {}), target: tgt, eer: {in: EER.in, howl: ctx ? +(EER.howl - ctx.currentTime).toFixed(1) : null, sfx: Object.keys(sbuf)}}; }};
 })();

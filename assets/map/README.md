@@ -73,3 +73,41 @@ Circular, de-squashed crop of the painted whirlpool (centre ~4503,1380 full-res 
 - Pirates (LIFE `PIRATE`): chase → broadside (muzzle flashes kind 5, smoke) → victim sinks, pirate flees and fades.
 - Test hooks: `__ulvMap.fx('storm'|'land'|'sand'|'pirate'|'whale'|'dolph'|'bow'|'dragon'|'eagle'|'serp', x, y)`,
   `__ulvMapDbg.nonat`.
+
+## t127–t130 additions
+- **Weather toggles.** `ulv-map-wx` (weather) now defaults ON and is the master switch for ALL weather: storms + rain,
+  tornadoes, the Southern Lands sandstorm and snowfall. The clouds toggle (`ulv-map-clouds`) additionally hides storm
+  clouds, rain, tornadoes and the sandstorm (they need clouds); snow only follows the weather toggle. In code:
+  `wxActive() = wxOn && cloudsOn`; everything fades out in ~5 s when switched off. Light mode: no storms, tornadoes or snowfall.
+- **Storms** (`STORM`): max 3 cells (~45 % over land), staggered (cell 2/3 wait 25–75 s / 70–160 s), life 150–300 s,
+  25–85 s pause after each. Never over the Southern Lands (only the occasional orange sandstorm there).
+- **Tornadoes** (LIFE `TORN`): a rare event of their own (first 80–190 s, then every 150–320 s; 12 % chance of a pair),
+  max 2, on land or near coasts at sea (coast distance ≤ 380), never in the south. Size `0.62 + 0.42·u³` (mostly small,
+  never huge). Cloud cap, trumpet funnel (3 soft passes + shaded side), spiral streaks, dust/spray skirt. Audio storm level
+  includes `TORN.near()`.
+- **Roads** (`roadnet.json`, built by `site-build/map/roadnet2.py`): least-cost paths (skimage MCP) over a terrain cost
+  (open 1, forest 1.7, snow 5, rock 7, inland water 14, sea impassable) where roads painted on Horaghfus.jpg (white
+  top-hat detection) and the traced `roads_auto` lines are cheap (0.3) — the network follows the painted roads and bridges.
+  Delaunay candidate links, redundancy pruning, MST guarantee, cheapest-first build so roads merge, RDP + Catmull-Rom
+  smoothing. 38 nodes / 62 edges. Each edge has a traffic weight `tr` (0.35 around Halldor and Balahnur↔Kuzey Sanayi,
+  0.6 elsewhere near Balahnur) so caravans spread over the other roads. Convoys, the Yollar layer and the planner use it.
+- **Harbour routes** (`searoutes.json`, `site-build/map/searoutes2.py`): MCP over the 1/4-res landmask + painted harbour
+  water near quays + a hand corridor out of Balahnur between the lighthouses and wrecks; never along the map border;
+  smoothed and re-checked against the mask (no land crossings). Blavinken quay moved onto the water.
+- **Ships**: lanes far from the coast carry mostly big ships, inner lanes smaller ones; black-sailed prowlers (max 3,
+  Light 1) on open lanes. **Fishing boats** (`FISHB`): 32 (Light 10) small boats 16–80 px off the coast near settlements
+  and harbours, sailing between spots and stopping to fish, lantern at night.
+- **Pirates** (`PIRATE`): up to 2 encounters at once (Light 1); first after 22–50 s, then every 55–115 s (Light 80–150 s);
+  victims are open-sea ships (preferably on screen); the pirate appears 140–230 px behind and closes in → broadside → sink.
+  `stats().life.pirCount` = {starts, fights, clock, next}.
+- **Snow** (`SNOW`): crisp full-resolution sprite flakes in 3 depth layers (replaces the old half-res shader flakes).
+- **Airships** (`AIRS`, t129): 0–5 steampunk balloon airships wander loosely around Mital Alari (random waypoints within
+  ~500 px, kept apart), fade in/out (life 110–240 s); target count re-rolled every 2–4 min. One size; body is a cached
+  hi-res sprite per zoom bucket, live propeller, ground shadow, faint engine-steam trail, night lamps. Light: max 2, no steam.
+- **Blavinken at night** (map-audio `eerie`): eerie loop + one-shot werewolf howls, bats and a rare creature when zoomed
+  close at night (self-made, see `assets/sfx/CREDITS.md`).
+- **Place panel gallery** (t130): prev/next, swipe, ←/→ keys, `n / N` counter + dots, caption, enlarge button / click photo →
+  fullscreen viewer using the site lightbox style (`.lb.mpl-lb`; ←/→, Esc / click outside to close). An "Etiket kartını aç"
+  chip opens the place's own tag card (`tagId` or `tag` field in places.json).
+- Test hooks: `__ulvMap.fx('tornado', x, y, scale)`, `__ulvMap.fx('airship', n)`, `__ulvMap.wx(on)`; stats: `tornado`,
+  `storms`, `sand`, `fishing`, `snow`, `airships`, `pirCount`, `harb`.

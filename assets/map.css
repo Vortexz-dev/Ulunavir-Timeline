@@ -159,6 +159,22 @@ body.fx-lite .mapx{backdrop-filter:none}
 .mpl-media figcaption{position:absolute;left:0;right:0;bottom:0;padding:14px 12px 6px;font:600 italic 13px Cormorant,serif;color:#f6e8c6;background:linear-gradient(0deg,#000a,transparent)}
 .mpl-nav{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:1px solid #e2b45a77;background:#0d0912aa;color:#f3e3bf;font:700 18px/1 Georgia,serif;cursor:pointer}
 .mpl-nav.prev{left:8px}.mpl-nav.next{right:8px}
+/* t130 panel gallery: counter, dots, enlarge button, swipe; fullscreen viewer reuses the site lightbox (.lb, style.css) */
+.mpl-media .slide img{cursor:zoom-in;-webkit-user-drag:none}
+.mpl-media.multi{touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.mpl-media.multi figcaption{padding-bottom:20px}
+.mpl-cnt{position:absolute;left:8px;top:8px;font:700 11px Cinzel,serif;letter-spacing:.1em;color:#f3e3bf;background:#0d0912b3;border:1px solid #e2b45a55;padding:3px 9px;border-radius:10px;pointer-events:none}
+.mpl-media.multi .mpl-auto{top:34px}
+.mpl-dots{position:absolute;left:0;right:0;bottom:6px;display:flex;gap:6px;justify-content:center;pointer-events:none}
+.mpl-dots i{width:7px;height:7px;border-radius:50%;background:#f6e8c666;box-shadow:0 0 0 1px #0006;pointer-events:auto;cursor:pointer}
+.mpl-dots i.on{background:#ffd27a;box-shadow:0 0 6px #ffd27a}
+.mpl-zoom{position:absolute;right:8px;bottom:8px;width:30px;height:30px;padding:0;border-radius:50%;border:1px solid #e2b45a77;background:#0d0912aa;color:#f3e3bf;display:grid;place-items:center;cursor:zoom-in}
+.mpl-zoom svg{width:15px;height:15px}
+.mpl-nav:hover,.mpl-zoom:hover{background:#3a2412dd}
+.mpl-media figcaption{padding-right:46px}
+.mpl-card{margin:8px 0 2px;padding:4px 12px;border-radius:12px;border:1px solid #8a6328;background:#2b1a0b;color:#f6e8c6;font:700 11px Cinzel,serif;letter-spacing:.08em;cursor:pointer}
+.mpl-card:hover{background:#5a2a10}
+.mpl-lb .lb-d{font-style:italic}
 .mpl-auto{position:absolute;left:8px;top:8px;font:600 10px Cinzel,serif;letter-spacing:.08em;color:#f3e3bf;background:#2b1c0ecc;padding:3px 8px;border-radius:9px}
 .mpl-body{padding:14px 18px 20px;font:16px/1.5 Cormorant,Georgia,serif}
 .mpl-k{font:700 10.5px Cinzel,serif;letter-spacing:.16em;text-transform:uppercase;color:#8a2f12}
