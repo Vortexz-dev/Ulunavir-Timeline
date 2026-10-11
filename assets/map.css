@@ -210,3 +210,15 @@ p .mpl-est{font-size:9px;vertical-align:1px}
 .p-node circle{fill:#2b1a0b;stroke:#f3e3bf;stroke-width:2}.p-node text{fill:#f3e3bf;font:700 10px Cinzel,serif;text-anchor:middle}
 .mapx-rt .rt-t b{white-space:nowrap}
 @media (max-width:700px){.mapx-plan{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:55%}}
+/* pin edit mode (t124) */
+.mapx-tools .mt-edit svg .open{display:none}
+.mapx-tools .mt-edit.on svg .open{display:inline}.mapx-tools .mt-edit.on svg .shut{display:none}
+.mapx-edit{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:6;display:flex;gap:10px;align-items:baseline;max-width:min(640px,calc(100% - 120px));padding:8px 14px;border-radius:12px;background:linear-gradient(180deg,#f3e3bff2,#e2cc9af2);color:#2b1a0b;border:1px solid #8a6328;box-shadow:0 8px 24px #0009;font:13px/1.35 Georgia,'Times New Roman',serif;animation:rtin .3s cubic-bezier(.3,.8,.25,1)}
+.mapx-edit[hidden]{display:none}
+.mapx-edit b{white-space:nowrap;color:#6b3f0e}.mapx-edit.msg b{display:none}
+.mapx-edit .me-n{font-style:normal;white-space:nowrap;color:#7a4a12;font-weight:bold}
+.editing .mp-place,.editing .mp-pin{cursor:grab;touch-action:none}
+.editing .mp-place{outline:1px dashed #f0cf86aa;outline-offset:1px;border-radius:4px}
+.editing .mp-pin{filter:drop-shadow(0 0 4px #f0cf86)}
+.editing .mp-place.dragging,.editing .mp-pin.dragging{cursor:grabbing;transition:none;z-index:5}
+@media (max-width:700px){.mapx-edit{top:auto;bottom:max(12px,env(safe-area-inset-bottom));max-width:calc(100% - 24px);flex-wrap:wrap;font-size:12px}}

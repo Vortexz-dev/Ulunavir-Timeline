@@ -50,3 +50,26 @@ Circular, de-squashed crop of the painted whirlpool (centre ~4503,1380 full-res 
 - Route planner: Dijkstra over `roadnet.json`; legs without a road connection fall back to a straight sea line
   (stated in the result).
 - Test hooks: `window.__ulvMapDbg = {nofx, nolife, noships, nocars, nosmoke, nonight}` switches layers off for profiling.
+
+## t124 additions
+- `searoutes.json` (built by `site-build/map/searoutes.py`): 9 harbour quays + 36 port-to-port sea routes (A* over the
+  landmask, kept away from coasts, smoothed). ~62 % of ships now leave from and arrive at city harbours on these routes.
+- Pin edit mode: lock button in the left toolbar → history pins and place labels become draggable (dashed outline).
+  Pressing the lock again sends only the moved positions `{moves:[{id,x,y}]}` to the Katip worker `POST /pins`
+  (`https://katip-pirdeviz.ulunavir.workers.dev/pins`). Ids: `pl:<placeId>` (label position lx/ly) and `pin:<o>`
+  (pin x/y). The worker accepts only known ids from the live places.json, positions inside the map bounds, at most 120
+  moves per request, only from the site origin/localhost, rate-limited per IP (8/min, 80/h); there is no delete. Stored in
+  KV namespace `PINS` (key `pos:v1`, audit log of the last 300 moves in `pos:log`). Every map load does `GET /pins`
+  (edge-cached 15 s, client memo 60 s) and applies the overrides over places.json. Failed saves stay in
+  localStorage (`ulv-pin-pending`) and are re-sent on the next open.
+- Baking overrides into the repo: `python3 site-build/map/pins_bake.py && python3 site-build/map_places.py`
+  (writes `site-build/map/pos_overrides.json`, which map_places.py applies when it rebuilds places.json).
+- Weather: up to 4 storm cells (2 over sea, 2 over land with the weather toggle) with a rotating dark cloud mass,
+  3-layer angled rain, ground darkening, lightning bolts (NGL flash quads, kind 4) and rare waterspouts; none over the
+  Southern Lands, which get an occasional sandstorm (`uSand`). Snow: 3 depth layers, per-column speeds, wind drift, haze.
+  Rain/snow offsets are integrated in JS and wrapped (mediump-safe).
+- Nature (LIFE `NAT`): deer herds (meadows picked from the base map), whales/dolphins, eagle over the peaks, a rare dragon
+  near Deathwing'in İni, a very rare faint sea serpent in the fog belt, rainbows after storms.
+- Pirates (LIFE `PIRATE`): chase → broadside (muzzle flashes kind 5, smoke) → victim sinks, pirate flees and fades.
+- Test hooks: `__ulvMap.fx('storm'|'land'|'sand'|'pirate'|'whale'|'dolph'|'bow'|'dragon'|'eagle'|'serp', x, y)`,
+  `__ulvMapDbg.nonat`.

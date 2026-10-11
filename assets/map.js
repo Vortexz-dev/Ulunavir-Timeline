@@ -23,6 +23,7 @@
     dn:'<svg viewBox="0 0 24 24"><g class="on"><circle cx="9" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 3.2v1.6M9 15.2v1.6M2.2 10h1.6M14.2 10h1.6M4.2 5.2l1.1 1.1M12.7 13.7l1.1 1.1M4.2 14.8l1.1-1.1M12.7 6.3l1.1-1.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M20.5 15.2a4.6 4.6 0 01-6.3 5.3 4.8 4.8 0 004-6.9 4.6 4.6 0 012.3 1.6z" fill="currentColor"/></g><g class="off"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></g></svg>',
     pin:'<svg viewBox="0 0 24 24"><path d="M12 21.5s-6.5-6.2-6.5-11.2a6.5 6.5 0 0113 0c0 5-6.5 11.2-6.5 11.2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.3 7.6l5.4 5.4M14.7 7.6l-5.4 5.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
   };
+  I.lock = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path class="shut" d="M8 10.5V8a4 4 0 018 0v2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path class="open" d="M8 10.5V8a4 4 0 017.6-1.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="15.5" r="1.5" fill="currentColor"/></svg>';
   I.wx = '<svg viewBox="0 0 24 24"><path d="M6.5 13.5h9a3.2 3.2 0 00.3-6.4A4.7 4.7 0 006.8 6.1 3.7 3.7 0 006.5 13.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 16.5v4M6.3 17.5l3.4 2M9.7 17.5l-3.4 2M15.5 16l-1.2 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
   I.roads = '<svg viewBox="0 0 24 24"><path d="M3.5 19.5c3-1 4-4 7-5.5s7.5-.5 10-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 9.5c2.5-.5 3.5-3 6.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.2" stroke-linecap="round"/><circle cx="3.5" cy="19.5" r="1.6" fill="currentColor"/><circle cx="20.5" cy="9" r="1.6" fill="currentColor"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
   I.plan = '<svg viewBox="0 0 24 24"><path d="M6 21V4M6 4.5h10l-2.2 3.2L16 11H6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="17.5" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 18.5h6.5" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.8 1.8"/></svg>';
@@ -69,9 +70,11 @@
         '<button type="button" class="mt-pins" aria-pressed="true" title="Tarihî olay iğneleri">' + I.pin + '</button>' +
         '<button type="button" class="mt-roads" aria-pressed="false" title="Yollar">' + I.roads + '</button>' +
         '<button type="button" class="mt-wx" aria-pressed="false" title="Mevsim ve hava">' + I.wx + '</button>' +
+        '<button type="button" class="mt-edit" aria-pressed="false" title="İğne ve yer adı düzenleme (kilidi aç, sürükle)">' + I.lock + '</button>' +
         '<div class="mt-sndwrap"><button type="button" class="mt-snd" aria-pressed="true" title="Harita sesleri">' + I.snd + '</button>' +
         '<div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div>' +
       '</div>' +
+      '<div class="mapx-edit" hidden role="status"><b>Düzenleme modu</b><span>İğneleri ve yer adlarını sürükleyerek taşıyın. Bitince kilide tekrar basın: yeni konumlar herkes için kaydedilir.</span><em class="me-n"></em></div>' +
       '<div class="mapx-rt" hidden>' +
         '<div class="rt-main"><span class="rt-km">—</span><span class="rt-t"><b class="rt-walk">—</b> yaya · <b class="rt-horse">—</b> atlı · <b class="rt-cart">—</b> kervan · <b class="rt-air">—</b> hava gemisi</span></div>' +
         '<div class="rt-sub"><span class="rt-hint">Haritaya tıklayarak durak ekle</span><span class="rt-est">ölçek tahmini</span></div>' +
@@ -117,7 +120,7 @@
       CFG = r[0]; TL = r[1]; PLACES = Array.isArray(r[2]) ? r[2] : ((r[2] && r[2].places) || []); PINS = (r[2] && r[2].pins) || []; ROADS = Array.isArray(r[3]) ? r[3] : [];
       W = TL.width; H = TL.height; maxS = CFG.maxZoom || 2.5;
       rt.querySelector('.rt-est').hidden = !CFG.scaleIsEstimate;
-      NETD = r[7] && r[7].nodes ? r[7] : null; buildPlaces(); buildRoads(); buildPlanList(); LIFE.init(Array.isArray(r[4]) ? r[4] : [], Array.isArray(r[5]) ? r[5] : [], r[6] || {}, r[7]);
+      NETD = r[7] && r[7].nodes ? r[7] : null; PE.apply(PE.cached()); buildPlaces(); PE.fetch().then(function(o){ if (!PE.on) PE.apply(o); dirty = true; kick(); }); buildRoads(); buildPlanList(); LIFE.init(Array.isArray(r[4]) ? r[4] : [], Array.isArray(r[5]) ? r[5] : [], r[6] || {}, r[7]);
       return new Promise(function(res){ baseImg = new Image(); baseImg.decoding = 'async'; baseImg.onload = baseImg.onerror = function(){ res(); }; baseImg.src = BASE + 'base.webp'; });
     }).then(function(){ loaded = true; ov.classList.add('ready'); FXL.init(); resize(true); });
     return loading;
@@ -281,6 +284,71 @@
       pth._pts = r.points; if (r.name){ var t = document.createElementNS('http://www.w3.org/2000/svg', 'title'); t.textContent = r.name; pth.appendChild(t); }
       gRoads.appendChild(pth); });
   }
+  // ---------------------------------------------------------------- pin edit mode (shared positions)
+  // Lock button -> edit mode: history pins and place labels become draggable. Leaving edit mode sends the moved
+  // positions (only {id,x,y}) to the Katip worker (POST /pins, strict validation + rate limit there, KV storage); every
+  // visitor's map loads them with GET /pins at open (cached briefly) and applies them over places.json. If the save
+  // fails, the moves stay in localStorage and are re-sent on the next open.
+  var PE = (function(){
+    var API = 'https://katip-pirdeviz.ulunavir.workers.dev/pins', on = false, moved = {}, drag = null, PKEY = 'ulv-pin-pending', CKEY = 'ulv-pin-cache';
+    function pending(){ try { return JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch(e){ return {}; } }
+    function cached(){ try { var c0 = JSON.parse(sessionStorage.getItem(CKEY) || 'null'); return c0 && c0.o || {}; } catch(e){ return {}; } }
+    function fetchO(){
+      try { var c0 = JSON.parse(sessionStorage.getItem(CKEY) || 'null'); if (c0 && Date.now() - c0.t < 60e3) return Promise.resolve(c0.o); } catch(e){}
+      var ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function(){ if (ctl) ctl.abort(); }, 8000);
+      return fetch(API, {signal: ctl ? ctl.signal : undefined}).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){ clearTimeout(tm); var o = d && d.o || {};
+        try { sessionStorage.setItem(CKEY, JSON.stringify({t: Date.now(), o: o})); } catch(e){} return o; }).catch(function(){ clearTimeout(tm); return {}; });
+    }
+    function apply(o){
+      o = o || {}; var pd = pending(), k; for (k in pd) o[k] = pd[k];
+      PLACES.forEach(function(p){ var v = p && o['pl:' + p.id]; if (v && isFinite(v[0]) && isFinite(v[1])){ p.lx = v[0]; p.ly = v[1]; } });
+      PINS.forEach(function(q){ var v = o['pin:' + q.o]; if (v && isFinite(v[0]) && isFinite(v[1])){ q.x = v[0]; q.y = v[1]; } });
+      if (Object.keys(pd).length && !apply.sent){ apply.sent = 1; setTimeout(function(){ send(pd); }, 1500); }
+    }
+    function send(m){
+      var moves = Object.keys(m).map(function(id){ return {id: id, x: Math.round(m[id][0]), y: Math.round(m[id][1])}; }); if (!moves.length) return;
+      try { var pd = pending(); moves.forEach(function(v){ pd[v.id] = [v.x, v.y]; }); localStorage.setItem(PKEY, JSON.stringify(pd)); } catch(e){}
+      var chunks = []; for (var i = 0; i < moves.length; i += 100) chunks.push(moves.slice(i, i + 100));
+      chunks.reduce(function(pr, ch){ return pr.then(function(){ return fetch(API, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({moves: ch})}).then(function(r){ if (!r.ok) throw new Error('pins ' + r.status); }); }); }, Promise.resolve())
+        .then(function(){ try { localStorage.removeItem(PKEY); sessionStorage.removeItem(CKEY); } catch(e){} toast(moves.length + ' konum kaydedildi — herkes için güncellendi.'); })
+        .catch(function(){ toast('Kaydedilemedi; değişiklikler bu cihazda saklandı, harita bir daha açıldığında yeniden denenecek.'); });
+    }
+    function toast(msg){ var e = ov.querySelector('.mapx-edit'); e.hidden = false; e.classList.add('msg'); e.querySelector('span').textContent = msg; e.querySelector('.me-n').textContent = '';
+      clearTimeout(toast.t); toast.t = setTimeout(function(){ if (!on){ e.hidden = true; e.classList.remove('msg'); } }, 4200); }
+    function count(){ var n = Object.keys(moved).length; ov.querySelector('.me-n').textContent = n ? n + ' değişiklik' : ''; }
+    function toggle(){
+      on = !on; ov.classList.toggle('editing', on);
+      var b = ov.querySelector('.mt-edit'), e = ov.querySelector('.mapx-edit'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.title = on ? 'Düzenlemeyi bitir ve kaydet' : 'İğne ve yer adı düzenleme (kilidi aç, sürükle)';
+      if (on){ moved = {}; e.hidden = false; e.classList.remove('msg'); e.querySelector('span').textContent = 'İğneleri ve yer adlarını sürükleyerek taşıyın. Bitince kilide tekrar basın: yeni konumlar herkes için kaydedilir.'; count(); pinsLayer.classList.remove('off'); }
+      else { pinsLayer.classList.toggle('off', !pinsOn); var m = moved; moved = {}; if (Object.keys(m).length) send(m); else e.hidden = true; }
+      dirty = true; kick();
+    }
+    function find(el){
+      for (var i = 0; i < placeEls.length; i++) if (placeEls[i].el === el) return {id: 'pl:' + placeEls[i].p.id, o: placeEls[i].p, kx: 'lx', ky: 'ly'};
+      for (i = 0; i < pinEls.length; i++) if (pinEls[i].el === el) return {id: 'pin:' + pinEls[i].q.o, o: pinEls[i].q, kx: 'x', ky: 'y'};
+      return null;
+    }
+    function down(ev){
+      if (!on) return; var el = ev.target.closest('.mp-place,.mp-pin'); if (!el) return; var f = find(el); if (!f) return;
+      ev.stopPropagation(); ev.preventDefault();
+      drag = {f: f, el: el, sx: ev.clientX, sy: ev.clientY, ox: f.o[f.kx], oy: f.o[f.ky], id: ev.pointerId}; el.classList.add('dragging');
+      try { el.setPointerCapture(ev.pointerId); } catch(e){}
+    }
+    function move(ev){
+      if (!drag || ev.pointerId !== drag.id) return; ev.preventDefault();
+      var f = drag.f, nx = clampN(drag.ox + (ev.clientX - drag.sx) / view.s, 0, W), ny = clampN(drag.oy + (ev.clientY - drag.sy) / view.s, 0, H);
+      f.o[f.kx] = nx; f.o[f.ky] = ny; if (Math.abs(ev.clientX - drag.sx) + Math.abs(ev.clientY - drag.sy) > 2){ moved[f.id] = [nx, ny]; count(); }
+      layoutOverlay();
+    }
+    function up(ev){ if (!drag || ev.pointerId !== drag.id) return; drag.el.classList.remove('dragging'); drag = null; }
+    function clampN(v, a, b){ return v < a ? a : v > b ? b : v; }
+    [labels, pinsLayer].forEach(function(L){
+      L.addEventListener('pointerdown', down, true); L.addEventListener('pointermove', move, true); L.addEventListener('pointerup', up, true); L.addEventListener('pointercancel', up, true);
+      L.addEventListener('click', function(ev){ if (on){ ev.stopPropagation(); ev.preventDefault(); } }, true);
+    });
+    return {fetch: fetchO, apply: apply, cached: cached, toggle: toggle, get on(){ return on; }, moved: function(){ return moved; }};
+  })();
   function layoutOverlay(){
     var zf = LIFE.zoomF(), ls = Math.min(1.25, .82 + zf * .5);
     labels.style.setProperty('--ls', ls.toFixed(3));
@@ -290,7 +358,7 @@
       o.el.style.transform = 'translate(' + s.x.toFixed(1) + 'px,' + s.y.toFixed(1) + 'px) translate(-50%,-50%) scale(' + ls.toFixed(3) + ')';
       o.el.classList.toggle('off', hide);
     });
-    var pinVis = pinsOn && zf >= .16;
+    var pinVis = (pinsOn || PE.on) && zf >= .16;
     pinEls.forEach(function(o){
       var s = toScreen(o.q.x, o.q.y);
       o.el.style.transform = 'translate(' + s.x.toFixed(1) + 'px,' + s.y.toFixed(1) + 'px)';
@@ -610,6 +678,7 @@
     else if (b.classList.contains('mt-roads')){ roadsOn = !roadsOn; try { localStorage.setItem('ulv-map-roads', roadsOn ? '1' : '0'); } catch(e){} syncToggles(); dirty = true; kick(); }
     else if (b.classList.contains('mt-wx')){ wxOn = !wxOn; try { localStorage.setItem('ulv-map-wx', wxOn ? '1' : '0'); } catch(e){} syncToggles(); kick(); }
     else if (b.classList.contains('mt-plan')){ togglePlan(); }
+    else if (b.classList.contains('mt-edit')){ PE.toggle(); }
     else if (b.classList.contains('mt-pins')){ pinsOn = !pinsOn; try { localStorage.setItem('ulv-map-pins', pinsOn ? '1' : '0'); } catch(e){} pinsLayer.classList.toggle('off', !pinsOn); syncToggles(); dirty = true; kick(); }
   });
   function syncToggles(){
@@ -694,7 +763,7 @@
     var DBG = window.__ulvMapDbg || 0;
     if (FXL.ok && !DBG.nofx && (t - fxLast >= period || reduce || moved)){ FXL.draw(t / 1000); fxLast = t; }
     if (loaded && !reduce && !DBG.nolife && (t - lifeLast >= period || moved)){ LIFE.draw(t / 1000); lifeLast = t; }
-    if (loaded && window.__ulvMapAudio && t - sndLast > 250){ sndLast = t; var cw0 = toWorld(vw / 2, vh / 2), pr = LIFE.probe(cw0.x, cw0.y); pr.zf = LIFE.zoomF(); pr.night = DN.v.night; pr.storm = STORM.near(cw0.x, cw0.y);
+    if (loaded && window.__ulvMapAudio && t - sndLast > 250){ sndLast = t; var cw0 = toWorld(vw / 2, vh / 2), pr = LIFE.probe(cw0.x, cw0.y); pr.zf = LIFE.zoomF(); pr.night = DN.v.night; pr.storm = STORM.near(cw0.x, cw0.y); pr.desert = Math.max(pr.desert || 0, STORM.nearSand(cw0.x, cw0.y));
       pr.snow = wxOn ? Math.max(1 - lin(560, 980, cw0.y), 1 - lin(260, 520, Math.hypot(cw0.x - 2290, (cw0.y - 700) * 1.5))) : 0; window.__ulvMapAudio.update(pr); }
     // auto light: sustained < 32fps while open
     if (!lite() && animFx){ fpsAcc += dt; fpsN++; if (fpsAcc > 2000){ var fps = fpsN * 1000 / fpsAcc; slow = fps < 32 ? slow + 1 : 0; if (slow >= 2 && !noAuto){ autoLite = true; FXL.resize(); } fpsAcc = 0; fpsN = 0; } }
@@ -710,6 +779,8 @@
     var land = null, field = null, landPts = [], roadsA = [], lanes = [], wp = null, wpIn = null, DATA = {smoke: [], settlements: []};
     var cars = [], flocks = [], ships = [], nextFlock = 1, lastT = 0, ready = false;
     var WP = {x: 4503, y: 1380, r: 132, sq: 0.68};
+    // sound landmarks: forges (the smithy glows; the lair and southern volcano are lava, not forges), waterfalls, temple, harbours
+    var FORGES = [[2330,855],[2511,930],[2222,984],[2319,1026],[2212,1219]], FALLS = [[1440,2010],[1720,420]], TEMPLES = [[3150,4044]], PORTS = [];
     var GLOW = [[2233,440,70],[2330,855,34],[2511,930,30],[2222,984,30],[2319,1026,32],[2212,1219,30],[2914,4484,60]];
     function rnd(a, b){ return a + Math.random() * (b - a); }
     function clamp(v, a, b){ return v < a ? a : v > b ? b : v; }
@@ -734,6 +805,7 @@
         var g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, '#000'); g.addColorStop(.42, '#000'); g.addColorStop(.62, 'rgba(0,0,0,0)');
         x.fillStyle = g; x.fillRect(0, 0, s, s); wpIn = t;
       }; wp.src = BASE + 'whirlpool.webp';
+      getJSON('searoutes.json').then(setRoutes).catch(function(){ routesReady = true; });
       makeSmokeSprites(); loadLights(); ready = true;
     }
     function isLand(x, y){ if (!land || x < 0 || y < 0 || x >= W || y >= H) return false; return land.a[((y / H * land.h) | 0) * land.w + ((x / W * land.w) | 0)] === 1; }
@@ -750,6 +822,37 @@
       return {x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, ang: Math.atan2(b.y - a.y, b.x - a.x)};
     }
     function vis(P, m){ return !(P.x < -m || P.y < -m || P.x > vw + m || P.y > vh + m); }
+    // ---- follow-the-leader trains: the head drops a world-space breadcrumb every HS px; every wagon / rank behind it is
+    // placed at a fixed arc length back along that trail, so the column turns at each bend in sequence (also across junctions).
+    var HS = 3, HC = 170, UP = {x: 0, y: 0, a: 0, v: false};
+    function atK(k, d){   // at() with a cached segment index (heads only move forward)
+      var L = k.L, i = k._i || 1; if (i >= L.length || L[i - 1] > d) i = 1;
+      while (i < L.length - 1 && L[i] < d) i++; k._i = i;
+      var a = k.p[i - 1], b = k.p[i], f = (d - L[i - 1]) / ((L[i] - L[i - 1]) || 1); f = f < 0 ? 0 : f > 1 ? 1 : f;
+      UP.x = a.x + (b.x - a.x) * f; UP.y = a.y + (b.y - a.y) * f; UP.a = Math.atan2(b.y - a.y, b.x - a.x); return UP;
+    }
+    function hPush(k, x, y){ k.hi = (k.hi + 1) % HC; k.hx[k.hi] = x; k.hy[k.hi] = y; if (k.hn < HC) k.hn++; }
+    function hInit(k){   // breadcrumbs behind the spawn point (along the current road, clamped at its start)
+      k.hx = new Float32Array(HC); k.hy = new Float32Array(HC); k.hn = 0; k.hi = -1; k._i = 1;
+      var back = Math.min(HC - 2, Math.floor(Math.max(0, k.d) / HS));
+      for (var j = back; j >= 0; j--){ var q = at(k, Math.max(0, k.d - j * HS)); hPush(k, q.x, q.y); }
+      k.trav = k.gate ? 0 : Math.max(0, k.d);
+    }
+    function hStep(k, dd){
+      var q = atK(k, Math.min(k.d, k.tot)); k.hdx = q.x; k.hdy = q.y; k.hda = q.a; k.trav += dd;
+      var lx = k.hx[k.hi], ly = k.hy[k.hi]; if ((q.x - lx) * (q.x - lx) + (q.y - ly) * (q.y - ly) >= HS * HS) hPush(k, q.x, q.y);
+    }
+    // world position + heading of the unit o px behind the head (UP.v = false when that part of the column has not left the gate yet)
+    function unitAt(k, o){
+      var hx = k.hdx, hy = k.hdy, lx = k.hx[k.hi], ly = k.hy[k.hi], hd = Math.hypot(hx - lx, hy - ly);
+      UP.v = o <= k.trav + .5;
+      if (o <= hd || k.hn < 2){ var f = hd ? o / hd : 0; if (f > 1) f = 1; UP.x = hx + (lx - hx) * f; UP.y = hy + (ly - hy) * f; UP.a = hd > .01 ? Math.atan2(hy - ly, hx - lx) : k.hda; return UP; }
+      var r = (o - hd) / HS, i0 = Math.floor(r), fr = r - i0;
+      if (i0 >= k.hn - 1){ i0 = k.hn - 2; fr = 1; }
+      var j0 = (k.hi - i0 + HC) % HC, j1 = (j0 - 1 + HC) % HC;
+      var ax = k.hx[j0], ay = k.hy[j0], bx = k.hx[j1], by = k.hy[j1];
+      UP.x = ax + (bx - ax) * fr; UP.y = ay + (by - ay) * fr; UP.a = Math.atan2(ay - by, ax - bx); return UP;
+    }
     // ---- caravans on the road network (roadnet.json: royal roads / trade routes / side roads between named places & villages)
     // carts & wagons, lone riders, rare army columns with banners; city-to-city journeys chained across junctions; anti-overlap queueing.
     var NET = null, netEdges = [], netAdj = {};
@@ -791,10 +894,10 @@
         var kind = pickKind(g), k = {kind: kind, d0: 0, gate: gate || !stagger, trail: [], tAcc: 0, size: rnd(.88, 1.15), hops: 0,
           v: rnd(5, 8.5) * (g.t < 2 ? 1 : .85), carts: 1, hue: (Math.random() * 4) | 0, ph: rnd(0, 9)};
         if (kind === 'rider') k.v *= 1.9;
-        else if (kind === 'army'){ k.v *= .62; k.n = 12 + ((Math.random() * 14) | 0); armies++; k.clen = k.n * 3.4; }
+        else if (kind === 'army'){ k.v *= .62; k.n = 12 + ((Math.random() * 14) | 0); armies++; k.ranks = armyRanks(k.n); k.clen = k.ranks.length * 7; }
         else k.carts = Math.random() < .4 ? 2 + (Math.random() < .3 ? 1 : 0) : 1;
         if (!k.clen) k.clen = k.carts * 9;
-        carOnEdge(k, g, rev, d); k.d0 = stagger ? d - 50 : d; g.n++;
+        carOnEdge(k, g, rev, d); k.d0 = stagger ? d - 50 : d; g.n++; hInit(k);
         return k;
       }
       return null;
@@ -816,68 +919,150 @@
       for (var i = 0; i < cars.length; i++){
         var k = cars[i], sp = k.v;
         for (var j = 0; j < cars.length; j++){ var o = cars[j]; if (o !== k && o.g === k.g && o.rev === k.rev){ var gap = o.d - k.d, need = 26 + o.clen; if (gap > 0 && gap < need + 16) sp = Math.min(sp, o.v * (gap < need ? .45 : 1)); } }
-        k.d += sp * dt; k.tAcc += dt;
+        k.d += sp * dt; k.tAcc += dt; hStep(k, sp * dt);
         if (k.tAcc > .5){ k.tAcc = 0; var q = at(k, k.d); k.trail.push({x: q.x, y: q.y}); if (k.trail.length > 14) k.trail.shift(); }
         if (k.d >= k.tot && !nextHop(k)){ retire(k); var r = newCar(false); if (r) cars[i] = r; else { cars.splice(i, 1); i--; } }
       }
     }
     var CART = [['#e9dfc6', '#6b4a28'], ['#c9b48a', '#5a3a1e'], ['#a83a2a', '#4a2c16'], ['#2f5a8a', '#3d2a18']], BAN = ['#b3262a', '#d9a62e', '#2c5aa0', '#1f6b3a'];
+    // per-unit spacing in WORLD px (sprites are zoom-clamped in screen px, so the spacing follows the drawn size)
     function drawCars(t, nightV){
       var s = view.s, sz = clamp(19.5 * s, 3.5, 12), lamps = nightV > .02, dots = new Path2D(), trails = new Path2D();
+      ARM.n = 0;
       for (var i = 0; i < cars.length; i++){
-        var k = cars[i], fin = k.d0 > -1e8 ? Math.min(1, (k.d - k.d0) / (k.gate ? 14 : 45)) : 1, fade = Math.min(fin, k.cont ? 1 : (k.tot - k.d) / 18); if (fade <= 0) continue;
-        var q = at(k, k.d), P = toScreen(q.x, q.y); if (!vis(P, 60)) continue;
-        var off = sz * .45; P = {x: P.x - Math.sin(q.ang) * off, y: P.y + Math.cos(q.ang) * off};
-        var z = sz * k.size;
-        if (z < 3.6){   // far: batched dots (one fill for all caravans)
-          var nn = k.kind === 'rider' ? 1 : k.kind === 'army' ? 3 : k.carts, ca0 = Math.cos(q.ang), sa0 = Math.sin(q.ang);
-          for (var m0 = 0; m0 < nn; m0++){ var rr = z * (m0 ? .42 : .52) * (k.kind === 'army' ? .8 : 1), dx = -m0 * z * 1.2; dots.moveTo(P.x + ca0 * dx + rr, P.y + sa0 * dx); dots.arc(P.x + ca0 * dx, P.y + sa0 * dx, rr, 0, 6.283); }
-          if (lamps) carLamps(k, P, q, z, fade);
-          continue;
-        }
-        if (k.trail.length > 2 && k.kind !== 'rider'){   // dust track: one path per caravan
+        var k = cars[i], fin = k.d0 > -1e8 ? Math.min(1, (k.d - k.d0) / (k.gate ? 14 : 45)) : 1, fade = Math.min(fin, k.cont ? 1 : (k.tot - k.d) / 18); if (fade <= 0 || !k.hx) continue;
+        var P = toScreen(k.hdx, k.hdy); if (!vis(P, 60 + k.clen * s * 2)) continue;
+        var z = sz * k.size, off = sz * .45, far = z < 3.6;
+        if (k.kind === 'army' && !far){ queueArmy(k, z, s, off, fade, t, lamps); continue; }
+        var nn = k.kind === 'rider' ? 1 : k.kind === 'army' ? 3 : k.carts, sp = (far ? z * 1.2 : z * 1.75) / s;
+        if (!far && k.trail.length > 2 && k.kind !== 'rider'){   // dust track: one path per caravan
           var A0 = toScreen(k.trail[0].x, k.trail[0].y); trails.moveTo(A0.x, A0.y);
-          for (var j = 1; j < k.trail.length - 1; j++){ var B0 = toScreen(k.trail[j].x, k.trail[j].y); trails.lineTo(B0.x, B0.y); }
+          for (var j = 1; j < k.trail.length; j++){ var B0 = toScreen(k.trail[j].x, k.trail[j].y); trails.lineTo(B0.x, B0.y); }
           trails.lineTo(P.x, P.y);
         }
-        // cached sprite per kind/colour/length/size: one drawImage per caravan instead of ~10 vector fills
-        var o = carSprite(k, z), sc = z / o.zq, ca1 = Math.cos(q.ang) * sc * dpr, sa1 = Math.sin(q.ang) * sc * dpr;
-        c.setTransform(ca1, sa1, -sa1, ca1, P.x * dpr, P.y * dpr); c.globalAlpha = .92 * fade; c.drawImage(o.cv, o.x0, o.y0, o.w, o.h);
-        if (lamps) carLamps(k, P, q, z, fade);
+        for (var m = 0; m < nn; m++){
+          var u = unitAt(k, m * sp); if (!u.v) break;
+          var ua = u.a, cu = Math.cos(ua), su = Math.sin(ua), X = (u.x * s + view.x) - su * off, Y = (u.y * s + view.y) + cu * off;
+          if (far){ var rr = z * (m ? .42 : .52) * (k.kind === 'army' ? .8 : 1); dots.moveTo(X + rr, Y); dots.arc(X, Y, rr, 0, 6.283); }
+          else {   // cached sprite per kind/colour/size, one drawImage per wagon, each turned to its own heading
+            var o = carSprite(k, z), sc = z / o.zq, ca1 = cu * sc * dpr, sa1 = su * sc * dpr;
+            c.setTransform(ca1, sa1, -sa1, ca1, X * dpr, Y * dpr); c.globalAlpha = .92 * fade; c.drawImage(o.cv, o.x0, o.y0, o.w, o.h);
+          }
+          if (lamps) unitLamp(k, X, Y, cu, su, z, fade, m, far);
+        }
       }
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.globalAlpha = 1;
       c.fillStyle = 'rgba(29,20,12,.88)'; c.fill(dots);
       c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = Math.max(.9, sz * .45); c.strokeStyle = 'rgba(70,52,30,.09)'; c.stroke(trails);
+      drawArmies(t, lamps);
     }
-    function carLamps(k, P, q, z, fade){
-        {   // lanterns: every wagon carries 1-2, armies torches along the column; each casts a small warm pool
-          // far away many overlapping pools would read as glowing roads: dim them with distance; the abandoned Southern Lands keep only a rare lit caravan
-          var la = fade * (.45 + .55 * Math.min(1, Math.max(0, (z - 3.5) / 6))) * (q.y > 3750 ? ((k.hue | 0) % 4 ? 0 : .6) : 1);
-          if (la < .01) return;
-          var lr = Math.max(1.1, z * .2), pr = Math.max(7, z * 3.2), ca = Math.cos(q.ang), sa = Math.sin(q.ang);
-          if (k.kind === 'army'){ for (var u = 0; u < k.n; u += 4){ var ox = -u * z * .36; NGL.lamp(P.x + ca * ox, P.y + sa * ox, lr * 1.1, la * .9, k.ph + u * .37, u % 8 ? 0 : pr); } }
-          else if (k.kind === 'rider') NGL.lamp(P.x + ca * z * .3, P.y + sa * z * .3, lr * .9, la * .8, k.ph, pr * .7);
-          else for (var m1 = 0; m1 < k.carts; m1++){ var cx0 = -m1 * z * 1.75;
-            NGL.lamp(P.x + ca * (cx0 + z * .45) - sa * z * .3, P.y + sa * (cx0 + z * .45) + ca * z * .3, lr, la, k.ph + m1, pr);
-            if ((k.hue + m1) & 1) NGL.lamp(P.x + ca * (cx0 - z * .5) + sa * z * .3, P.y + sa * (cx0 - z * .5) - ca * z * .3, lr * .8, la * .75, k.ph + m1 + .5, 0); }
-        }
+    // lanterns: EVERY wagon carries one (merchants/odd wagons a second one at the tail), riders one; each casts a small warm pool.
+    // Far away the pools are dimmed (many overlapping pools would read as glowing roads); the abandoned south only dimmer.
+    function unitLamp(k, X, Y, ca, sa, z, fade, m, far){
+      var la = fade * (.45 + .55 * Math.min(1, Math.max(0, (z - 3.5) / 6))) * (k.hdy > 3750 ? .55 : 1);
+      var lr = Math.max(1.1, z * .2), pr = Math.max(7, z * 3.2) * (far && m ? 0 : 1);
+      if (k.kind === 'rider'){ NGL.lamp(X + ca * z * .3, Y + sa * z * .3, lr * .9, la * .8, k.ph, pr * .7); return; }
+      NGL.lamp(X + ca * z * .45 - sa * z * .3, Y + sa * z * .45 + ca * z * .3, lr, la, k.ph + m, pr);
+      if (!far && (k.kind === 'merchant' || (k.hue + m) & 1)) NGL.lamp(X - ca * z * .5 + sa * z * .3, Y - sa * z * .5 - ca * z * .3, lr * .8, la * .75, k.ph + m + .5, 0);
     }
     var SPC = {}, nSPC = 0;
     function carSprite(k, z){
-      var zq = Math.max(3.5, Math.round(z * 2) / 2), len = k.kind === 'army' ? k.n : k.carts, key = k.kind + (k.hue | 0) + '|' + len + '|' + zq + '|' + dpr, o = SPC[key];
+      var zq = Math.max(3.5, Math.round(z * 2) / 2), key = k.kind + (k.hue | 0) + '|' + zq + '|' + dpr, o = SPC[key];
       if (o) return o;
-      if (nSPC > 600){ SPC = {}; nSPC = 0; }
-      var x0, x1, y0, y1, u = Math.max(1.2, zq * .2);
-      if (k.kind === 'army'){ x0 = -k.n * zq * .36 - zq * .8; x1 = u + 1; y0 = -zq * 1.2; y1 = u * 1.3; }
-      else if (k.kind === 'rider'){ x0 = -zq * .5; x1 = zq * .62; y0 = -zq * .32; y1 = zq * .32; }
-      else { x0 = -(k.carts - 1) * 1.75 * zq - zq * .7; x1 = zq * 1.3; y0 = -zq * .42; y1 = zq * .42; }
+      if (nSPC > 400){ SPC = {}; nSPC = 0; }
+      var x0, x1, y0, y1;
+      if (k.kind === 'rider'){ x0 = -zq * .5; x1 = zq * .62; y0 = -zq * .32; y1 = zq * .32; }
+      else { x0 = -zq * .7; x1 = zq * 1.3; y0 = -zq * .42; y1 = zq * .42; }
       x0 -= 1; y0 -= 1; x1 += 1; y1 += 1;
       var cv0 = document.createElement('canvas'); cv0.width = Math.ceil((x1 - x0) * dpr); cv0.height = Math.ceil((y1 - y0) * dpr);
       var x = cv0.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, -x0 * dpr, -y0 * dpr);
       var keep = c; c = x;
-      try { if (k.kind === 'army') drawArmy(k, zq, 0); else if (k.kind === 'rider') drawRider(k, zq, 0); else for (var m = 0; m < k.carts; m++) drawCart(k, zq, -m * zq * 1.75, 0); } finally { c = keep; }
+      try { if (k.kind === 'rider') drawRider(k, zq, 0); else drawCart(k, zq, 0, 0); } finally { c = keep; }
       o = SPC[key] = {cv: cv0, x0: x0, y0: y0, w: x1 - x0, h: y1 - y0, zq: zq}; nSPC++;
       return o;
+    }
+    // ---- armies (2.5D): marching column in ranks that follows the leader along the road. Upright figures seen from the
+    // map's oblique camera: mounted vanguard/rearguard, spear infantry in files of three, banner bearers whose flags wave
+    // and stream back from the pole, spear tips glinting in the sun, a dust cloud rising behind the column.
+    function armyRanks(n){
+      var R = ['cav', 'cav', 'ban'], inf = Math.max(2, Math.round((n - 7) / 3));
+      for (var i = 0; i < inf; i++) R.push(i % 4 === 3 ? 'ban' : 'inf');
+      R.push('cav'); return R;
+    }
+    var ARM = {n: 0, dn: 0, L: []}, FIG = {}, nFIG = 0, ACOL = [['#7d2420', '#4a1512'], ['#2c4f86', '#1a2f52'], ['#2f5a2e', '#1b361b'], ['#6e5a2a', '#43361a']];
+    function figSprite(type, zq, face, fr, hue){
+      var key = type + face + fr + hue + '|' + zq + '|' + dpr, o = FIG[key]; if (o) return o;
+      if (nFIG > 500){ FIG = {}; nFIG = 0; }
+      var Hh = zq, w = Hh * 1.5, x0 = -w / 2, y0 = -Hh * 1.55, hh = Hh * 1.65;
+      var cv0 = document.createElement('canvas'); cv0.width = Math.ceil(w * dpr) + 2; cv0.height = Math.ceil(hh * dpr) + 2;
+      var x = cv0.getContext('2d'); x.setTransform(dpr * face, 0, 0, dpr, (face > 0 ? -x0 : w + x0) * dpr + 1, -y0 * dpr + 1);
+      var C = ACOL[hue & 3], st = [-.11, -.035, .11, .035][fr], lw = Math.max(.6, Hh * .075);
+      x.fillStyle = 'rgba(0,0,0,.22)'; x.beginPath(); x.ellipse(0, 0, Hh * (type === 'cav' ? .36 : .17), Hh * .05, 0, 0, 6.283); x.fill();
+      x.lineCap = 'round'; x.lineJoin = 'round';
+      if (type === 'cav'){
+        x.strokeStyle = '#2a1a0e'; x.lineWidth = lw * 1.1; x.beginPath();   // legs (walk cycle)
+        x.moveTo(-Hh * .2, -Hh * .36); x.lineTo(-Hh * .2 - st * 1.4, 0); x.moveTo(-Hh * .12, -Hh * .36); x.lineTo(-Hh * .12 + st * 1.4, 0);
+        x.moveTo(Hh * .17, -Hh * .36); x.lineTo(Hh * .17 + st * 1.4, 0); x.moveTo(Hh * .25, -Hh * .36); x.lineTo(Hh * .25 - st * 1.4, 0); x.stroke();
+        x.fillStyle = ['#4a2e18', '#2b1d12', '#6a4a2a', '#3a2a1c'][hue & 3]; x.beginPath(); x.ellipse(0, -Hh * .45, Hh * .33, Hh * .13, 0, 0, 6.283); x.fill();   // horse body
+        x.beginPath(); x.moveTo(Hh * .22, -Hh * .5); x.lineTo(Hh * .38, -Hh * .78); x.lineTo(Hh * .48, -Hh * .72); x.lineTo(Hh * .32, -Hh * .42); x.closePath(); x.fill();   // neck+head
+        x.strokeStyle = x.fillStyle; x.lineWidth = lw; x.beginPath(); x.moveTo(-Hh * .32, -Hh * .5); x.lineTo(-Hh * .42, -Hh * .28); x.stroke();   // tail
+        x.fillStyle = C[0]; x.fillRect(-Hh * .1, -Hh * .9, Hh * .2, Hh * .36);                 // rider
+        x.fillStyle = '#b8bcc4'; x.beginPath(); x.arc(0, -Hh * .98, Hh * .09, 0, 6.283); x.fill();   // helm
+        x.strokeStyle = '#5a4128'; x.lineWidth = lw * .8; x.beginPath(); x.moveTo(-Hh * .1, -Hh * .62); x.lineTo(Hh * .62, -Hh * 1.22); x.stroke();   // lance
+        x.fillStyle = '#dfe3ea'; x.beginPath(); x.moveTo(Hh * .62, -Hh * 1.22); x.lineTo(Hh * .52, -Hh * 1.12); x.lineTo(Hh * .66, -Hh * 1.15); x.closePath(); x.fill();
+      } else {
+        x.strokeStyle = '#2a2018'; x.lineWidth = lw; x.beginPath(); x.moveTo(-Hh * .03, -Hh * .36); x.lineTo(-Hh * .03 - st, 0); x.moveTo(Hh * .03, -Hh * .36); x.lineTo(Hh * .03 + st, 0); x.stroke();   // legs
+        x.fillStyle = C[0]; x.beginPath(); x.moveTo(-Hh * .13, -Hh * .36); x.lineTo(-Hh * .1, -Hh * .78); x.lineTo(Hh * .1, -Hh * .78); x.lineTo(Hh * .13, -Hh * .36); x.closePath(); x.fill();   // tunic
+        x.fillStyle = '#d8b48c'; x.beginPath(); x.arc(0, -Hh * .87, Hh * .085, 0, 6.283); x.fill();
+        x.fillStyle = '#9aa0aa'; x.beginPath(); x.arc(0, -Hh * .9, Hh * .09, Math.PI, 0); x.fill();   // helmet
+        if (type === 'inf'){
+          x.strokeStyle = '#5a4128'; x.lineWidth = lw * .8; x.beginPath(); x.moveTo(Hh * .08, -Hh * .2); x.lineTo(Hh * .22, -Hh * 1.42); x.stroke();   // spear
+          x.fillStyle = '#e6e9ee'; x.beginPath(); x.moveTo(Hh * .22, -Hh * 1.52); x.lineTo(Hh * .18, -Hh * 1.38); x.lineTo(Hh * .26, -Hh * 1.38); x.closePath(); x.fill();
+          x.fillStyle = C[1]; x.beginPath(); x.arc(Hh * .12, -Hh * .56, Hh * .14, 0, 6.283); x.fill();                    // round shield
+          x.strokeStyle = '#c9a24a'; x.lineWidth = Math.max(.4, lw * .55); x.stroke();
+        } else { x.strokeStyle = '#3a2a18'; x.lineWidth = lw * .9; x.beginPath(); x.moveTo(0, -Hh * .3); x.lineTo(0, -Hh * 1.55); x.stroke(); }   // banner pole
+      }
+      o = FIG[key] = {cv: cv0, w: cv0.width / dpr, h: cv0.height / dpr, ax: (face > 0 ? -x0 : w + x0) + 1 / dpr, ay: -y0 + 1 / dpr}; nFIG++;
+      return o;
+    }
+    function queueArmy(k, z, s, off, fade, t, lamps){
+      var Hh = Math.max(5, z * 1.45), rs = Hh * .6 / s, R = k.ranks, fr0 = (t * 3.2 + k.ph) | 0;
+      for (var r = 0; r < R.length; r++){
+        var u = unitAt(k, r * rs); if (!u.v) break;
+        var cu = Math.cos(u.a), su = Math.sin(u.a), cx = (u.x * s + view.x) - su * off, cy = (u.y * s + view.y) + cu * off;
+        var face = cu >= 0 ? 1 : -1, files = R[r] === 'cav' ? 2 : R[r] === 'ban' ? 1 : 3, gap = Hh * .42;
+        for (var f = 0; f < files; f++){
+          var lo = (f - (files - 1) / 2) * gap, e = ARM.L[ARM.n] || (ARM.L[ARM.n] = {});
+          e.x = cx - su * lo; e.y = cy + cu * lo * .62; e.t = R[r]; e.face = face; e.fr = (fr0 + f + r) & 3; e.hue = k.hue; e.Hh = Hh; e.fade = fade; e.sd = k.ph + r * 1.7 + f; ARM.n++;
+          if (lamps && f === 0 && r % 2 === 0) NGL.lamp(e.x + face * Hh * .2, e.y - Hh * 1.05, Math.max(1.1, Hh * .12), fade * .9, k.ph + r * .37, r % 4 ? 0 : Math.max(9, Hh * 3));
+        }
+        if (r === R.length - 1 || r % 3 === 2){ var D = DUST[ARM.dn] || (DUST[ARM.dn] = {}); D.x = cx - cu * rs * s * .6; D.y = cy - su * rs * s * .6; D.r = Hh * (2.2 + (r % 2)); D.a = fade * (r === R.length - 1 ? .2 : .12); D.sd = k.ph + r; ARM.dn++; }
+      }
+    }
+    var DUST = [], dustSpr = null;
+    function drawArmies(t, lamps){
+      if (!ARM.n && !ARM.dn){ ARM.dn = 0; return; }
+      if (!dustSpr){ dustSpr = document.createElement('canvas'); dustSpr.width = dustSpr.height = 64; var dx = dustSpr.getContext('2d'), g = dx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        g.addColorStop(0, 'rgba(176,146,102,.9)'); g.addColorStop(.5, 'rgba(160,130,90,.45)'); g.addColorStop(1, 'rgba(150,120,80,0)'); dx.fillStyle = g; dx.fillRect(0, 0, 64, 64); }
+      for (var d = 0; d < ARM.dn; d++){ var D = DUST[d], rr = D.r * (1 + .25 * Math.sin(t * .9 + D.sd)); c.globalAlpha = D.a; c.drawImage(dustSpr, D.x - rr, D.y - rr * .75, rr * 2, rr * 1.4); }
+      ARM.dn = 0;
+      var L = ARM.L, n = ARM.n, i, j;
+      for (i = 1; i < n; i++){ var e = L[i]; j = i - 1; while (j >= 0 && L[j].y > e.y){ L[j + 1] = L[j]; j--; } L[j + 1] = e; }   // back to front
+      var day = 1 - DN.v.night;
+      for (i = 0; i < n; i++){
+        var a = L[i], zq = Math.max(4, Math.round(a.Hh)), o = figSprite(a.t, zq, a.face, a.t === 'ban' ? 0 : a.fr, a.hue), sc = a.Hh / zq;
+        c.globalAlpha = .96 * a.fade; c.drawImage(o.cv, a.x - o.ax * sc, a.y - o.ay * sc, o.w * sc, o.h * sc);
+        if (a.t === 'ban'){   // banner faces the camera, streams back from the pole and waves
+          var px = a.x, py = a.y - a.Hh * 1.52, bw = a.Hh * .62, bh = a.Hh * .36, fb = -a.face, w1 = Math.sin(t * 5 + a.sd) * bh * .18, w2 = Math.sin(t * 5 + a.sd - 1.6) * bh * .22;
+          c.fillStyle = BAN[a.hue & 3]; c.beginPath(); c.moveTo(px, py);
+          c.quadraticCurveTo(px + fb * bw * .5, py + w1, px + fb * bw, py + w2); c.lineTo(px + fb * bw * .92, py + bh + w2); c.quadraticCurveTo(px + fb * bw * .5, py + bh + w1, px, py + bh); c.closePath(); c.fill();
+          c.fillStyle = 'rgba(240,215,140,.9)'; c.beginPath(); c.arc(px + fb * bw * .45, py + bh * .5 + w1 * .8, bh * .17, 0, 6.283); c.fill();
+        } else if (day > .3 && Math.sin(t * 2.3 + a.sd * 3.1) > .965){   // a spear tip / helm catches the sun
+          var gx = a.x + a.face * a.Hh * (a.t === 'cav' ? .6 : .22), gy = a.y - a.Hh * (a.t === 'cav' ? 1.2 : 1.47), gr = Math.max(1.2, a.Hh * .14);
+          c.globalAlpha = a.fade * day; c.strokeStyle = 'rgba(255,250,225,.95)'; c.lineWidth = .8; c.beginPath(); c.moveTo(gx - gr, gy); c.lineTo(gx + gr, gy); c.moveTo(gx, gy - gr); c.lineTo(gx, gy + gr); c.stroke();
+        }
+      }
+      c.globalAlpha = 1; ARM.n = 0;
     }
     function horse(z, x, col){
       c.fillStyle = col || '#4a2e18'; c.beginPath(); c.ellipse(x, 0, z * .34, z * .13, 0, 0, 6.283); c.fill();
@@ -898,28 +1083,41 @@
       c.fillStyle = ['#7a1e1e', '#1e3d6a', '#2f4a22', '#5a4a2a'][k.hue]; c.beginPath(); c.arc(-z * .02, b, z * .17, 0, 6.283); c.fill();    // rider cloak
       c.fillStyle = '#e0c9a0'; c.beginPath(); c.arc(z * .06, b, z * .07, 0, 6.283); c.fill();
     }
-    function drawArmy(k, z, t){
-      var u = Math.max(1.2, z * .2), stepX = z * .36;
-      for (var m = 0; m < k.n; m++){
-        var x = -m * stepX, w = Math.sin(t * 6 + m * .9) * u * .12;
-        c.fillStyle = m % 6 === 0 ? '#3a2a1a' : '#2a2a30';
-        c.fillRect(x - u * .5, -u * 1.1 + w, u, u * .9); c.fillRect(x - u * .5, u * .2 + w, u, u * .9);   // two files
-        if (z > 3.6 && m % 2 === 0){ c.fillStyle = 'rgba(200,205,215,.55)'; c.fillRect(x - u * .2, -u * .9 + w, u * .4, u * .3); }   // helmets glint
-      }
-      for (var b = 0; b < k.n; b += 6){   // banners
-        var bx = -b * stepX, fl = Math.sin(t * 4 + b) * .25;
-        c.strokeStyle = '#2a1a0c'; c.lineWidth = Math.max(.6, z * .05); c.beginPath(); c.moveTo(bx, 0); c.lineTo(bx, -z * 1.1); c.stroke();
-        c.fillStyle = BAN[(k.hue + b / 6) & 3]; c.beginPath(); c.moveTo(bx, -z * 1.1); c.lineTo(bx - z * (.55 + fl * .2), -z * (1 - fl * .1)); c.lineTo(bx, -z * .78); c.closePath(); c.fill();
-      }
-    }
     // ---- ships: several types, some in fleets; only on coastal sea lanes (contours of the coast-distance field => never cross land)
     var TYPES = {
       galleon: {sc: 1.55, v: 5.5, beam: .3, w: 2}, cog: {sc: 1.1, v: 6.5, beam: .32, w: 1}, sloop: {sc: .8, v: 9, beam: .26, w: 1},
-      longship: {sc: 1.15, v: 8.5, beam: .2, w: 1}, fishing: {sc: .7, v: 5, beam: .3, w: 1}
+      longship: {sc: 1.15, v: 8.5, beam: .2, w: 1}, fishing: {sc: .7, v: 5, beam: .3, w: 1}, pirate: {sc: .95, v: 10, beam: .25, w: 0}
     };
     var TYPE_W = [['galleon', .18], ['cog', .25], ['sloop', .25], ['longship', .14], ['fishing', .18]];
     function pickType(){ var r = Math.random(), a = 0; for (var i = 0; i < TYPE_W.length; i++){ a += TYPE_W[i][1]; if (r <= a) return TYPE_W[i][0]; } return 'cog'; }
     function laneAt(ln, d){ if (ln.closed){ d = ((d % ln.tot) + ln.tot) % ln.tot; } return at(ln, clamp(d, 0, ln.tot)); }
+    // ---- harbour traffic (searoutes.json): ships leave a city harbour, sail an A* sea route to another port and berth there
+    var PORTR = [], SP = {x: 0, y: 0, ang: 0, fade: 0}, routesReady = false;
+    function setRoutes(d){
+      routesReady = true; PORTS = ((d && d.ports) || []).map(function(q){ return [q.x, q.y]; });
+      PORTR = ((d && d.routes) || []).map(function(r){ var g = geoEdge(r.p, r.a, r.b, 0); g.closed = false; return g; });
+    }
+    function spawnPortShip(stagger, budget){
+      if (!PORTR.length) return 0;
+      var ln = PORTR[(Math.random() * PORTR.length) | 0], dir = Math.random() < .5 ? 1 : -1, lead = Math.random() < .4 ? 'cog' : Math.random() < .5 ? 'galleon' : Math.random() < .6 ? 'sloop' : 'longship';
+      var fleet = Math.random() < .18 ? Math.min(budget, 2 + ((Math.random() * 2) | 0)) : 1, v = TYPES[lead].v * rnd(.85, 1.1), ph = rnd(0, 9);
+      var run = ln.tot, t0 = stagger ? rnd(0, run * .9) : 0, d0 = dir > 0 ? 0 : ln.tot;
+      for (var k = 0; k < fleet; k++){
+        var row = Math.ceil(k / 2), type = k === 0 ? lead : (lead === 'galleon' ? 'sloop' : lead);
+        ships.push({ln: ln, dir: dir, d0: d0, run: run, t: Math.max(0, t0 - row * 60), v: v, type: type, port: 1, fl: fleet,
+          lat: k ? (k % 2 ? 1 : -1) * row * 24 : 0, ph: ph + k, sz: rnd(.9, 1.1), sink: -1});
+      }
+      return fleet;
+    }
+    // current position of a ship (lane or harbour route; escorts close up near the harbours) -> SP
+    function shipPos(k){
+      var d = k.d0 + k.dir * k.t, q = laneAt(k.ln, d), ang = q.ang + (k.dir < 0 ? Math.PI : 0);
+      var lat = k.port ? k.lat * clamp(Math.min(k.t, k.run - k.t) / 260, 0, 1) : k.lat;
+      SP.x = q.x - Math.sin(ang) * lat; SP.y = q.y + Math.cos(ang) * lat; SP.ang = ang;
+      SP.fade = k.port ? Math.min(1, k.t / 45, (k.run - k.t) / 45) : Math.min(1, k.t / 160, (k.run - k.t) / 160);
+      if (k.sink >= 0) SP.fade *= 1 - sstep(4, 16, k.sink);
+      return SP;
+    }
     function spawnShips(stagger, budget){
       if (!lanes.length) return 0;
       var sum = 0, i; for (i = 0; i < lanes.length; i++) sum += lanes[i].tot;
@@ -931,21 +1129,30 @@
       t0 = stagger ? rnd(0, run * .8) : 0;
       for (var k = 0; k < fleet; k++){
         var type = k === 0 ? lead : (lead === 'galleon' && Math.random() < .5 ? 'sloop' : lead), row = Math.ceil(k / 2);
-        ships.push({ln: ln, dir: dir, d0: d0 - dir * row * 70 * TYPES[lead].sc, run: run, t: t0, v: v, type: type,
-          lat: k ? (k % 2 ? 1 : -1) * row * 26 : 0, ph: ph + k, sz: rnd(.9, 1.1)});
+        ships.push({ln: ln, dir: dir, d0: d0 - dir * row * 70 * TYPES[lead].sc, run: run, t: t0, v: v, type: type, fl: fleet,
+          lat: k ? (k % 2 ? 1 : -1) * row * 26 : 0, ph: ph + k, sz: rnd(.9, 1.1), sink: -1});
       }
       return fleet;
     }
     function stepShips(dt, lt){
-      wLT = !!lt; var want = lt ? 12 : 40, guard = 0;
-      while (ships.length < want && guard++ < 60) spawnShips(true, want - ships.length);
+      if (!routesReady) return;
+      wLT = !!lt; var want = lt ? 12 : 40, wantP = PORTR.length ? Math.round(want * .62) : 0, guard = 0, np = 0;
+      for (var i = 0; i < ships.length; i++) if (ships[i].port) np++;
+      while (ships.length < want && guard++ < 60){ var stg = !shipsInit; if (np < wantP){ var a = spawnPortShip(stg, want - ships.length); np += a; if (!a) spawnShips(stg, want - ships.length); } else spawnShips(stg, want - ships.length); }
+      shipsInit = true;
       if (ships.length > want + 4) ships.length = want;
-      for (var i = ships.length - 1; i >= 0; i--){ var k = ships[i]; k.t += k.v * dt; if (k.t >= k.run) ships.splice(i, 1); }
+      for (i = ships.length - 1; i >= 0; i--){
+        var k = ships[i];
+        if (k.sink >= 0){ k.sink += dt; if (k.sink > 16){ if (k.wk) k.wk.live = false; ships.splice(i, 1); } continue; }
+        if (k.halt) continue;
+        var e = k.port ? clamp(.22 + Math.min(k.t, k.run - k.t) / 170, .22, 1) : 1;   // leave / enter harbour slowly
+        k.t += k.v * e * dt; if (k.t >= k.run) ships.splice(i, 1);
+      }
     }
     function drawShip(z, type, ang, t, ph){
       var T = TYPES[type], L = z * T.sc, B = L * T.beam;
       c.save(); c.rotate(ang);
-      c.fillStyle = type === 'longship' ? '#3a2412' : '#2b1a0e';
+      c.fillStyle = type === 'longship' ? '#3a2412' : type === 'pirate' ? '#151012' : '#2b1a0e';
       c.beginPath(); c.ellipse(0, 0, L * .62, B, 0, 0, 6.283); c.fill();                  // hull
       if (type === 'longship'){                                                             // oars
         c.strokeStyle = 'rgba(40,25,12,.8)'; c.lineWidth = Math.max(.4, L * .03); var sw = Math.sin(t * 2.2 + ph) * L * .06;
@@ -961,12 +1168,18 @@
       if (type === 'galleon'){ sq(-L * .28, L * .78, L * .34); sq(L * .05, L * 1.0, L * .42); sq(L * .36, L * .72, L * .3); c.fillStyle = '#8a1f1f'; c.fillRect(L * .02, -L * 1.14, L * .14, L * .08); }
       else if (type === 'cog'){ sq(0, L * .9, L * .5, '#e8dcc0'); }
       else if (type === 'sloop'){ tri(-L * .05, L * .95, L * .5); }
+      else if (type === 'pirate'){ sq(-L * .12, L * .82, L * .38, '#4a4440'); tri(L * .2, L * .7, L * .3); c.strokeStyle = '#111'; c.lineWidth = Math.max(.5, L * .035);
+        var wv = Math.sin(t * 5 + ph) * L * .03;
+        c.beginPath(); c.moveTo(-L * .12, -L * .82); c.lineTo(-L * .12, -L * 1.12); c.stroke(); c.fillStyle = '#060607';
+        c.beginPath(); c.moveTo(-L * .12, -L * 1.12); c.quadraticCurveTo(L * .05, -L * 1.12 + wv, L * .2, -L * 1.1); c.lineTo(L * .2, -L * .9); c.quadraticCurveTo(L * .05, -L * .92 + wv, -L * .12, -L * .92); c.closePath(); c.fill();
+        c.fillStyle = '#efeadf'; c.beginPath(); c.arc(L * .04, -L * 1.03 + wv * .5, Math.max(.6, L * .045), 0, 6.283); c.fill();
+        c.strokeStyle = '#efeadf'; c.lineWidth = Math.max(.35, L * .018); c.beginPath(); c.moveTo(-L * .03, -L * .95); c.lineTo(L * .11, -L * .99); c.moveTo(-L * .03, -L * .99); c.lineTo(L * .11, -L * .95); c.stroke(); }
       else if (type === 'longship'){ sq(0, L * .8, L * .55, '#b23a2a'); c.fillStyle = 'rgba(245,235,215,.9)'; c.fillRect(-L * .275 + L * .11, -L * .78, L * .1, L * .56); c.fillRect(-L * .275 + L * .33, -L * .78, L * .1, L * .56); }
       else { tri(0, L * .75, L * .4); }
     }
     // ---- detached ship wakes: points dropped in world space behind the stern; each point ages in place and is drawn as a
     // kelvin-ish pair of diverging, broken foam arms + soft central turbulence. Pooled; length/width/lifetime scale with hull size.
-    var WAKE = {galleon: 3.4, cog: 2.4, longship: 2.8, sloop: 1.6, fishing: 1.3}, wakes = [], wPool = [], wLT = false;
+    var shipsInit = false, WAKE = {galleon: 3.4, cog: 2.4, longship: 2.8, sloop: 1.6, fishing: 1.3, pirate: 1.8}, wakes = [], wPool = [], wLT = false;
     function wPt(){ return wPool.pop() || {}; }
     function wakeEmit(k, wx, wy, ang, Lw, t, fade){
       var tr = k.wk;
@@ -1013,18 +1226,22 @@
       var s = view.s, base = clamp(40 * s, 7, 30);
       for (var w = 0; w < wakes.length; w++) wakes[w].live = false;
       for (var i = 0; i < ships.length; i++){
-        var k = ships[i], fade = Math.min(1, k.t / 160, (k.run - k.t) / 160); if (k.wk) k.wk.live = true; if (fade <= 0) continue;
-        var d = k.d0 + k.dir * k.t, q = laneAt(k.ln, d), ang = q.ang + (k.dir < 0 ? Math.PI : 0);
-        var wx = q.x - Math.sin(ang) * k.lat, wy = q.y + Math.cos(ang) * k.lat;
-        wakeEmit(k, wx, wy, ang, base * k.sz * TYPES[k.type].sc / s, t, fade);
+        var k = ships[i]; if (k.wk) k.wk.live = true; var Q = shipPos(k), fade = Q.fade; if (fade <= 0 || k.halt || k.sink >= 0) continue;
+        wakeEmit(k, Q.x, Q.y, Q.ang, base * k.sz * TYPES[k.type].sc / s, t, fade);
       }
+      PIRATE.wake(t, base, s);
       drawWakes(t);
       for (i = 0; i < ships.length; i++){
-        k = ships[i]; fade = Math.min(1, k.t / 160, (k.run - k.t) / 160); if (fade <= 0) continue;
-        d = k.d0 + k.dir * k.t; q = laneAt(k.ln, d); ang = q.ang + (k.dir < 0 ? Math.PI : 0);
-        wx = q.x - Math.sin(ang) * k.lat; wy = q.y + Math.cos(ang) * k.lat; var P = toScreen(wx, wy); if (!vis(P, 60)) continue;
-        c.save(); c.translate(P.x, P.y); c.globalAlpha = fade; drawShip(base * k.sz, k.type, ang, t, k.ph); c.restore();
-        if (nv > .02){   // big ships: stern lanterns, deck lights, masthead; small boats one lantern; warm pool on the water
+        k = ships[i]; var Q2 = shipPos(k), ang = Q2.ang; fade = Q2.fade; if (fade <= 0) continue;
+        var P = toScreen(Q2.x, Q2.y); if (!vis(P, 60)) continue;
+        c.save(); c.translate(P.x, P.y); c.globalAlpha = fade;
+        if (k.sink >= 0){   // struck by pirates: lists, settles lower and fades; a ring of foam spreads
+          var sk = k.sink, L1 = base * k.sz * TYPES[k.type].sc;
+          c.strokeStyle = 'rgba(230,242,248,' + (.35 * (1 - sk / 16)).toFixed(3) + ')'; c.lineWidth = 1; c.beginPath(); c.ellipse(0, 0, L1 * (.5 + sk * .09), L1 * (.25 + sk * .045), 0, 0, 6.283); c.stroke();
+          c.translate(0, Math.min(sk, 10) * L1 * .02); c.rotate(Math.min(.6, sk * .055) * (k.ph % 2 > 1 ? 1 : -1)); c.scale(1, 1 - sstep(3, 16, sk) * .55);
+        }
+        drawShip(base * k.sz, k.type, ang, t, k.ph); c.restore();
+        if (nv > .02 && k.sink < 0){   // big ships: stern lanterns, deck lights, masthead; small boats one lantern; warm pool on the water
           var L0 = base * k.sz * TYPES[k.type].sc, lr = Math.max(1, L0 * .045), ca = Math.cos(ang), sa = Math.sin(ang), big = k.type === 'galleon' || k.type === 'cog';
           NGL.lamp(P.x - ca * L0 * .5, P.y - sa * L0 * .5, lr, fade, k.ph, L0 * (big ? 1.3 : .9));
           if (big){ NGL.lamp(P.x - ca * L0 * .45 - sa * L0 * .12, P.y - sa * L0 * .45 + ca * L0 * .12, lr * .85, fade * .9, k.ph + 1, 0);
@@ -1033,6 +1250,97 @@
             NGL.lamp(P.x, P.y - L0 * .9, lr * .7, fade * .8, k.ph + 4, 0); }
           else if (k.type === 'longship') NGL.lamp(P.x + ca * L0 * .3, P.y + sa * L0 * .3, lr * .8, fade * .8, k.ph + 2, 0);
         }
+      }
+    }
+    // ---- pirates: now and then (random time & place) a black-flagged ship appears behind a lone merchant, closes in a little
+    // faster, comes alongside; cannon flashes + smoke both ways (and sword clashes when boarding); then it sails off and fades
+    // while the merchant lists and sinks. Sounds only when the camera is near (map-audio one-shots).
+    var PUF = [];
+    function sfx(name, x, y, g){
+      var A = window.__ulvMapAudio; if (!A || !A.sfx) return;
+      var P = toScreen(x, y), zf = zoomF(), dx = (P.x - vw / 2) / vw, dy = (P.y - vh / 2) / vh, d = Math.sqrt(dx * dx + dy * dy);
+      var near = (1 - sstep(.35, .75, d)) * sstep(.25, .6, zf); if (near > .03) A.sfx(name, near * (g || 1), clamp(dx * 1.6, -1, 1));
+    }
+    var PIRATE = (function(){
+      var P = null, next = 25 + Math.random() * 60, clock = 0, SPv = {x: 0, y: 0, ang: 0};
+      function pickVictim(){
+        var A = toWorld(0, 0), B = toWorld(vw, vh), best = null, vis0 = [];
+        var C = ships.filter(function(k){ return !k.halt && k.sink < 0 && (k.fl || 1) === 1 && (k.type === 'cog' || k.type === 'galleon' || k.type === 'sloop') && k.run - k.t > 700 && k.t > 200; });
+        if (!C.length) return null;
+        C.forEach(function(k){ var q = shipPos(k); if (q.x > A.x && q.x < B.x && q.y > A.y && q.y < B.y) vis0.push(k); });
+        best = vis0.length && Math.random() < .75 ? vis0[(Math.random() * vis0.length) | 0] : C[(Math.random() * C.length) | 0];
+        return best;
+      }
+      function water(x, y){ return !isLand(x, y) && coastDist(x, y) > 14; }
+      function start(){
+        var v = pickVictim(); if (!v) return false;
+        var q = shipPos(v), ca = Math.cos(q.ang), sa = Math.sin(q.ang);
+        for (var i = 0; i < 14; i++){
+          var back = rnd(220, 360), side = rnd(-1, 1) * 160, x = q.x - ca * back - sa * side, y = q.y - sa * back + ca * side;
+          if (water(x, y)){ P = {x: x, y: y, ang: Math.atan2(q.y - y, q.x - x), st: 'chase', t: 0, v: v, a: 0, nextShot: 0, k: {type: 'pirate', v: 9, ph: rnd(0, 9), sz: 1}}; return true; }
+        }
+        return false;
+      }
+      function steer(tx, ty, sp, dt, rate){
+        var want = Math.atan2(ty - P.y, tx - P.x), da = Math.atan2(Math.sin(want - P.ang), Math.cos(want - P.ang));
+        P.ang += clamp(da, -rate * dt, rate * dt);
+        for (var tr = 0; tr < 5; tr++){
+          var nx = P.x + Math.cos(P.ang) * sp * dt, ny = P.y + Math.sin(P.ang) * sp * dt;
+          if (water(nx, ny)){ P.x = nx; P.y = ny; return true; }
+          P.ang += (tr % 2 ? -1 : 1) * .5 * (tr + 1);
+        }
+        return false;
+      }
+      function step(t, dt, lt){
+        clock += dt;
+        if (!P){ if (clock > next && ships.length){ if (!start()) next = clock + 15; } return; }
+        P.t += dt; var v = P.v, alive = ships.indexOf(v) >= 0;
+        if (P.st === 'chase' && (!alive || v.sink >= 0 || v.halt)){ P.st = 'flee'; P.t = 0; }
+        if (P.st === 'chase'){
+          P.a = Math.min(1, P.a + dt / 4);
+          var q = shipPos(v), ca = Math.cos(q.ang), sa = Math.sin(q.ang), sd = ((P.x - q.x) * -sa + (P.y - q.y) * ca) >= 0 ? 1 : -1;
+          var tx = q.x - sa * sd * 20 + ca * 4, ty = q.y + ca * sd * 20 + sa * 4, d = Math.hypot(tx - P.x, ty - P.y);
+          var vv = v.v * (v.port ? clamp(.22 + Math.min(v.t, v.run - v.t) / 170, .22, 1) : 1);
+          if (!steer(tx, ty, vv * 1.3 + 2, dt, .9) || P.t > 90){ P.st = 'flee'; P.t = 0; }
+          else if (d < 7){ P.st = 'fight'; P.t = 0; v.halt = true; P.side = sd; }
+        } else if (P.st === 'fight'){
+          var q2 = shipPos(v), c2 = Math.cos(q2.ang), s2 = Math.sin(q2.ang);
+          P.x += ((q2.x - s2 * P.side * 19) - P.x) * Math.min(1, dt * 2); P.y += ((q2.y + c2 * P.side * 19) - P.y) * Math.min(1, dt * 2); P.ang += Math.atan2(Math.sin(q2.ang - P.ang), Math.cos(q2.ang - P.ang)) * Math.min(1, dt * 1.5);
+          if (P.t > P.nextShot && P.t < 9){   // broadside: muzzle flash + smoke from either hull towards the other
+            var fromP = Math.random() < .6, ox = fromP ? P.x : q2.x, oy = fromP ? P.y : q2.y, tox = fromP ? q2.x : P.x, toy = fromP ? q2.y : P.y, m = Math.hypot(tox - ox, toy - oy) || 1;
+            var along = rnd(-6, 6), fx = ox + (tox - ox) / m * 6 + c2 * along, fy = oy + (toy - oy) / m * 6 + s2 * along;
+            FLASH.push({x: fx, y: fy, t: t, r: rnd(5, 8)});
+            for (var j = 0; j < 3; j++) PUF.push({x: fx + rnd(-2, 2), y: fy + rnd(-2, 2), vx: (tox - ox) / m * rnd(1, 4) + rnd(-1, 1), vy: (toy - oy) / m * rnd(1, 4) - rnd(.5, 2), age: 0, life: rnd(5, 8), r0: rnd(2.5, 4), spr: SPR[(Math.random() * SPR.length) | 0]});
+            sfx('cannon', fx, fy, rnd(.7, 1)); P.nextShot = P.t + rnd(.25, .9);
+          }
+          if (P.t > 5.5 && P.t < 10 && Math.random() < dt * 1.4) sfx('clash', P.x, P.y, rnd(.5, .8));   // boarding
+          if (P.t > 11){ v.sink = 0; P.st = 'flee'; P.t = 0;
+            var bestA = P.ang, bd = -1; for (var a = 0; a < 8; a++){ var aa = a * .785, cd = coastDist(P.x + Math.cos(aa) * 180, P.y + Math.sin(aa) * 180); if (cd > bd && !isLand(P.x + Math.cos(aa) * 90, P.y + Math.sin(aa) * 90)){ bd = cd; bestA = aa; } } P.flee = bestA; }
+        } else {
+          steer(P.x + Math.cos(P.flee == null ? P.ang : P.flee) * 100, P.y + Math.sin(P.flee == null ? P.ang : P.flee) * 100, 7 + Math.min(8, P.t * 1.5), dt, .5);
+          P.a = Math.max(0, 1 - P.t / 16);
+          if (P.t > 16){ P = null; clock = 0; next = (lt ? 160 : 90) + Math.random() * (lt ? 220 : 140); }
+        }
+      }
+      return {step: step, get p(){ return P; },
+        wake: function(t, base, s){ if (!P) return; if (P.k.wk) P.k.wk.live = true; if (P.a > .05 && P.st !== 'fight') wakeEmit(P.k, P.x, P.y, P.ang, base * TYPES.pirate.sc / s, t, P.a); },
+        draw: function(t, base){ if (!P || P.a <= .01) return; var Q = toScreen(P.x, P.y); if (!vis(Q, 60)) return; c.save(); c.translate(Q.x, Q.y); c.globalAlpha = P.a; drawShip(base, 'pirate', P.ang, t, P.k.ph); c.restore(); },
+        force: function(){ next = clock; }};
+    })();
+    var FLASH = [];
+    function drawBattle(t, dt){
+      var s = view.s;
+      for (var i = PUF.length - 1; i >= 0; i--){
+        var p = PUF[i]; p.age += dt; if (p.age > p.life){ PUF.splice(i, 1); continue; }
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .985; p.vy *= .985;
+        var u = p.age / p.life, r = p.r0 * (1 + u * 3) * s * 2.2, P = toScreen(p.x, p.y); if (r < .5 || !vis(P, r)) continue;
+        c.globalAlpha = sstep(0, .05, u) * Math.pow(1 - u, 1.4) * .85; c.drawImage(p.spr, P.x - r, P.y - r, r * 2, r * 2);
+      }
+      c.globalAlpha = 1;
+      for (i = FLASH.length - 1; i >= 0; i--){
+        var f = FLASH[i], e = t - f.t; if (e > .35 || e < 0){ FLASH.splice(i, 1); continue; }
+        var Q = toScreen(f.x, f.y), a = 1 - e / .35, rr = Math.max(2.5, f.r * s * 1.1) * (1 + e * 2);
+        NGL.flash(Q.x, Q.y, rr, a * .75, 5);
       }
     }
     // ---- chimney smoke: soft noise-textured sprite particles (rise, expand, drift with the wind, fade)
@@ -1175,7 +1483,7 @@
     // ships and caravans. Dynamic lanterns are written into a preallocated Float32Array each frame (no allocations).
     var NGL = (function(){
       var gl = null, prog = null, A = {}, U = {}, bufP = null, bufQ = null, bufD = null, nP = 0, nQ = 0, ok = false, cleared = true;
-      var DMAX = 1400, dyn = new Float32Array(DMAX * 48), nd = 0, STR = 32;
+      var DMAX = 3200, dyn = new Float32Array(DMAX * 48), nd = 0, STR = 32;
       var VS = ['attribute vec4 aA;attribute vec4 aB;uniform vec3 uView;uniform vec2 uRes;uniform float uT;uniform float uNV;uniform float uPx;uniform float uPool;',
         'varying vec2 vC;varying float vA;varying float vK;varying float vW;',
         'void main(){float k=aB.w,sd=aB.z;vec2 sp=aA.xy*uView.x+uView.yz;float r;float a=aB.y;',
@@ -1186,10 +1494,12 @@
         ' else if(k<1.5){r=aB.x*uView.x;a*=uPool*(.9+.1*sin(uT*.8+sd*9.));}',
         ' else if(k<2.5){r=aB.x*2.6;a*=.86+.14*sin(uT*7.3+sd*13.);}',
         ' else{r=aB.x;}',
-        ' a*=uNV;sp+=aA.zw*r;vec2 cl=sp/uRes*2.-1.;gl_Position=vec4(cl.x,-cl.y,0.,1.);vC=aA.zw;vA=a;vK=k;vW=fract(sd*7.13);}'].join('\n');
+        ' if(k<3.5)a*=uNV;sp+=aA.zw*r;vec2 cl=sp/uRes*2.-1.;gl_Position=vec4(cl.x,-cl.y,0.,1.);vC=aA.zw;vA=a;vK=k;vW=fract(sd*7.13);}'].join('\n');
       var FS = ['precision mediump float;varying vec2 vC;varying float vA;varying float vK;varying float vW;',
         'void main(){float d=dot(vC,vC);if(d>1.||vA<.003)discard;vec3 c;',
-        ' if(vK<.5||(vK>1.5&&vK<2.5)){float core=exp(-d*20.);float halo=exp(-d*5.)*.38;c=mix(vec3(1.,.74,.40),vec3(1.,.90,.68),vW)*core*1.25+vec3(1.,.52,.18)*halo;}',
+        ' if(vK>4.5){float core=exp(-d*9.);c=vec3(1.,.93,.75)*core*1.6+vec3(1.,.55,.2)*exp(-d*3.)*.5;}',
+        ' else if(vK>3.5){float core=exp(-d*14.);c=vec3(.85,.9,1.)*core*1.7+vec3(.55,.65,1.)*exp(-d*3.5)*.45;}',
+        ' else if(vK<.5||(vK>1.5&&vK<2.5)){float core=exp(-d*20.);float halo=exp(-d*5.)*.38;c=mix(vec3(1.,.74,.40),vec3(1.,.90,.68),vW)*core*1.25+vec3(1.,.52,.18)*halo;}',
         ' else{float f=1.-d;c=vec3(1.,.58,.26)*f*f*f*.75;}',
         ' gl_FragColor=vec4(c*vA,0.);}'].join('\n');
       var CORN = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1];
@@ -1224,21 +1534,26 @@
         put(dyn, nd * 48, x, y, r, a, sd, 2); nd++;
         if (pr > 0){ put(dyn, nd * 48, x, y, pr, a * .55, sd, 3); nd++; }
       }
+      // kind 4 = lightning (bluish white), 5 = muzzle / fire flash: visible by day too
+      function flash(x, y, r, a, k){
+        if (nd >= DMAX - 1 || a < .01 || x < -80 || y < -80 || x > vw + 80 || y > vh + 80) return;
+        put(dyn, nd * 48, x, y, r, a, 0, k); nd++;
+      }
       function bind(b){ gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.vertexAttribPointer(A.a, 4, gl.FLOAT, false, STR, 0); gl.vertexAttribPointer(A.b, 4, gl.FLOAT, false, STR, 16); }
       function flush(t, nv, zf, lt){
         if (!ok) return;
-        if (nv <= .01){ if (!cleared){ gl.viewport(0, 0, cvN.width, cvN.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); cleared = true; } return; }
+        if (nv <= .01 && !nd){ if (!cleared){ gl.viewport(0, 0, cvN.width, cvN.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); cleared = true; } return; }
         cleared = false;
         gl.viewport(0, 0, cvN.width, cvN.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
         gl.uniform2f(U.uRes, vw, vh); gl.uniform1f(U.uT, t % 10000); gl.uniform1f(U.uNV, nv);
         gl.uniform1f(U.uPx, .75 + Math.min(view.s, .7) * 1.5);
         gl.uniform1f(U.uPool, .3 + .7 * Math.pow(1 - zf, 1.4));
         gl.uniform3f(U.uView, view.s, view.x, view.y);
-        if (bufQ && nQ){ bind(bufQ); gl.drawArrays(gl.TRIANGLES, 0, nQ * 6); }
-        if (bufP && nP){ var n = Math.round(nP * (lt ? .5 : 1) * (.42 + .58 * sstep(.04, .4, zf))); bind(bufP); gl.drawArrays(gl.TRIANGLES, 0, n * 6); }
+        if (nv > .01 && bufQ && nQ){ bind(bufQ); gl.drawArrays(gl.TRIANGLES, 0, nQ * 6); }
+        if (nv > .01 && bufP && nP){ var n = Math.round(nP * (lt ? .5 : 1) * (.42 + .58 * sstep(.04, .4, zf))); bind(bufP); gl.drawArrays(gl.TRIANGLES, 0, n * 6); }
         if (nd){ gl.uniform3f(U.uView, 1, 0, 0); bind(bufD); gl.bufferSubData(gl.ARRAY_BUFFER, 0, dyn.subarray(0, nd * 48)); gl.drawArrays(gl.TRIANGLES, 0, nd * 6); }
       }
-      return {init: init, setStatic: setStatic, begin: begin, lamp: lamp, flush: flush, get ok(){ return ok; }, get n(){ return nP; }, get pools(){ return nQ; }, get dyn(){ return nd; }};
+      return {init: init, setStatic: setStatic, begin: begin, lamp: lamp, flash: flash, flush: flush, get ok(){ return ok; }, get n(){ return nP; }, get pools(){ return nQ; }, get dyn(){ return nd; }};
     })();
     var LN = 0;
     function loadLights(){
@@ -1251,6 +1566,123 @@
         NGL.setStatic(pts, pools); LN = np; kick();
       }).catch(function(e){ if (window.console) console.warn('map night lights', e); });
     }
+    // ---- nature: deer herds grazing on the plains, whales/dolphins surfacing, an eagle circling the high peaks, a rare
+    // dragon near Deathwing'in İni, a very rare faint sea-serpent in the fog belt, rainbows after storms, waterspouts /
+    // small tornadoes under some storm cells, lightning bolts (NGL, above the clouds). All tiny vector strokes, view-culled.
+    var NAT = (function(){
+      var HZ = [[1512,984],[1272,1184],[1656,1264],[2112,1272],[3448,1400],[3880,1136],[3536,976]], herds = null, sea = [], nextSea = 4, sky = [], nextEagle = 20, nextDragon = 120, nextSerp = 200, bows = [], bolts = [], seen = [0, 0, 0, 0], clock = 0;
+      function mkHerds(){
+        herds = HZ.map(function(z){ var n = 5 + ((Math.random() * 6) | 0), d = []; for (var i = 0; i < n; i++) d.push({x: z[0] + rnd(-25, 25), y: z[1] + rnd(-18, 18), tx: 0, ty: 0, ang: rnd(0, 6.28), ph: rnd(0, 9), mv: 0});
+          return {cx: z[0], cy: z[1], z: z, d: d, next: rnd(10, 40)}; });
+        herds = herds.filter(function(h){ return isLand(h.cx, h.cy); });
+      }
+      function seaPt(minD, maxD){ var A = toWorld(0, 0), B = toWorld(vw, vh); for (var i = 0; i < 12; i++){ var x = rnd(A.x, B.x), y = rnd(A.y, B.y), d = coastDist(x, y); if (!isLand(x, y) && d > minD && d < maxD) return [x, y]; } return null; }
+      function step(dt, t, lt){
+        clock += dt; var zf = zoomF();
+        if (!herds && land) mkHerds();
+        if (herds && zf > .4) herds.forEach(function(h){
+          h.next -= dt; if (h.next <= 0){ h.next = rnd(18, 50); var a = rnd(0, 6.28), r = rnd(10, 55), nx = h.z[0] + Math.cos(a) * r, ny = h.z[1] + Math.sin(a) * r; if (isLand(nx, ny)){ h.cx = nx; h.cy = ny; } }
+          for (var i = 0; i < h.d.length; i++){ var e = h.d[i], gx = h.cx + Math.cos(i * 2.4) * (9 + i * 3.6), gy = h.cy + Math.sin(i * 2.4) * (6 + i * 2.6), dx = gx - e.x, dy = gy - e.y, dd = Math.hypot(dx, dy);
+            if (dd > 2){ var sp = Math.min(dd, dd > 18 ? 9 : 2.2) * dt; e.x += dx / dd * sp; e.y += dy / dd * sp; e.ang = Math.atan2(dy, dx); e.mv = dd > 18 ? 2 : 1; } else e.mv = 0; }
+        });
+        // sea life events near the view
+        nextSea -= dt; if (nextSea <= 0 && zf > .3 && sea.length < 3){ nextSea = rnd(5, 12) * (lt ? 1.6 : 1); var sp0 = seaPt(60, 600);
+          if (sp0){ var wh = Math.random() < .4; sea.push({k: wh ? 'whale' : 'dolph', x: sp0[0], y: sp0[1], a: rnd(0, 6.28), t: 0, life: wh ? 9 : 5, n: wh ? 1 : 3 + ((Math.random() * 3) | 0)}); } }
+        for (var i = sea.length - 1; i >= 0; i--){ sea[i].t += dt; if (sea[i].t > sea[i].life) sea.splice(i, 1); }
+        // sky: eagle circling (Strömbah range / north peaks), dragon near the lair, serpent in the fog belt
+        nextEagle -= dt; if (nextEagle <= 0){ nextEagle = rnd(70, 150); var ep = Math.random() < .6 ? [2200 + rnd(-250, 250), 800 + rnd(-200, 200)] : [1500 + rnd(-150, 150), 550 + rnd(-100, 100)]; sky.push({k: 'eagle', x: ep[0], y: ep[1], t: 0, life: 45, r: rnd(35, 60), a0: rnd(0, 6.28)}); }
+        nextDragon -= dt; if (nextDragon <= 0){ nextDragon = rnd(240, 420); var da = rnd(0, 6.28); sky.push({k: 'dragon', x: 2233 - Math.cos(da) * 700, y: 450 - Math.sin(da) * 500, vx: Math.cos(da) * 38, vy: Math.sin(da) * 26, t: 0, life: 38}); }
+        nextSerp -= dt; if (nextSerp <= 0 && !lt){ nextSerp = rnd(240, 480); var s0 = seaPt(220, 380); if (s0) sky.push({k: 'serp', x: s0[0], y: s0[1], a: rnd(0, 6.28), t: 0, life: 14}); else nextSerp = 40; }
+        for (i = sky.length - 1; i >= 0; i--){ sky[i].t += dt; if (sky[i].t > sky[i].life) sky.splice(i, 1); }
+        // rainbows where a storm has just rained out (daytime); lightning bolts on new flashes
+        while (STORM.ended.length){ var en = STORM.ended.shift(); if (DN.v.day > .45 && t - en.t < 5) bows.push({x: en.x + en.r * .3, y: en.y + en.r * .5, r: en.r * .55, t: 0, life: 45}); }
+        for (i = bows.length - 1; i >= 0; i--){ bows[i].t += dt; if (bows[i].t > bows[i].life) bows.splice(i, 1); }
+        if (!lt) STORM.cells.forEach(function(c0, j){ var b = c0.bolt || 0; if (b !== seen[j]){ seen[j] = b; if (c0.a > .3) bolts.push(mkBolt(c0, t)); } });
+        for (i = bolts.length - 1; i >= 0; i--) if (t - bolts[i].t > .75) bolts.splice(i, 1);
+      }
+      function mkBolt(c0, t){
+        var a = rnd(0, 6.28), rr = rnd(.1, .55) * c0.r, gx = c0.x + Math.cos(a) * rr, gy = c0.y + Math.sin(a) * rr * .7, top = rnd(110, 170), P = [], B = [];
+        var n = 9, x = gx + rnd(-20, 20), y = gy - top;
+        for (var i = 0; i <= n; i++){ var u = i / n; P.push([x + (gx - x) * u + (i && i < n ? rnd(-14, 14) : 0), y + (gy - y) * u]); }
+        var bi = 3 + ((Math.random() * 3) | 0), bx = P[bi][0], by = P[bi][1], ba = rnd(-1, 1) > 0 ? 1 : -1; B.push([bx, by]); for (i = 1; i < 4; i++) B.push([bx + ba * i * rnd(8, 14), by + i * rnd(9, 14)]);
+        return {P: P, B: B, t: t, c: c0};
+      }
+      function drawBolt(b, t){
+        var fl = b.c.fl; if (fl < .05) return; var s = view.s;
+        [b.P, b.B].forEach(function(L, li){
+          for (var i = 1; i < L.length; i++){ var A = toScreen(L[i - 1][0], L[i - 1][1]), Bq = toScreen(L[i][0], L[i][1]), d = Math.hypot(Bq.x - A.x, Bq.y - A.y), n = Math.max(1, Math.min(14, (d / 4) | 0));
+            if (!vis(A, 40) && !vis(Bq, 40)) continue;
+            for (var j = 0; j < n; j++){ var u = j / n; NGL.flash(A.x + (Bq.x - A.x) * u, A.y + (Bq.y - A.y) * u, Math.max(3, 2.6 * s) * (li ? .7 : 1), fl * (li ? .45 : .85), 4); } }
+        });
+        var G = toScreen(b.P[b.P.length - 1][0], b.P[b.P.length - 1][1]); NGL.flash(G.x, G.y, Math.max(10, 16 * s), fl * .5, 4);
+      }
+      function deer(x, y, ang, sc, mv, t, ph, a){
+        var ca = Math.cos(ang), sa = Math.sin(ang), face = ca >= 0 ? 1 : -1, L = sc, legs = mv ? Math.sin(t * (mv > 1 ? 14 : 6) + ph) * .35 : 0;
+        c.globalAlpha = a; c.fillStyle = 'rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(x, y + L * .1, L * .55, L * .16, 0, 0, 6.283); c.fill();
+        c.strokeStyle = '#4a3220'; c.lineWidth = Math.max(.6, L * .1); c.beginPath();
+        c.moveTo(x - L * .3 * face, y - L * .32); c.lineTo(x - L * (.3 + legs * .3) * face, y);
+        c.moveTo(x + L * .28 * face, y - L * .32); c.lineTo(x + L * (.28 - legs * .3) * face, y); c.stroke();
+        c.fillStyle = '#8a5a32'; c.beginPath(); c.ellipse(x, y - L * .42, L * .42, L * .17, 0, 0, 6.283); c.fill();
+        var graze = !mv && Math.sin(t * .5 + ph) > .2, hx = x + L * .44 * face, hy = graze ? y - L * .1 : y - L * .78;
+        c.strokeStyle = '#7a4e2a'; c.lineWidth = Math.max(.5, L * .12); c.beginPath(); c.moveTo(x + L * .3 * face, y - L * .5); c.lineTo(hx, hy); c.stroke();
+        c.fillStyle = '#7a4e2a'; c.beginPath(); c.arc(hx + L * .06 * face, hy, L * .1, 0, 6.283); c.fill();
+        c.fillStyle = '#efe6d6'; c.beginPath(); c.arc(x - L * .4 * face, y - L * .44, L * .06, 0, 6.283); c.fill();
+      }
+      function draw(t, lt){
+        var s = view.s, zf = zoomF(), day = DN.v.day, nightA = 1 - DN.v.night * .65;
+        if (herds && zf > .45){ var L = Math.max(3, 7 * s), al = sstep(.45, .6, zf) * nightA;
+          for (var h = 0; h < herds.length; h++){ var H0 = herds[h], C = toScreen(H0.cx, H0.cy); if (!vis(C, 120)) continue;
+            for (var i = 0; i < H0.d.length; i++){ var e = H0.d[i], P = toScreen(e.x, e.y); deer(P.x, P.y, e.ang, L, e.mv, t, e.ph, al); } }
+          c.globalAlpha = 1; }
+        for (i = 0; i < sea.length; i++){ var q = sea[i], Q = toScreen(q.x, q.y); if (!vis(Q, 60)) continue; var u = q.t / q.life, ca = Math.cos(q.a), sa = Math.sin(q.a);
+          if (q.k === 'whale'){ var ws = Math.max(5, 11 * s), rise = Math.sin(Math.min(1, u * 1.15) * Math.PI);
+            c.globalAlpha = .8 * rise * nightA; c.fillStyle = '#26323a'; c.beginPath(); c.ellipse(Q.x + ca * u * ws, Q.y + sa * u * ws, ws, ws * .28 * rise + .5, q.a, 0, 6.283); c.fill();
+            c.globalAlpha = .35 * rise; c.strokeStyle = '#e8f2f6'; c.lineWidth = 1; c.beginPath(); c.ellipse(Q.x + ca * u * ws, Q.y + sa * u * ws, ws * 1.25, ws * .45, q.a, 0, 6.283); c.stroke();
+            if (u < .35){ var sp = u / .35; c.globalAlpha = (1 - sp) * .7; c.fillStyle = '#f2f7fa'; c.beginPath(); c.ellipse(Q.x + ca * ws * .5, Q.y + sa * ws * .5 - ws * (.4 + sp * 1.2), ws * (.18 + sp * .3), ws * (.3 + sp * .5), 0, 0, 6.283); c.fill(); }
+            if (u > .55 && u < .9){ var tu = (u - .55) / .35, tx = Q.x - ca * ws * .6, ty = Q.y - sa * ws * .6; c.globalAlpha = Math.sin(tu * Math.PI) * .85 * nightA; c.fillStyle = '#26323a'; c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx - ws * .45, ty - ws * .55 * Math.sin(tu * Math.PI)); c.lineTo(tx + ws * .45, ty - ws * .55 * Math.sin(tu * Math.PI)); c.closePath(); c.fill(); }
+          } else { var ds = Math.max(2.5, 4.5 * s);
+            c.lineCap = 'round'; c.lineWidth = Math.max(1.2, ds * .45);
+            for (var j = 0; j < q.n; j++){ var uj = (u * 1.6 - j * .16), lj = (uj % .5) / .5; if (uj < 0 || uj > 1.4) continue; var ox = Q.x + ca * (uj * ds * 9) + (-sa) * (j - 1) * ds * 1.4, oy = Q.y + sa * (uj * ds * 9) + ca * (j - 1) * ds * 1.4;
+              var arc = Math.sin(lj * Math.PI); c.globalAlpha = .85 * arc * nightA; c.strokeStyle = '#3c4a54'; c.beginPath(); c.moveTo(ox - ca * ds, oy - sa * ds); c.quadraticCurveTo(ox, oy - ds * 1.6 * arc, ox + ca * ds, oy + sa * ds); c.stroke();
+              c.globalAlpha = .4 * (1 - arc); c.strokeStyle = '#eef6f8'; c.lineWidth = 1; c.beginPath(); c.arc(ox + ca * ds, oy + sa * ds, ds * .6 * (1 - arc) + .5, 0, 6.283); c.stroke(); c.lineWidth = Math.max(1.2, ds * .45); } }
+        }
+        c.globalAlpha = 1;
+        for (i = 0; i < sky.length; i++){ var k = sky[i], fa = Math.min(1, k.t / 4, (k.life - k.t) / 4);
+          if (k.k === 'eagle'){ var an = k.a0 + k.t * .35, ex = k.x + Math.cos(an) * k.r, ey = k.y + Math.sin(an) * k.r * .6, E = toScreen(ex, ey); if (!vis(E, 80) || zf < .15) continue;
+            var es = Math.max(4, 7 * s), dir = an + 1.57, cx2 = Math.cos(dir), sx2 = Math.sin(dir); var Sh = toScreen(ex + 30, ey + 46);
+            [[Sh, 'rgba(0,0,0,' + (.14 * fa) + ')'], [E, 'rgba(26,22,20,' + (.9 * fa * nightA) + ')']].forEach(function(o){ var X = o[0]; c.fillStyle = o[1]; c.beginPath(); c.moveTo(X.x + cx2 * es * .5, X.y + sx2 * es * .5);
+              c.quadraticCurveTo(X.x - sx2 * es * .6, X.y + cx2 * es * .6 - es * .25, X.x - sx2 * es * 1.3 - cx2 * es * .2, X.y + cx2 * es * 1.3 - sx2 * es * .2); c.lineTo(X.x - cx2 * es * .5, X.y - sx2 * es * .5);
+              c.lineTo(X.x + sx2 * es * 1.3 - cx2 * es * .2, X.y - cx2 * es * 1.3 - sx2 * es * .2); c.quadraticCurveTo(X.x + sx2 * es * .6, X.y - cx2 * es * .6 - es * .25, X.x + cx2 * es * .5, X.y + sx2 * es * .5); c.fill(); });
+          } else if (k.k === 'dragon'){ var dx = k.x + k.vx * k.t, dy = k.y + k.vy * k.t + Math.sin(k.t * .6) * 30, D = toScreen(dx, dy); if (!vis(D, 160)) continue;
+            var dsz = Math.max(9, 22 * s), ang2 = Math.atan2(k.vy, k.vx), c3 = Math.cos(ang2), s3 = Math.sin(ang2), flap = Math.sin(k.t * 3.2);
+            [[toScreen(dx + 70, dy + 110), .16 * fa, '0,0,0'], [D, .92 * fa * nightA, '30,18,16']].forEach(function(o){ var X = o[0]; c.fillStyle = 'rgba(' + o[2] + ',' + o[1] + ')'; c.strokeStyle = c.fillStyle;
+              c.lineWidth = Math.max(1, dsz * .14); c.lineCap = 'round'; c.beginPath(); c.moveTo(X.x + c3 * dsz * .8, X.y + s3 * dsz * .8); c.quadraticCurveTo(X.x - c3 * dsz * .8 + s3 * dsz * .25 * flap, X.y - s3 * dsz * .8 - c3 * dsz * .25 * flap, X.x - c3 * dsz * 1.6, X.y - s3 * dsz * 1.6); c.stroke();
+              var wl = dsz * (1.1 + .25 * flap), wb = dsz * .35 * flap;
+              for (var sg = -1; sg <= 1; sg += 2){ c.beginPath(); c.moveTo(X.x + c3 * dsz * .3, X.y + s3 * dsz * .3); c.lineTo(X.x - s3 * wl * sg + c3 * wb, X.y + c3 * wl * sg + s3 * wb - dsz * .2 * flap);
+                c.lineTo(X.x - s3 * wl * .7 * sg - c3 * dsz * .5, X.y + c3 * wl * .7 * sg - s3 * dsz * .5); c.lineTo(X.x - c3 * dsz * .35, X.y - s3 * dsz * .35); c.closePath(); c.fill(); }
+              c.beginPath(); c.ellipse(X.x, X.y, dsz * .55, dsz * .16, ang2, 0, 6.283); c.fill(); });
+          } else if (k.k === 'serp'){ var Sp = toScreen(k.x, k.y); if (!vis(Sp, 100) || zf < .2) continue;
+            var ssz = Math.max(6, 12 * s), ca4 = Math.cos(k.a), sa4 = Math.sin(k.a), mv2 = k.t * .9; c.globalAlpha = .22 * fa; c.strokeStyle = '#1c2a30'; c.lineWidth = Math.max(1.5, ssz * .28); c.lineCap = 'round';
+            for (var hm = 0; hm < 3; hm++){ var ph2 = (mv2 + hm * .8) % 2.4, ar = Math.sin(Math.min(1, ph2 / 1.6) * Math.PI); if (ar <= 0) continue; var bx = Sp.x + ca4 * (hm * ssz * 2.2 + k.t * ssz * .35), by = Sp.y + sa4 * (hm * ssz * 2.2 + k.t * ssz * .35);
+              c.beginPath(); c.moveTo(bx - ca4 * ssz, by - sa4 * ssz); c.quadraticCurveTo(bx, by - ssz * 1.3 * ar, bx + ca4 * ssz, by + sa4 * ssz); c.stroke(); }
+            c.globalAlpha = 1; }
+        }
+        if (day > .3) for (i = 0; i < bows.length; i++){ var b = bows[i], R0 = b.r * s, Bc = toScreen(b.x, b.y); if (!vis(Bc, R0 * 1.2)) continue; var ba = Math.min(1, b.t / 8, (b.life - b.t) / 12) * .26 * day;
+          var g = c.createRadialGradient(Bc.x, Bc.y, R0 * .86, Bc.x, Bc.y, R0); ['rgba(140,60,200,0)', 'rgba(140,60,200,1)', 'rgba(60,110,255,1)', 'rgba(60,200,120,1)', 'rgba(250,230,70,1)', 'rgba(255,150,40,1)', 'rgba(240,50,40,1)', 'rgba(240,50,40,0)'].forEach(function(cl, ci){ g.addColorStop(ci / 7, cl); });
+          c.globalAlpha = ba; c.strokeStyle = g; c.lineWidth = R0 * .14; c.beginPath(); c.arc(Bc.x, Bc.y, R0 * .93, Math.PI * 1.08, Math.PI * 1.92); c.stroke(); c.globalAlpha = 1; }
+        // waterspouts / small tornadoes at the edge of some storm cells
+        if (!lt) STORM.cells.forEach(function(c0){ if (!c0.spout || c0.a < .3) return; var u = c0.age / c0.life; if (u < .22 || u > .72) return; var fa2 = Math.min(1, (u - .22) / .06, (.72 - u) / .06) * c0.a;
+          var ox = c0.x + c0.sx * c0.r * 1.4, oy = c0.y + c0.sy * c0.r * 1.4 + c0.r * .55, G = toScreen(ox, oy); if (!vis(G, 120)) return;
+          var wet = !isLand(ox, oy), hgt = Math.max(30, 95 * s), wd = Math.max(2, 5 * s);
+          c.globalAlpha = .5 * fa2; c.fillStyle = wet ? 'rgba(225,235,240,.8)' : 'rgba(150,120,90,.8)'; c.beginPath(); c.ellipse(G.x, G.y, wd * 2.6 + Math.sin(t * 5) * wd * .3, wd * .9, 0, 0, 6.283); c.fill();
+          c.beginPath(); c.moveTo(G.x - wd * .5, G.y); for (var st2 = 0; st2 <= 8; st2++){ var uu = st2 / 8; c.lineTo(G.x + Math.sin(t * 2.2 + uu * 4) * wd * 1.2 * uu - wd * (.5 + uu * 2.8), G.y - uu * hgt); }
+          for (st2 = 8; st2 >= 0; st2--){ uu = st2 / 8; c.lineTo(G.x + Math.sin(t * 2.2 + uu * 4) * wd * 1.2 * uu + wd * (.5 + uu * 2.8), G.y - uu * hgt); } c.closePath();
+          var gg = c.createLinearGradient(0, G.y, 0, G.y - hgt); gg.addColorStop(0, wet ? 'rgba(160,172,180,.5)' : 'rgba(120,100,80,.55)'); gg.addColorStop(1, 'rgba(70,74,82,.85)'); c.fillStyle = gg; c.globalAlpha = .75 * fa2; c.fill(); c.globalAlpha = 1; });
+        for (i = 0; i < bolts.length; i++) drawBolt(bolts[i], t);
+      }
+      return {step: step, draw: draw, st: function(){ return {herds: herds ? herds.length : 0, sea: sea.length, sky: sky.map(function(k){ return k.k; }), bows: bows.length, bolts: bolts.length}; },
+        force: function(k, x, y){ if (k === 'whale' || k === 'dolph') sea.push({k: k, x: x, y: y, a: .3, t: 0, life: k === 'whale' ? 9 : 5, n: 4}); else if (k === 'bow') bows.push({x: x, y: y, r: 300, t: 8, life: 60}); else if (k === 'dragon') sky.push({k: 'dragon', x: x - 300, y: y, vx: 30, vy: 4, t: 5, life: 30}); else if (k === 'eagle') sky.push({k: 'eagle', x: x, y: y, t: 5, life: 40, r: 45, a0: 0}); else if (k === 'serp') sky.push({k: 'serp', x: x, y: y, a: .2, t: 3, life: 14}); }};
+    })();
     var simAcc = 0;
     function draw(t){
       var dt = lastT ? Math.min(.1, t - lastT) : .016; lastT = t;
@@ -1261,7 +1693,8 @@
       simAcc += dt; if (simAcc >= (zf < .28 ? (lt ? .05 : .033) : 0)){ stepCars(simAcc, lt); stepBirds(simAcc, lt); stepShips(simAcc, lt); simAcc = 0; }
       var sv = stepSmoke(dt, lt, zf);
       NGL.begin(); var D = window.__ulvMapDbg || 0;
-      drawWhirl(t, lt); drawGlow(t, lt); if (!D.noships) drawShips(t, nv); if (!D.nocars) drawCars(t, nv); if (!D.nosmoke) drawSmoke(sv, zf); drawBirds(lt);
+      NAT.step(dt, t, lt); PIRATE.step(t, dt, lt);
+      drawWhirl(t, lt); drawGlow(t, lt); if (!D.nonat) NAT.draw(t, lt); if (!D.noships){ drawShips(t, nv); PIRATE.draw(t, clamp(40 * view.s, 7, 30)); drawBattle(t, dt); } if (!D.nocars) drawCars(t, nv); if (!D.nosmoke) drawSmoke(sv, zf); drawBirds(lt);
       if (!D.nonight) NGL.flush(t, nv, zf, lt);
     }
     // what is around a world point (for the soundscape)
@@ -1270,45 +1703,69 @@
       for (var i = 0; i < S.length; i++){ var d = Math.hypot(S[i][0] - x, S[i][1] - y); town = Math.max(town, 1 - sstep(S[i][2] * .6, S[i][2] * 2.2, d)); }
       var landF = 0, n = 0; for (var a = 0; a < 5; a++){ var ox = a ? Math.cos(a * 1.57) * 120 : 0, oy = a ? Math.sin(a * 1.57) * 120 : 0; landF += isLand(x + ox, y + oy) ? 1 : 0; n++; }
       var sh = 0, ca = 0;   // ship / caravan proximity (world px), for creaks+lapping and hooves+wheels when zoomed close
-      for (i = 0; i < ships.length; i++){ var k = ships[i], q = laneAt(k.ln, k.d0 + k.dir * k.t); sh = Math.max(sh, 1 - sstep(25, 150, Math.hypot(q.x - x, q.y - y))); }
+      for (i = 0; i < ships.length; i++){ var k = ships[i], q = shipPos(k); sh = Math.max(sh, 1 - sstep(25, 150, Math.hypot(q.x - x, q.y - y))); }
       for (i = 0; i < cars.length; i++){ var c = cars[i]; if (c.d < 0 || c.d > c.tot) continue; var q2 = at(c, c.d); ca = Math.max(ca, 1 - sstep(20, 120, Math.hypot(q2.x - x, q2.y - y))); }
-      return {town: town, land: landF / n, coast: coastDist(x, y), ship: sh, car: ca};
+      var near = function(L, r0, r1){ var b = 0; for (var j = 0; j < L.length; j++) b = Math.max(b, 1 - sstep(r0, r1, Math.hypot(L[j][0] - x, L[j][1] - y))); return b; };
+      var desert = STORM.south(x, y) && landF > 0 ? sstep(3550, 3800, y) * (landF / n) * (1 - (1 - sstep(80, 260, Math.hypot(x - 3150, y - 4044))) * .6) : 0;
+      return {town: town, land: landF / n, coast: coastDist(x, y), ship: sh, car: ca, harbor: near(PORTS, 70, 300), forge: near(FORGES, 40, 220), waterfall: near(FALLS, 40, 240), temple: near(TEMPLES, 50, 260), desert: desert};
     }
     function landPt(){ return landPts.length ? landPts[(Math.random() * landPts.length) | 0] : null; }
-    return {init: init, resize: resize, draw: draw, zoomF: zoomF, landPt: landPt, spawn: spawnFlock, probe: probe, coastDist: coastDist,
-      stats: function(){ return {ships: ships.length, wakes: wakes.length, wakePts: wakes.reduce(function(n, w){ return n + w.pts.length; }, 0), galleon: (function(){ var g = ships.filter(function(k){ return k.type === "galleon" && k.t > 300; })[0]; if (!g) return null; var q = laneAt(g.ln, g.d0 + g.dir * g.t); return [Math.round(q.x), Math.round(q.y)]; })(), fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
-        shipPos: ships.slice(0, 6).map(function(k){ var q = laneAt(k.ln, k.d0 + k.dir * k.t); return [Math.round(q.x), Math.round(q.y)]; }),
+    return {init: init, resize: resize, draw: draw, zoomF: zoomF, landPt: landPt, spawn: spawnFlock, probe: probe, coastDist: coastDist, isLand: isLand, dbg: {pirate: PIRATE, nat: NAT},
+      stats: function(){ return {ships: ships.length, wakes: wakes.length, wakePts: wakes.reduce(function(n, w){ return n + w.pts.length; }, 0), galleon: (function(){ var g = ships.filter(function(k){ return k.type === "galleon" && k.t > 300; })[0]; if (!g) return null; var q = shipPos(g); return [Math.round(q.x), Math.round(q.y)]; })(), fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
+        portShips: ships.filter(function(k){ return k.port; }).length, routes: PORTR ? PORTR.length : 0, sinking: ships.filter(function(k){ return k.sink >= 0; }).length, pirate: PIRATE.p ? PIRATE.p.st : null, pirPos: PIRATE.p ? [Math.round(PIRATE.p.x), Math.round(PIRATE.p.y), +PIRATE.p.t.toFixed(1)] : null, nat: NAT.st(),
+        shipPos: ships.slice(0, 6).map(function(k){ var q = shipPos(k); return [Math.round(q.x), Math.round(q.y)]; }),
         net: !!NET, netEdges: netEdges.length, armies: armies, lights: LN, pools: NGL.pools, dynLights: NGL.dyn, kinds: cars.reduce(function(o, k){ o[k.kind] = (o[k.kind] || 0) + 1; return o; }, {}), hops: cars.filter(function(k){ return k.hops; }).length,
         cars: cars.length, carRoads: cars.reduce(function(o, k){ var j = roadGeo().indexOf(k.g); o[j] = (o[j] || 0) + 1; return o; }, {}), gates: cars.filter(function(k){ return k.gate; }).length, flocks: flocks.length, roads: roadGeo().length, lanes: lanes.length, smoke: smoke.length, land: landPts.length,
+        armyPos: cars.filter(function(k){ return k.kind === 'army' && k.d > 0 && k.d < k.tot; }).map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; }),
+        merchPos: cars.filter(function(k){ return k.kind === 'merchant' && k.d > 0 && k.d < k.tot; }).slice(0, 3).map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; }),
         carPos: cars.slice(0, 4).map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
   })();
 
-  // ---------------------------------------------------------------- storm cells (drift slowly over open sea; rendered in the shader)
+  // ---------------------------------------------------------------- storm cells (rendered in the shader) + desert sandstorm
+  // Two cells roam the open sea; with the weather toggle on, two more pass over land. Big, slowly rotating, each with
+  // its own lightning rhythm. Never over the Southern Lands (abandoned desert): there a sandstorm forms now and then instead.
   var STORM = (function(){
-    var cells = [mk(), mk()], last = 0;
-    function mk(){ return {x: -9999, y: -9999, r: 300, a: 0, fl: 0, life: 0, age: 0, vx: 0, vy: 0, next: 0, f2: 0}; }
-    function spawn(c0, t){
-      var lp = wxOn && c0 === cells[1] && Math.random() < .8 ? LIFE.landPt() : null;   // weather on: passing rain storms over land too
-      if (lp){ c0.x = lp[0] - 160; c0.y = lp[1] - 40; c0.land = 1; } else c0.land = 0;
-      for (var i = 0; i < 60 && !lp; i++){
-        var x = 300 + Math.random() * (W - 600), y = 300 + Math.random() * (H - 600), d = LIFE.coastDist(x, y);
-        if (d > 180 && d < 520){ c0.x = x; c0.y = y; break; }
+    var cells = [mk(), mk(), mk(), mk()], last = 0, ended = [];
+    var sand = {x: -9999, y: -9999, r: 420, a: 0, life: 0, age: 0, vx: 0, vy: 0, next: 30 + Math.random() * 60};
+    function mk(){ return {x: -9999, y: -9999, r: 300, a: 0, fl: 0, life: 0, age: 0, vx: 0, vy: 0, next: 0, f2: 0, rot: 1, spout: 0, land: 0}; }
+    function south(x, y){ return y > 3550 && x > 1150 && x < 3500; }
+    function spawn(c0, t, overLand){
+      var ok = false;
+      for (var i = 0; i < 80 && !ok; i++){
+        var x, y;
+        if (overLand){ var lp = LIFE.landPt(); if (!lp) break; x = lp[0] - 160; y = lp[1] - 40; }
+        else { x = 300 + Math.random() * (W - 600); y = 300 + Math.random() * (H - 600); var d = LIFE.coastDist(x, y); if (d < 160 || d > 560) continue; }
+        if (south(x, y) || south(x + 400, y + 150)) continue;
+        c0.x = x; c0.y = y; ok = true;
       }
-      c0.r = 240 + Math.random() * 160; c0.age = 0; c0.life = 150 + Math.random() * 150; c0.vx = 5 + Math.random() * 5; c0.vy = 1 + Math.random() * 3; c0.next = t + 4 + Math.random() * 8;
+      if (!ok){ c0.life = 1; c0.age = 1; c0.a = 0; c0.x = -9999; return; }
+      c0.land = overLand ? 1 : 0; c0.r = 380 + Math.random() * 260; c0.age = 0; c0.life = 160 + Math.random() * 170;
+      c0.vx = 4 + Math.random() * 5; c0.vy = 1 + Math.random() * 3; c0.next = t + 3 + Math.random() * 6; c0.rot = Math.random() < .5 ? 1 : -1;
+      c0.spout = Math.random() < .35 ? 1 : 0; c0.sx = (Math.random() - .5) * .5; c0.sy = (Math.random() - .3) * .4;
     }
     function step(t){
       var dt = last ? Math.min(.2, t - last) : 0; last = t;
-      for (var i = 0; i < 2; i++){
-        var c0 = cells[i];
-        if (c0.age >= c0.life){ if (Math.random() < (wxOn ? .05 : .02) || !c0.life) spawn(c0, t + i * 40); continue; }
+      for (var i = 0; i < 4; i++){
+        var c0 = cells[i], landCell = i >= 2;
+        if (landCell && !wxOn){ c0.a = Math.max(0, c0.a - dt / 8); if (c0.a <= 0) c0.age = c0.life; continue; }
+        if (c0.age >= c0.life){ if (c0.life && c0.a === 0 && c0.x > -9000){ ended.push({x: c0.x, y: c0.y, r: c0.r, t: t}); c0.x = -9999; } if (Math.random() < (wxOn ? .04 : .015) * (dt * 60) || !c0.life) spawn(c0, t, landCell); continue; }
         c0.age += dt; c0.x += c0.vx * dt; c0.y += c0.vy * dt;
-        c0.a = Math.min(1, c0.age / 12, (c0.life - c0.age) / 12);
-        if (t > c0.next){ c0.f2 = t; c0.next = t + 6 + Math.random() * 12; }
+        if (south(c0.x, c0.y)) c0.life = Math.min(c0.life, c0.age + 12);   // drifting toward the desert: rain out before it
+        c0.a = Math.max(0, Math.min(1, c0.age / 14, (c0.life - c0.age) / 14));
+        if (t > c0.next){ c0.f2 = t; c0.next = t + 3 + Math.random() * 9; c0.bolt = (c0.bolt || 0) + 1; }
         var e = t - c0.f2; c0.fl = e < 0 || e > .7 ? 0 : (e < .08 ? 1 : e < .16 ? .25 : e < .24 ? .8 : Math.max(0, .8 - (e - .24) * 2));
       }
+      // sandstorm over the Southern Lands: forms, drifts with the wind for a while, dissipates
+      if (sand.age >= sand.life){ sand.a = 0; sand.next -= dt; if (sand.next <= 0){ var lp2 = null; for (var k = 0; k < 40; k++){ var q = LIFE.landPt(); if (q && q[1] > 3900 && q[0] > 1500 && q[0] < 3100){ lp2 = q; break; } }
+          if (lp2){ sand.x = lp2[0] - 220; sand.y = lp2[1]; sand.r = 600 + Math.random() * 300; sand.age = 0; sand.life = 120 + Math.random() * 90; sand.vx = 7 + Math.random() * 6; sand.vy = (Math.random() - .5) * 4; }
+          sand.next = 140 + Math.random() * 160; } }
+      else { sand.age += dt; sand.x += sand.vx * dt; sand.y += sand.vy * dt; sand.a = Math.max(0, Math.min(1, sand.age / 22, (sand.life - sand.age) / 28)); }
     }
-    function near(x, y){ var b = 0; for (var i = 0; i < 2; i++){ var c0 = cells[i]; if (c0.a > .05) b = Math.max(b, c0.a * (1 - Math.min(1, Math.hypot(c0.x - x, c0.y - y) / (c0.r * 2.2)))); } return b; }
-    return {cells: cells, step: step, near: near};
+    function near(x, y){ var b = 0; for (var i = 0; i < 4; i++){ var c0 = cells[i]; if (c0.a > .05) b = Math.max(b, c0.a * (1 - Math.min(1, Math.hypot(c0.x - x, c0.y - y) / (c0.r * 2.2)))); } return b; }
+    function nearSand(x, y){ return sand.a > .05 ? sand.a * (1 - Math.min(1, Math.hypot(sand.x - x, sand.y - y) / (sand.r * 2))) : 0; }
+    return {cells: cells, step: step, near: near, nearSand: nearSand, sand: sand, ended: ended, south: south,
+      force: function(kind, x, y){ if (kind === 'sand'){ sand.x = x; sand.y = y; sand.r = 750; sand.age = 23; sand.life = 200; sand.vx = 9; sand.vy = 0; }
+        else { var c0 = cells[kind === 'land' ? 2 : 0]; c0.x = x; c0.y = y; c0.r = 460; c0.age = 15; c0.life = 260; c0.vx = 5; c0.vy = 1.5; c0.next = 0; c0.spout = 1; c0.sx = .2; c0.sy = .1; c0.land = kind === 'land' ? 1 : 0; } }};
   })();
   var cloudsOn = true; try { cloudsOn = localStorage.getItem('ulv-map-clouds') !== '0'; } catch(e){}
   // ---------------------------------------------------------------- day/night cycle: 1 min day + 1 min night; paused = eases back to noon
@@ -1333,16 +1790,18 @@
 
   // ---------------------------------------------------------------- atmosphere (WebGL)
   var FXL = (function(){
+    var STA = new Float32Array(16), RN = [0, 0, 0], SNX = [0, 0, 0], SNY = [0, 0, 0], lastFx = 0;
     var gl = null, prog = null, U = {}, tex = null, tex2 = null, hasBase = false, ok = false, ratio = 0.5, tried = false, fallback = null;
     var VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
     var FS = [
       'precision mediump float;',
       'uniform sampler2D uField;uniform vec2 uRes;uniform float uK;uniform vec3 uView;uniform vec2 uMap;uniform vec2 uCenter;',
-      'uniform float uTime;uniform float uZoom;uniform float uLite;uniform vec4 uFogP;uniform float uCloud;uniform vec2 uWind;uniform vec4 uSt0;uniform vec4 uSt1;uniform vec2 uFl;',
+      'uniform float uTime;uniform float uZoom;uniform float uLite;uniform vec4 uFogP;uniform float uCloud;uniform vec2 uWind;uniform vec4 uSt[4];uniform vec4 uFl;uniform vec4 uSr;uniform vec4 uSand;uniform vec3 uRn;uniform vec3 uSnX;uniform vec3 uSnY;',
       'uniform sampler2D uBase;uniform float uHasBase;uniform vec4 uDN;uniform vec2 uSun;uniform float uWx;',
       'float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
       'float fbm(vec2 p){float v=0.,a=.5,s=0.;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int i=0;i<5;i++){if(uLite>.5&&i>2)break;v+=a*n(p);s+=a;p=m*p;a*=.5;}return v/s;}',
+      'float fb3(vec2 p){mat2 m=mat2(1.6,1.2,-1.2,1.6);float v=n(p)*.5;p=m*p;v+=n(p)*.25;p=m*p;v+=n(p)*.125;return v/.875;}',
       'float cloud(vec2 c,float t,float thr){float d=fbm(c+uWind*t);d+=.35*fbm(c*2.1-uWind*t*1.3);return smoothstep(thr,thr+.17,d*.78);}',
       'void over(inout vec4 o,vec3 c,float a){o.rgb=c*a+o.rgb*(1.-a);o.a=a+o.a*(1.-a);}',
       'void main(){',
@@ -1396,13 +1855,30 @@
       '  float fr=fract(dist/15.+t*.33+nn*1.3); float wv=smoothstep(0.,.07,fr)*(1.-smoothstep(.07,.32,fr));',
       '  float amp=smoothstep(1.2,4.5,dist)*(1.-smoothstep(16.,44.,dist))*smoothstep(.42,.72,n(w/230.+vec2(t*.008,0.)));',
       '  o.rgb+=vec3(.92,.98,1.)*wv*amp*.36*cz*(1.-fogA);}}',
-      // storm cells over open sea: dark cloud mass, rain streaks, lightning flashes
-      ' if(uLite<.5){for(int k=0;k<2;k++){vec4 S=k==0?uSt0:uSt1; float fl=k==0?uFl.x:uFl.y; if(S.w<.01)continue;',
-      '  float dd=length(w-S.xy)/S.z+(fbm(w/170.+t*.015+float(k)*5.)-.5)*.7; float m=(1.-smoothstep(.25,1.,dd))*S.w;',
-      '  if(m<.002)continue; over(o,vec3(.07,.08,.10),m*.5);',
-      '  float rn=n(vec2((w.x+w.y*.28)/1.7,(w.y-t*260.)/24.)); over(o,vec3(.72,.76,.82),smoothstep(.78,.93,rn)*m*.24*smoothstep(.1,.4,uZoom)*smoothstep(.2,.6,m));',
-      '  o.rgb+=vec3(.85,.9,1.)*fl*m*.55;}}',
       ' over(o,fogC,fogA);',
+      // storm cells: wet darkened ground, three depth layers of angled rain streaks (varied lengths/speeds) + splashes,
+      // a dense dark cloud mass rotating slowly (faster near the core) with gaps, lit from inside by lightning
+      ' if(uLite<.5){for(int k=0;k<4;k++){vec4 S=uSt[k]; if(S.w<.01)continue; vec2 rel=w-S.xy; float r=length(rel)/S.z; if(r>1.45)continue;',
+      '  float ro=uSr[k]*t*.035*(1.3-min(r,1.)); float ca=cos(ro),sa=sin(ro); vec2 rr=vec2(ca*rel.x-sa*rel.y,sa*rel.x+ca*rel.y);',
+      '  float cn=fb3(rr/(S.z*.42)+float(k)*7.3)*.85+n(rr/(S.z*.06))*.15; float dd=r+(cn-.5)*.8; float m=(1.-smoothstep(.15,1.,dd))*S.w; if(m<.003)continue;',
+      '  float fl=uFl[k]; over(o,vec3(.02,.025,.04),m*.5);',
+      '  float ra=smoothstep(.2,.65,m)*smoothstep(.06,.3,uZoom); if(ra>.01){float rain=0.;',
+      '   for(int L=0;L<3;L++){float fL=float(L); float cw=7.+fL*5.; float xs=css.x+css.y*(.30+fL*.04); float col=floor(xs/cw); float hc=h(vec2(col,fL*13.1+float(k))); float h2=h(vec2(col*1.7,fL+3.3));',
+      '    float PL=90.+fL*35.; float Pc=PL*exp2(floor(hc*2.99)); float off=L==0?uRn.x:L==1?uRn.y:uRn.z; float yy=fract((css.y-off)/Pc+h2*5.)*Pc; float len=PL*(.25+.5*h2);',
+      '    float st=smoothstep(0.,len*.15,yy)*(1.-smoothstep(len*.5,len,yy)); float xl=abs(fract(xs/cw)-.5)*cw-(h2-.5)*cw*.5; rain+=(1.-smoothstep(.5+fL*.3,1.6+fL*.7,abs(xl)))*st*step(.35-fL*.1,hc)*(.30+fL*.25);}',
+      '   over(o,vec3(.70,.75,.84),min(rain,1.)*ra*.42);',
+      '   vec2 sid=floor(css/5.); float sph=fract(uRn.x*.013+h(sid)*7.); float sp=step(.975,h(sid+floor(uRn.x*.013+h(sid)*7.)))*(1.-smoothstep(0.,.25,sph));o.rgb+=vec3(.78,.83,.92)*sp*ra*.22*smoothstep(.3,.6,uZoom);}',
+      '  float cn2=n(rr/70.+vec2(t*.04,0.))*.6+n(rr/26.-vec2(0.,t*.05))*.4; float body=smoothstep(.22,.6,cn+cn2*.28)*smoothstep(0.,.5,m)*S.w;',
+      '  float cnl=fb3((rr-uSun*S.z*.06)/(S.z*.42)+float(k)*7.3)*.85+n((rr-uSun*S.z*.06)/(S.z*.06))*.15; float lit=clamp((cn-cnl)*5.+.35,0.,1.);',
+      '  vec3 cc=mix(vec3(.06,.065,.08),vec3(.36,.38,.43),clamp(cn2*.9-.15+lit*.55,0.,1.));',
+      '  over(o,cc,min(body*.9,.88)); o.rgb+=vec3(.82,.87,1.)*fl*(body*.85+m*.25);}}',
+      // sandstorm (Southern Lands): a dense orange dust wall with turbulent billows and fast streaks; ground dims beneath
+      ' if(uSand.w>.01){vec2 rel=w-uSand.xy; float r=length(rel*vec2(.8,1.25))/uSand.z; if(r<1.6){',
+      '  vec2 q2=rel/(uSand.z*.55)-vec2(t*.05,0.); float d1=fb3(q2+fb3(q2*1.7+vec2(t*.03,0.))*1.3); float m=(1.-smoothstep(.1,1.05,r+(d1-.5)*.9))*uSand.w;',
+      '  if(m>.003){over(o,vec3(.16,.07,.02),m*.38); float d2=n(rel/40.-vec2(t*.7,t*.05)); float dl=fb3(q2-uSun*.08+fb3(q2*1.7+vec2(t*.03,0.))*1.3); float lit=clamp((d1-dl)*5.+.4,0.,1.);',
+      '   vec3 sc=mix(vec3(.46,.24,.09),vec3(.93,.66,.36),clamp(d1*.6+lit*.6-.1,0.,1.))*(.88+.24*d2);',
+      '   over(o,sc,min(1.,m*1.25)*smoothstep(.15,.6,d1+.2)*.92); float sk=n(vec2(rel.x/110.-t*1.1,rel.y/4.5));',
+      '   o.rgb+=vec3(.95,.78,.52)*smoothstep(.7,.95,sk)*m*.18*smoothstep(.15,.45,uZoom);}}}',
       // ---- day/night: relief relighting from the moving sun (luminance of the painted map as height), warm low sun, blue night
       ' float day=uDN.x,dusk=uDN.y,night=uDN.z,elev=uDN.w; vec3 L3=normalize(vec3(uSun,.35+elev*.9));',
       ' float landM=1.-smoothstep(.5,3.,dist);',
@@ -1424,9 +1900,17 @@
       ' if(uWx>.01){float nz=1.-smoothstep(560.,980.,w.y);float pk=(1.-smoothstep(260.,520.,length((w-vec2(2290.,700.))*vec2(1.,1.5))));',
       '  float sz=max(nz,pk)*landM*(1.-fogA*.6);float sn=n(w/38.)*.6+n(w/11.)*.4;',
       '  over(o,mix(vec3(.80,.86,.94),vec3(.95,.97,1.),day),sz*smoothstep(.35,.75,sn)*.42*uWx*(1.-night*.5));',
-      '  float szf=max(nz,pk)*(1.-fogA*.6);if(uLite<.5&&szf>.02){for(int L=0;L<2;L++){float fl=float(L);vec2 g=css/(15.+fl*11.)+vec2(sin(t*.6+fl*2.)*.8+t*(.6+fl*.3),-t*(1.6+fl*.9));',
-      '   vec2 id=floor(g);vec2 fq=fract(g)-.5-(vec2(h(id),h(id+5.3))-.5)*.6;float fk=step(.55,h(id+1.7));',
-      '   o.rgb+=vec3(.95,.97,1.)*(1.-smoothstep(.05,.16+fl*.04,length(fq)))*fk*szf*(.75-fl*.2)*uWx*smoothstep(.12,.45,uZoom);}}',
+      // snowfall: three depth layers (far = small/slow, near = big/soft/fast with parallax), per-column fall speeds and
+      // per-flake phase so nothing falls in sync, sideways flutter + gusting wind drift, and a soft snow haze
+      '  float szf=max(nz,pk)*(1.-fogA*.6);if(szf>.02){float zv=smoothstep(.12,.45,uZoom);',
+      '   over(o,mix(vec3(.78,.83,.9),vec3(.93,.95,.98),day),szf*(.06+.07*n(w/260.+vec2(t*.05,0.)))*uWx*(1.-night*.4));',
+      '   if(uLite<.5&&zv>0.){',
+      '   for(int L=0;L<3;L++){float fL=float(L); float cs=13.+fL*12.; vec2 pp=(css-uRes*uK*.5)*(1.+fL*.18)/cs;',
+      '    float ox=L==0?uSnX.x:L==1?uSnX.y:uSnX.z; float oy=L==0?uSnY.x:L==1?uSnY.y:uSnY.z; pp.x-=ox; float col=floor(pp.x); float hc=h(vec2(col,fL*7.7)); pp.y-=oy*(.75+floor(hc*2.99)*.25)+hc*9.;',
+      '    vec2 id=floor(pp); float hr=h(id+fL*3.1); if(hr<.45-fL*.08)continue;',
+      '    vec2 fq=fract(pp)-.5-(vec2(h(id+5.3),h(id+1.9))-.5)*.55; fq.x+=sin(t*(1.1+hr*1.4)+hr*6.3)*.16;',
+      '    float rad=.035+fL*.03+hr*.025; float fk=exp(-dot(fq,fq)/(rad*rad))*(.55+fL*.2);',
+      '    o.rgb+=vec3(.96,.97,1.)*fk*szf*uWx*zv*(1.-night*.35)*(.3+.7*(1.-smoothstep(3.,60.,dist)));}}}',
       '  float gm=(1.-smoothstep(220.,520.,length((w-vec2(1450.,1320.))*vec2(1.,1.3))))*landM*uWx*smoothstep(.15,.45,uZoom);',
       '  if(gm>.01){float env=smoothstep(.3,1.,sin(t*.37)*.5+.5+sin(t*.91)*.3);vec2 gq=vec2((w.x+w.y*.25)/70.-t*1.6,(w.y-w.x*.12)/4.5);',
       '   o.rgb+=vec3(.92,.96,.9)*smoothstep(.78,.96,n(gq))*smoothstep(.3,.7,n(gq*.13+3.))*.16*gm*env*(1.-night*.6);}}',
@@ -1452,7 +1936,7 @@
       gl.useProgram(prog);
       var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['uField','uRes','uK','uView','uMap','uCenter','uTime','uZoom','uLite','uFogP','uCloud','uWind','uSt0','uSt1','uFl','uBase','uHasBase','uDN','uSun','uWx'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
+      ['uField','uRes','uK','uView','uMap','uCenter','uTime','uZoom','uLite','uFogP','uCloud','uWind','uSt','uFl','uSr','uSand','uRn','uSnX','uSnY','uBase','uHasBase','uDN','uSun','uWx'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
       tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 1, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, new Uint8Array([255]));
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -1506,8 +1990,14 @@
       gl.uniform1f(U.uZoom, zf); gl.uniform1f(U.uLite, lt ? 1 : 0);
       gl.uniform4f(U.uFogP, F.clearPx || 70, F.densePx || 420, F.edge || 0.14, F.strength == null ? 1 : F.strength);
       gl.uniform1f(U.uCloud, cloudsOn ? (C.strength == null ? 1 : C.strength) * (lt ? 0.8 : 1) : 0);
-      STORM.step(time); var S0 = STORM.cells[0], S1 = STORM.cells[1];
-      gl.uniform4f(U.uSt0, S0.x, S0.y, S0.r, lt || reduce ? 0 : S0.a); gl.uniform4f(U.uSt1, S1.x, S1.y, S1.r, lt || reduce ? 0 : S1.a); gl.uniform2f(U.uFl, S0.fl, S1.fl);
+      STORM.step(time); var SC = STORM.cells, off = lt || reduce;
+      for (var si = 0; si < 4; si++){ var Sx = SC[si]; STA[si * 4] = Sx.x; STA[si * 4 + 1] = Sx.y; STA[si * 4 + 2] = Sx.r; STA[si * 4 + 3] = off ? 0 : Sx.a; }
+      gl.uniform4fv(U.uSt, STA); gl.uniform4f(U.uFl, SC[0].fl, SC[1].fl, SC[2].fl, SC[3].fl); gl.uniform4f(U.uSr, SC[0].rot, SC[1].rot, SC[2].rot, SC[3].rot);
+      var SD = STORM.sand; gl.uniform4f(U.uSand, SD.x, SD.y, SD.r, reduce ? 0 : SD.a);
+      // fast-moving rain / snow offsets integrated here and wrapped (keeps shader numbers small: mediump-safe on phones)
+      var fdt = lastFx ? Math.min(.1, Math.max(0, time - lastFx)) : 0, gust = 1 + .6 * Math.sin(time * .23) + .3 * Math.sin(time * .71); lastFx = time;
+      for (var li = 0; li < 3; li++){ var PL = 90 + li * 35; RN[li] = (RN[li] + fdt * (430 + li * 210)) % (PL * 4); SNX[li] = (SNX[li] + fdt * (.35 + li * .25) * gust) % 64; SNY[li] = (SNY[li] + fdt * (.55 + li * .45)) % 64; }
+      gl.uniform3f(U.uRn, RN[0], RN[1], RN[2]); gl.uniform3f(U.uSnX, SNX[0], SNX[1], SNX[2]); gl.uniform3f(U.uSnY, SNY[0], SNY[1], SNY[2]);
       var wd = C.wind || [1, 0.35]; gl.uniform2f(U.uWind, wd[0], wd[1]);
       gl.uniform1i(U.uBase, 1); gl.uniform1f(U.uHasBase, hasBase && !lt ? 1 : 0);
       var dv = DN.v; gl.uniform4f(U.uDN, dv.day, dv.dusk, dv.night, dv.elev); gl.uniform2f(U.uSun, dv.sx, dv.sy); gl.uniform1f(U.uWx, wxOn ? 1 : 0);
@@ -1568,6 +2058,7 @@
     view: function(){ return {s: view.s, x: view.x, y: view.y, fit: fitScale(), vw: vw, vh: vh}; },
     zoomTo: function(s, wx, wy){ var p = toScreen(wx, wy); view.x += vw / 2 - p.x; view.y += vh / 2 - p.y; zoomAt(s, vw / 2, vh / 2); kick(); },
     stats: function(){ return {fx: FXL.ok, gl: !!(cvF.getContext && FXL.ok), lite: lite(), tiles: tileCount, loaded: loaded, km: km(totalPx()), places: PLACES.length, roads: ROADS.length, life: LIFE.stats()}; },
+    fx: function(k, x, y){ if (k === 'storm' || k === 'land' || k === 'sand') STORM.force(k === 'storm' ? 'sea' : k, x, y); else if (k === 'pirate') LIFE.dbg.pirate.force(); else LIFE.dbg.nat.force(k, x, y); kick(); },
     cfg: function(){ return CFG; }, clouds: function(){ return cloudsOn; }, spawnFlock: function(){ LIFE.spawn(); }, redraw: function(){ dirty = true; kick(); },
     isOpen: function(){ return isOpen; }, dn: function(p, run){ if (run != null) DN.setRun(run); if (p != null) DN.setPhase(p); kick(); return DN.v; },
     places: function(){ return {places: PLACES.length, pins: PINS.length, labels: placeEls.length}; }, showPlace: function(id){ var p = placeById(id); if (p) showPlace(p, null); },
