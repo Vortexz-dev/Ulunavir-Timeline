@@ -510,3 +510,19 @@ body.lb-open .fx-btn{pointer-events:none}
 @media (prefers-reduced-motion:reduce){.et.on .et-k,.et.on .et-n,.et.on .et-rule i,.et.on .et-y{animation:none}}
 /* event-song indicator in the music panel */
 .mp.special .mp-now{color:var(--gold2,#ffd88a)}
+/* time jump (t124): 'Eskiden yeniye oku' + veil that hides the instant jump */
+.tj-btn{display:inline-flex;align-items:center;gap:9px;margin-top:22px;padding:8px 18px 8px 14px;border:1px solid #e2b45a55;border-radius:30px;background:#140e18b3;backdrop-filter:blur(4px);color:var(--gold);font-family:Cinzel;font-size:12px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;opacity:.78;transition:opacity .25s,box-shadow .3s,border-color .3s,transform .25s}
+.tj-btn .tj-ic{font-size:15px;line-height:1;transition:transform .6s}
+.tj-btn i{font-style:normal;font-size:13px;opacity:.7}
+.tj-btn:hover,.tj-btn:focus-visible{opacity:1;border-color:#e2b45aaa;box-shadow:0 0 18px #e2b45a44;transform:translateY(1px)}
+.tj-btn:hover .tj-ic{transform:rotate(180deg)}
+.tj-btn:focus-visible{outline:2px solid var(--gold2);outline-offset:3px}
+.end-hint{color:var(--muted);font-style:italic;font-size:15px;margin:-12px auto 22px;max-width:520px;opacity:.85}
+.tj-veil{position:fixed;inset:0;z-index:90;pointer-events:none;opacity:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 50%,#1a1020f2 0%,#07040af8 70%);transition:opacity .36s ease}
+.tj-veil.on{opacity:1;pointer-events:auto}
+.tj-glyph{font-size:54px;color:var(--gold);text-shadow:0 0 30px var(--ember);opacity:.85;transform:scale(.7);transition:transform .7s ease}
+.tj-veil.on .tj-glyph{transform:scale(1) rotate(180deg)}
+.tj-veil.up.on .tj-glyph{transform:scale(1) rotate(-180deg)}
+body.fx-lite .tj-veil{transition-duration:.12s}body.fx-lite .tj-btn{backdrop-filter:none}
+@media (prefers-reduced-motion:reduce){.tj-veil,.tj-glyph{transition:none}}
+.tj-btn .tj-ic,.tj-btn i{display:inline-flex}.tj-glyph{display:inline-flex}

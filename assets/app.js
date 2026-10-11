@@ -278,7 +278,7 @@ function musicRegion(){
   var n = anchors.length; if (!n) return;
   var y = window.scrollY + innerHeight*0.5, best = -1, bd = 1e12;
   if (y >= anchors[0] - innerHeight*0.6){ for (var i=0;i<n;i++){ var d = Math.abs(anchors[i] - y); if (d < bd){ bd = d; best = i; } } }
-  if (best !== focusIdx){ focusIdx = best; if (best >= 0 && typeof Ambience !== 'undefined' && Ambience) Ambience.onEvent(events[best]); }
+  if (best !== focusIdx){ focusIdx = best; if (best < 0 && typeof Ambience !== 'undefined' && Ambience) Ambience.clear(); if (best >= 0){ if (typeof Ambience !== 'undefined' && Ambience) Ambience.onEvent(events[best]); if (EV_ELS[best]) setCurrent(EV_ELS[best]); } }
   if (typeof Music === 'undefined' || !Music) return;
   var pick = best >= 0 ? SONG_OF[events[best].o] : null;
   if (pick == null && songWant != null){ var R = SONG_REG[songWant], m = innerHeight*0.2; if (R && y >= R.top - m && y <= R.bot + m) pick = songWant; }
@@ -479,12 +479,12 @@ var FX = (function(){
 })();
 
 // per-frame work driven from FX loop (or scroll in reduced-motion mode)
-var lastScrollY = window.scrollY, sparkAcc = 0, scrollDirty = true;
+var lastScrollY = window.scrollY, sparkAcc = 0, scrollDirty = true, JUMPING = false;
 window.addEventListener('scroll', function(){ scrollDirty = true; }, {passive:true});
 function tick(){
   var sy = window.scrollY, dy = sy - lastScrollY; lastScrollY = sy;
   if (scrollDirty){ scrollDirty = false; applyAtmosphere(); if (ATM) FX.setTargets(ATM.p); musicRegion(); }
-  if (dy && ATM && !reduce){
+  if (dy && ATM && !reduce && !JUMPING){
     sparkAcc += Math.abs(dy);
     if (sparkAcc > 22){
       var n = Math.min(3, Math.floor(sparkAcc/22)); sparkAcc = 0;
@@ -961,6 +961,9 @@ var Ambience = (function(){
     if (!cur){ applyState(idx, war); return; }   // first sound after load/unlock: no wait
     dwellT = setTimeout(function(){ if (wantIdx === idx && wantWar === war) applyState(idx, war); }, DWELL);
   }
+  // above the first card (hero): same as a fresh load at the top = no era ambience (fades out after the dwell)
+  function clear(){ wantIdx = -1; wantWar = false; clearTimeout(dwellT); if (!running() || !cur) return;
+    dwellT = setTimeout(function(){ if (wantIdx === -1) applyState(-1, false); }, DWELL); }
   function applyLevel(){ if (!ctx) return; var t = ctx.currentTime; gate.gain.cancelScheduledValues(t); gate.gain.setTargetAtTime(st.on ? 1 : 0, t, .4); ambBus.gain.cancelScheduledValues(t); ambBus.gain.setTargetAtTime(ambLevel(), t, .3); }
   function unlock(){
     if (!st.on || !ensure()) return;
@@ -1030,7 +1033,7 @@ var Ambience = (function(){
       if (ctx.state === 'suspended') ctx.resume().then(go, function(){}); else go();
     }
   }
-  return {onEvent:onEvent, setTargets:setTargets, spark:spark, hold:hold, play:function(o){ unlock(); playSfx(String(o)); },
+  return {onEvent:onEvent, clear:clear, setTargets:setTargets, spark:spark, sync:function(y){ lastY = y; }, hold:hold, play:function(o){ unlock(); playSfx(String(o)); },
     eras:ERAS, war:WAR, _seekEnd:function(sec){ if (cur && cur.n && cur.n.a){ var el = cur.n.a.el; try { el.currentTime = Math.max(0, el.duration - sec); } catch(e){} } },
     state:function(){ return {st:st, ctx:ctx && ctx.state, eras:ERAS.length, era:curIdx, file:curIdx >= 0 ? ERAS[curIdx].file : null, war:curWar, want:wantIdx, wantWar:wantWar,
       normal:cur && vstate(cur.n), warV:cur && vstate(cur.w), slots:POOL.filter(function(s){ return s.busy; }).length, eraChanges:eraChanges, bus:ambBus && +ambBus.gain.value.toFixed(3),
@@ -1081,7 +1084,7 @@ function burstCard(el){
     ents.forEach(function(en){
       var el = en.target;
       if (!en.isIntersecting){ armedB.set(el, true); return; }
-      if (en.intersectionRatio >= .45 && armedB.get(el) !== false){ armedB.set(el, false); setTimeout(function(){ burstCard(el); }, 380); }
+      if (en.intersectionRatio >= .45 && armedB.get(el) !== false){ armedB.set(el, false); if (!JUMPING) setTimeout(function(){ if (!JUMPING) burstCard(el); }, 380); }
     });
   }, {threshold:[0, .45]});
   // only the truly epic events (great wars, great victories, deaths that matter) get the ember burst
@@ -1308,7 +1311,7 @@ var EraTitle = (function(){
   }
   function check(){
     if (!pend) return;
-    if (speed() > innerHeight * 2.2 || busy()){ pendT = setTimeout(check, 300); return; }
+    if (speed() > innerHeight * 2.2 || busy() || JUMPING){ pendT = setTimeout(check, 300); return; }
     var id = pend; pend = null;
     if (id === cur && !seen[id]) show(id);
   }
@@ -1334,7 +1337,7 @@ function buildAnimations(){
   ScrollTrigger.create({trigger:tlEl, start:'top 60%', end:'bottom 60%', scrub:true, onUpdate:function(self){
     var p = self.progress, H = tlEl.offsetHeight; sparkGeo.p = p; sparkGeo.h = H;
     gsap.set('#lineFill', {scaleY:p}); gsap.set('#lineSpark', {y: p*H});
-    Ambience.spark(p*H);
+    if (JUMPING) Ambience.sync(p*H); else Ambience.spark(p*H);
     hudBar.style.width = (p*100).toFixed(1)+'%';
   }});
   ScrollTrigger.create({trigger:tlEl, start:'top 70%', end:'bottom 30%', onToggle:function(self){ hud.classList.toggle('on', self.isActive); }});
@@ -1352,8 +1355,7 @@ function buildAnimations(){
         ui = el.querySelectorAll('.gnav, .dots, .zoom'),
         bits = el.querySelectorAll('.date, h3, .summary, .chips, .more');
     var origin = left ? '100% 50%' : '0% 50%';
-    var tl = gsap.timeline({scrollTrigger:{trigger:el, start:'top 94%', end:'top 52%', scrub:.7,
-      onEnter:function(){setCurrent(el);}, onEnterBack:function(){setCurrent(el);} }});
+    var tl = gsap.timeline({scrollTrigger:{trigger:el, start:'top 94%', end:'top 52%', scrub:.7}});   // current card = focus (musicRegion), same rule in both directions
     tl.fromTo(dot, {scale:0, opacity:0}, {scale:1, opacity:1, duration:.18, ease:'back.out(3)'}, 0);
     if (pill) tl.fromTo(pill, {opacity:0, y:10}, {opacity:1, y:0, duration:.2}, .02);
     tl.fromTo(arm, {scaleX:0}, {scaleX:1, duration:.22, ease:'power1.inOut'}, .05);
@@ -1378,8 +1380,6 @@ function buildAnimations(){
 function showAllStatic(){
   hud.classList.add('on');
   document.getElementById('lineFill').style.transform = 'scaleY(1)';
-  var io = new IntersectionObserver(function(ents){ ents.forEach(function(en){ if (en.isIntersecting) setCurrent(en.target); }); }, {rootMargin:'-45% 0px -45% 0px'});
-  EV_ELS.forEach(function(el){ io.observe(el); });
 }
 
 // "Detaylar" toggles change card heights -> re-run the masonry + triggers
@@ -1395,7 +1395,29 @@ var relayoutT;
 function relayout(ms){ clearTimeout(relayoutT); relayoutT = setTimeout(function(){ layout(); if (window.ScrollTrigger && !reduce) ScrollTrigger.refresh(); computeAnchors(); scrollDirty = true; if (reduce) applyAtmosphere(); }, ms==null?120:ms); }
 
 start();
-document.querySelectorAll('a[href^="#"]').forEach(function(a){ a.addEventListener('click', function(ev){ var t = document.querySelector(a.getAttribute('href')); if (!t) return; ev.preventDefault(); t.scrollIntoView({behavior: reduce?'auto':'smooth'}); }); });
+// TIME JUMP: 'Eskiden yeniye' (to the oldest record) / 'Bugüne dön' (to the top). A short veil hides an
+// instant jump, so nothing along the way fires (no sounds, sparks, bursts or chapter titles); music and
+// ambience simply settle on the destination's region (their dwell timers never see the skipped ones).
+var TimeJump = (function(){
+  var veil = document.createElement('div'); veil.className = 'tj-veil'; veil.setAttribute('aria-hidden', 'true');
+  veil.innerHTML = '<span class="tj-glyph"><svg viewBox="0 0 24 24" width="56" height="56"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9s8 4 8 9" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M10 18.5h4l-2-2.2z" fill="currentColor"/></svg></span>'; document.body.appendChild(veil);
+  var busyJ = false;
+  function go(where){
+    if (busyJ) return; busyJ = true;
+    var dest = function(){ return where === 'top' ? 0 : Math.max(0, document.documentElement.scrollHeight - innerHeight); };
+    var fast = reduce || document.body.classList.contains('fx-lite');
+    JUMPING = true; veil.classList.add('on', where === 'top' ? 'up' : 'down');
+    setTimeout(function(){
+      window.scrollTo({top: dest(), behavior: 'instant'});
+      requestAnimationFrame(function(){ window.scrollTo({top: dest(), behavior: 'instant'}); lastScrollY = window.scrollY; scrollDirty = true;
+        setTimeout(function(){ veil.classList.remove('on'); setTimeout(function(){ veil.classList.remove('up', 'down'); JUMPING = false; busyJ = false; }, 450); }, 260); });
+    }, fast ? 60 : 380);
+  }
+  document.querySelectorAll('a[href="#top"], [data-jump="top"]').forEach(function(a){ a.addEventListener('click', function(ev){ ev.preventDefault(); go('top'); }); });
+  document.querySelectorAll('[data-jump="oldest"]').forEach(function(a){ a.addEventListener('click', function(ev){ ev.preventDefault(); go('oldest'); }); });
+  return {go:go, jumping:function(){ return JUMPING; }};
+})();
+document.querySelectorAll('a[href^="#"]:not([href="#top"]):not([data-jump])').forEach(function(a){ a.addEventListener('click', function(ev){ var t = document.querySelector(a.getAttribute('href')); if (!t) return; ev.preventDefault(); t.scrollIntoView({behavior: reduce?'auto':'smooth'}); }); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ relayout(); });
 window.addEventListener('load', function(){ relayout(); });
 window.addEventListener('resize', function(){ relayout(); });
@@ -1407,5 +1429,5 @@ var SFX_EVS = EV_ELS.map(function(el){ var o = String(el.dataset.o); return SFX_
 window.Ambience_targets = function(sy){ if (!lineEl) return;
   Ambience.setTargets(SFX_EVS.map(function(t){ var d = t.el.querySelector('.dot') || t.el, r = d.getBoundingClientRect(); return {y: r.top + sy + r.height/2 - sparkGeo.top - 13, o:t.o, fired:false}; })); };
 window.Ambience_targets(window.scrollY);
-window.__ulv = {EraTitle:EraTitle, weatherOf:function(o){ return WEATHER_OF[o] || null; }, weather:function(){ var y = window.scrollY + innerHeight*0.55, n = anchors.length; if (!n) return null; var lo = 0; for (var i=0;i<n;i++){ if (Math.abs(anchors[i]-y) < Math.abs(anchors[lo]-y)) lo = i; } return WEATHER_OF[events[lo].o] || null; }, songRegions:function(){ return SONG_REG; }, focus:function(){ return focusIdx >= 0 ? events[focusIdx].o : null; }, Music:Music, Ambience:Ambience, FX:FX, Effects:Effects, Lightbox:Lightbox, TagCard:TagCard, MiniMap:MiniMap, kind:KIND_OF, burstCard:burstCard, theme:THEME_OF, atm:function(){return ATM;}};
+window.__ulv = {EraTitle:EraTitle, weatherOf:function(o){ return WEATHER_OF[o] || null; }, weather:function(){ var y = window.scrollY + innerHeight*0.55, n = anchors.length; if (!n) return null; var lo = 0; for (var i=0;i<n;i++){ if (Math.abs(anchors[i]-y) < Math.abs(anchors[lo]-y)) lo = i; } return WEATHER_OF[events[lo].o] || null; }, songRegions:function(){ return SONG_REG; }, focus:function(){ return focusIdx >= 0 ? events[focusIdx].o : null; }, Music:Music, Ambience:Ambience, FX:FX, Effects:Effects, Lightbox:Lightbox, TagCard:TagCard, MiniMap:MiniMap, kind:KIND_OF, burstCard:burstCard, TimeJump:TimeJump, setCurrent:setCurrent, theme:THEME_OF, atm:function(){return ATM;}};
 })();

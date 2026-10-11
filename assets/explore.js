@@ -192,7 +192,8 @@ var Net = (function(){
     '<div class="tn-list" hidden><div class="tn-lhead"><div class="tn-seg" role="tablist"><button type="button" class="on" data-g="type" role="tab" aria-selected="true">Türe göre</button><button type="button" data-g="clu" role="tab" aria-selected="false">İlişki kümeleri</button></div></div><div class="tn-lbody"></div></div>' +
     '<header class="tn-top"><div class="tn-title"><span class="tn-k">Ulunavir Arşivi</span><b>Etiket Ağı</b><span class="tn-n"></span></div>' +
     '<label class="tn-find">' + ICON_SRCH + '<input type="search" placeholder="Etiket süz…" aria-label="Etiketleri süz" autocomplete="off" spellcheck="false"></label>' +
-    '<button type="button" class="tn-mode" aria-pressed="false"><span class="m-list">Liste görünümü</span><span class="m-net">Ağ görünümü</span></button>' +
+    '<button type="button" class="tn-names" aria-pressed="false" title="Ağdaki tüm etiketlerin adlarını göster / gizle"><span class="n-on"><b class="lg">Tüm isimleri göster</b><b class="sm">Tüm isimler</b></span><span class="n-off"><b class="lg">İsimleri sadeleştir</b><b class="sm">Sade</b></span></button>' +
+    '<button type="button" class="tn-mode" aria-pressed="false"><span class="m-list"><b class="lg">Liste görünümü</b><b class="sm">Liste</b></span><span class="m-net"><b class="lg">Ağ görünümü</b><b class="sm">Ağ</b></span></button>' +
     '<button type="button" class="tn-x" aria-label="Kapat (Esc)">' + ICON_X + '</button></header>' +
     '<div class="tn-legend"></div><div class="tn-hint">Sürükle: döndür · Tekerlek / iki parmak: yakınlaş · Tıkla: bilgi kartı</div>' +
     '<div class="tn-tip" hidden></div>';
@@ -201,7 +202,8 @@ var Net = (function(){
       lbody = ov.querySelector('.tn-lbody'), find = ov.querySelector('.tn-find input'), modeB = ov.querySelector('.tn-mode');
   var g = null, P = null, built = false, raf = 0, W = 0, H = 0, DPR = 1, iter = 0, ITER = 260, temp = 1;
   var R = [1,0,0, 0,1,0, 0,0,1], zoom = 1, vx = 0, vy = 0, idleT = 0, hover = -1, sel = -1, match = null, listMode = false, grouping = 'type';
-  var sprites = {}, proj = [], order = [], last = 0, closeT = 0, opener = null;
+  var sprites = {}, proj = [], order = [], last = 0, closeT = 0, opener = null, allNames = false;
+  try { allNames = localStorage.getItem('ulv-tn-names') === '1'; } catch(e){}
 
   function rnd(seed){ return function(){ seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
   function build(){
@@ -299,18 +301,18 @@ var Net = (function(){
       if (!lt) r *= 1 + 0.06 * Math.sin(tw + n * 1.7);
       ctx.globalAlpha = dim ? 0.13 : (0.35 + depth2 * 0.65);
       ctx.drawImage(sprites[nd.t], P2.x - r * 2, P2.y - r * 2, r * 4, r * 4);
-      if (!dim && (n === focus || (nb && nb[n]) || (match && match[n] && matchN < 40) || (nd.imp > 0.42 && P2.z > -0.35) || (zoom > 1.6 && nd.imp > 0.22 && P2.z > 0)))
+      if (!dim && (allNames || n === focus || (nb && nb[n]) || (match && match[n] && matchN < 40) || (nd.imp > 0.42 && P2.z > -0.35) || (zoom > 1.6 && nd.imp > 0.22 && P2.z > 0)))
         labels.push([n, P2, r, n === focus ? 2 : (nb && nb[n]) ? 1 : 0]); }
     ctx.globalAlpha = 1;
     // labels (front-most first, skip overlaps)
     labels.sort(function(a, b){ return b[3] - a[3] || b[1].z - a[1].z; });
     var boxes = [];
-    for (var l = 0; l < labels.length && l < 70; l++){ var L = labels[l], nd2 = g.nodes[L[0]], big = L[3] === 2;
-      ctx.font = (big ? '700 15px' : (nd2.imp > 0.6 ? '600 12.5px' : '600 11px')) + ' Cinzel, Georgia, serif';
+    for (var l = 0; l < labels.length && (allNames || l < 70); l++){ var L = labels[l], nd2 = g.nodes[L[0]], big = L[3] === 2;
+      ctx.font = (big ? '700 15px' : (nd2.imp > 0.6 ? '600 12.5px' : allNames && nd2.imp < 0.3 && L[3] === 0 ? (W < 700 ? '600 8px' : '600 9.5px') : '600 11px')) + ' Cinzel, Georgia, serif';
       var tx = L[1].x, ty2 = L[1].y - L[2] * 1.05 - 6, wdt = ctx.measureText(nd2.k).width, bx = [tx - wdt / 2 - 3, ty2 - 12, wdt + 6, 15];
-      if (!big && boxes.some(function(b){ return bx[0] < b[0] + b[2] && bx[0] + bx[2] > b[0] && bx[1] < b[1] + b[3] && bx[1] + bx[3] > b[1]; })) continue;
+      if (!big && !allNames && boxes.some(function(b){ return bx[0] < b[0] + b[2] && bx[0] + bx[2] > b[0] && bx[1] < b[1] + b[3] && bx[1] + bx[3] > b[1]; })) continue;
       boxes.push(bx); ctx.textAlign = 'center';
-      ctx.globalAlpha = big ? 1 : Math.max(0.35, Math.min(1, 0.5 + L[1].z * 0.6));
+      ctx.globalAlpha = big ? 1 : allNames ? Math.max(0.28, Math.min(1, 0.62 + L[1].z * 0.5)) : Math.max(0.35, Math.min(1, 0.5 + L[1].z * 0.6));
       ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(8,5,14,.85)'; ctx.strokeText(nd2.k, tx, ty2);
       ctx.fillStyle = big ? '#fff3d0' : 'rgba(' + COL[nd2.t].map(function(v){ return Math.min(255, v + 50); }) + ',1)'; ctx.fillText(nd2.k, tx, ty2); }
     ctx.globalAlpha = 1;
@@ -403,6 +405,10 @@ var Net = (function(){
     try { localStorage.setItem('ulv-tn-mode', l ? 'list' : 'net'); } catch(e){}
   }
   modeB.addEventListener('click', function(){ setMode(!listMode); });
+  var namesB = ov.querySelector('.tn-names');
+  function setNames(on){ allNames = on; namesB.setAttribute('aria-pressed', on); ov.classList.toggle('names', on); try { localStorage.setItem('ulv-tn-names', on ? '1' : '0'); } catch(e){} kick(); }
+  namesB.addEventListener('click', function(){ setNames(!allNames); });
+  setNames(allNames);
   // ---- open / close
   function open(){
     Search.close(true); clearTimeout(closeT);
@@ -431,7 +437,7 @@ var Net = (function(){
     if (find.value && document.activeElement === find){ find.value = ''; find.dispatchEvent(new Event('input')); return; }
     close();
   });
-  return {open:open, close:close, isOpen:function(){ return !ov.hidden; }, _state:function(){ return {iter:iter, nodes:g && g.nodes.length, edges:g && g.edges.length, sel:sel, list:listMode, fam:g && g.fam.map(function(f){ return f.name + ':' + f.keys.length; })}; }};
+  return {open:open, close:close, isOpen:function(){ return !ov.hidden; }, _state:function(){ return {iter:iter, nodes:g && g.nodes.length, edges:g && g.edges.length, sel:sel, list:listMode, names:allNames, fam:g && g.fam.map(function(f){ return f.name + ':' + f.keys.length; })}; }};
 })();
 
 // ================================================================ SEARCH

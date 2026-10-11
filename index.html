@@ -10,10 +10,10 @@
 <meta name="theme-color" content="#0b0810">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpolygon points='32,3 50,10 61,27 58,46 44,59 20,59 6,46 3,27 14,10' fill='%23120c18' stroke='%23e2b45a' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%23ff9a3c'/%3E%3C/svg%3E">
 <link rel="preload" href="assets/fonts/cinzel-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/style.css?v=0f69041e9e">
+<link rel="stylesheet" href="assets/style.css?v=33b84d6bb2">
 <link rel="stylesheet" href="assets/map.css?v=d9c4733525">
-<link rel="stylesheet" href="assets/explore.css?v=630ccfafec">
-<link rel="stylesheet" href="assets/katip.css?v=b12db90bea">
+<link rel="stylesheet" href="assets/explore.css?v=aaedbeb474">
+<link rel="stylesheet" href="assets/katip.css?v=420e4e3cf7">
 </head>
 <body>
 <div class="bg-era" id="bgEra" aria-hidden="true"></div>
@@ -40,6 +40,7 @@
     <h1 class="hero-title"><span class="t1">Horaghfus Evreni</span><span class="t2">Tam Zaman Çizelgesi</span></h1>
     <p class="hero-sub" id="heroSub">En yeniden en eskiye — aşağı kaydırdıkça zamanda geriye inersin.</p>
     <div class="legend"><span><i class="lg-major"></i>Büyük olay</span><span><i class="lg-minor"></i>Küçük olay</span><span><i class="lg-unc">≈</i>Tarihi belirsiz</span></div>
+    <a class="tj-btn" href="#eskiden-yeniye" data-jump="oldest" title="En eski kayda in; yukarı kaydırarak eskiden yeniye oku"><span class="tj-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15"><path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9s8 4 8 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M10 18.5h4l-2-2.2z" fill="currentColor"/></svg></span><span>Eskiden yeniye oku</span><i aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M12 4v15M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></i></a>
   </div>
   <a class="scroll-cue" href="#timeline" aria-label="Zaman çizelgesine in"><span>Geçmişe in</span><i></i></a>
 </header>
@@ -55,7 +56,8 @@
   <div class="end-sigil" aria-hidden="true">✦</div>
   <p class="end-title">Zamanın Şafağı</p>
   <p class="end-sub">Kayıtların başladığı yer: 1949 — Kadim Tanrılar Tarikatı Ayini</p>
-  <a class="back-top" href="#top">Bugüne dön ↑</a>
+  <p class="end-hint">Eskiden yeniye okumak için buradan yukarı kaydır; zaman ilerledikçe çağlar sırayla açılır.</p>
+  <a class="back-top" href="#top" data-jump="top">Bugüne dön ↑</a>
   <p class="end-credits">Olay sesleri: OpenGameArt ve Wikimedia Commons kayıtlarından düzenlendi (çoğu CC0 / kamu malı). CC BY ile kullanılanlar: Gregor Quendel (CC BY 4.0), Kat (CC BY 4.0), Michel Baradari (CC BY 3.0), congusbongus (CC BY 3.0), pla1554alaska (CC BY 3.0), thanvannispen (CC BY 3.0) — düzenlendi. <a href="assets/sfx/CREDITS.md" target="_blank" rel="noopener">Tüm ses kaynakları</a></p>
 </footer>
 
@@ -76,16 +78,16 @@
 </div>
 
 <noscript><p class="noscript">Bu zaman çizelgesini görmek için JavaScript gerekli.</p></noscript>
-<script src="data.js?v=642548196c"></script>
+<script src="data.js?v=cfc6ad3ece"></script>
 <script src="assets/themes.js?v=a24513ce13"></script>
 <script src="assets/music.js?v=5d58d20ce8"></script>
 <script src="assets/vendor/gsap.min.js?v=bf3fd8ec2a"></script>
 <script src="assets/vendor/ScrollTrigger.min.js?v=5445d0e95e"></script>
-<script src="assets/tags.js?v=5797793a50"></script>
-<script src="assets/app.js?v=707a3c6eb5"></script>
+<script src="assets/tags.js?v=2ce2c64971"></script>
+<script src="assets/app.js?v=e3267752e2"></script>
 <script src="assets/map-audio.js?v=57334702b9" defer></script>
 <script src="assets/map.js?v=ac752e4974" defer></script>
-<script src="assets/explore.js?v=afac02af4a" defer></script>
+<script src="assets/explore.js?v=fbbff1d371" defer></script>
 <script src="assets/katip.js?v=0815428b8b" defer></script>
 </body>
 </html>

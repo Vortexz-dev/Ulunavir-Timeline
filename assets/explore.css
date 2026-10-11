@@ -123,3 +123,12 @@ body.fx-lite .sr{backdrop-filter:none}
 }
 @media (prefers-reduced-motion:reduce){.tn,.sr,.sr-box{transition:none}.tn-neb i{animation:none}.tn.on .tn-cv{animation:none}}
 .tn [hidden],.sr [hidden]{display:none!important}
+.tn-names{height:36px;padding:0 13px;border-radius:18px;border:1px solid #e2b45a44;background:#0d0912cc;color:#e8d3a4;font:600 11.5px Cinzel,serif;letter-spacing:.05em;cursor:pointer;transition:box-shadow .25s,border-color .25s,background .25s}
+.tn-names:hover,.tn-names:focus-visible{border-color:#e2b45aaa;box-shadow:0 0 12px #e2b45a33}
+.tn-names[aria-pressed=true]{background:linear-gradient(180deg,#3a2614,#22160c);border-color:#e2b45a;color:#ffe6b0}
+.tn-names .n-off,.tn.names .tn-names .n-on{display:none}.tn.names .tn-names .n-off{display:inline}
+.tn.list .tn-names{display:none}
+.tn-names b{font-weight:inherit}.tn-names .sm{display:none}
+@media (max-width:700px){.tn-names{height:34px;padding:0 10px;font-size:10.5px}.tn-names .lg{display:none}.tn-names .sm{display:inline}}
+.tn-mode b{font-weight:inherit}.tn-mode .sm{display:none}
+@media (max-width:700px){.tn-mode .lg{display:none}.tn-mode .sm{display:inline}}
