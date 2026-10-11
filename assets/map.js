@@ -1707,7 +1707,7 @@
         nextSerp -= dt; if (nextSerp <= 0 && !lt){ nextSerp = rnd(240, 480); var s0 = seaPt(220, 380); if (s0) sky.push({k: 'serp', x: s0[0], y: s0[1], a: rnd(0, 6.28), t: 0, life: 14}); else nextSerp = 40; }
         for (i = sky.length - 1; i >= 0; i--){ sky[i].t += dt; if (sky[i].t > sky[i].life) sky.splice(i, 1); }
         // rainbows where a storm has just rained out (daytime); lightning bolts on new flashes
-        while (STORM.ended.length){ var en = STORM.ended.shift(); if (DN.v.day > .45 && t - en.t < 5) bows.push({x: en.x + en.r * .3, y: en.y + en.r * .5, r: en.r * .55, t: 0, life: 45}); }
+        while (STORM.ended.length){ var en = STORM.ended.shift(); if (DN.v.day > .45 && t - en.t < 5 && Math.random() < (en.tier <= 3 ? .3 : .1)) bows.push({x: en.x + en.r * .3, y: en.y + en.r * .5, r: en.r * .55, t: 0, life: 45}); }
         for (i = bows.length - 1; i >= 0; i--){ bows[i].t += dt; if (bows[i].t > bows[i].life) bows.splice(i, 1); }
         if (!lt) STORM.cells.forEach(function(c0, j){ var b = c0.bolt || 0; if (b !== seen[j]){ seen[j] = b; if (c0.a > .3) bolts.push(mkBolt(c0, t)); } });
         for (i = bolts.length - 1; i >= 0; i--) if (t - bolts[i].t > .75) bolts.splice(i, 1);
@@ -1803,17 +1803,16 @@
       }
       function step(dt, lt){
         var on = wxActive() && !lt;
-        for (var i = L.length - 1; i >= 0; i--){ var k = L[i]; k.t += dt; if (!on) k.life = Math.min(k.life, k.t + 6); k.x += k.vx * dt; k.y += k.vy * dt; k.vx += Math.sin(k.t * .23 + k.ph) * dt * .9; k.vy += Math.cos(k.t * .17 + k.ph) * dt * .6;
+        for (var i = L.length - 1; i >= 0; i--){ var k = L[i]; k.t += dt; if (!on) k.life = Math.min(k.life, k.t + 6); if (k.cell){ var cc0 = k.cell; if (cc0.tier !== 5) k.life = Math.min(k.life, k.t + 6); k.ox += Math.sin(k.t * .21 + k.ph) * dt * 4; k.oy += Math.cos(k.t * .17 + k.ph) * dt * 2.5; k.x = cc0.x + k.ox; k.y = cc0.y + k.oy; } else { k.x += k.vx * dt; k.y += k.vy * dt; } k.vx += Math.sin(k.t * .23 + k.ph) * dt * .9; k.vy += Math.cos(k.t * .17 + k.ph) * dt * .6;
           if (STORM.south(k.x, k.y)) k.life = Math.min(k.life, k.t + 5); if (k.t > k.life) L.splice(i, 1); }
         if (!on) return;
-        next -= dt; if (next <= 0){ if (L.length < 2){ spawn(); if (L.length === 1 && Math.random() < .12) spawn(); } next = rnd(150, 320); }
       }
-      function near(x, y){ var b = 0; for (var i = 0; i < L.length; i++){ var k = L[i], fa = Math.min(1, k.t / 5, (k.life - k.t) / 6); b = Math.max(b, fa * (1 - sstep(60, 420 * k.sc, Math.hypot(k.x - x, k.y - y)))); } return b; }
+      function near(x, y){ var b = 0; for (var i = 0; i < L.length; i++){ var k = L[i], fa = Math.max(0, Math.min(1, k.t / 5, (k.life - k.t) / 6)); b = Math.max(b, fa * (1 - sstep(60, 420 * k.sc, Math.hypot(k.x - x, k.y - y)))); } return b; }
       function draw(t){
         if (!L.length) return; var s = view.s, cp = capSprite();
         for (var i = 0; i < L.length; i++){
           var k = L[i], G = toScreen(k.x, k.y), hgt = Math.max(30, 165 * s) * k.sc, wd = Math.max(3, 11 * s) * k.sc; if (!vis(G, hgt * 1.4)) continue;
-          var fa = Math.min(1, k.t / 5, (k.life - k.t) / 6), rope = sstep(k.life - 9, k.life, k.t), wet = !isLand(k.x, k.y), tw = t * 2.1 + k.ph;
+          var fa = Math.min(1, k.t / 5, (k.life - k.t) / 6); if (fa <= 0) continue; var rope = sstep(k.life - 9, k.life, k.t), wet = !isLand(k.x, k.y), tw = t * 2.1 + k.ph;
           var lean = Math.sin(t * .4 + k.ph) * .25 + rope * .9, wdk = wd * (1 - .65 * rope);
           // ground contact: spray (sea) or dust (land) ring + spinning debris
           c.globalAlpha = .45 * fa; c.fillStyle = wet ? 'rgba(226,236,242,.85)' : 'rgba(150,122,92,.85)';
@@ -1844,7 +1843,9 @@
         }
       }
       return {step: step, draw: draw, near: near, count: function(){ return L.length; }, list: function(){ return L.map(function(k){ return [Math.round(k.x), Math.round(k.y), +k.sc.toFixed(2), +k.t.toFixed(0)]; }); },
-        force: function(x, y, sc){ spawn(x, y, sc); if (L.length > 2) L.shift(); L[L.length - 1].t = 6; }, nextIn: function(){ return +next.toFixed(1); }};
+        force: function(x, y, sc){ L.length = 0; spawn(x, y, sc); L[0].t = 6; }, nextIn: function(){ return -1; },
+        attach: function(c0){ L.length = 0; var u = Math.random(); L.push({cell: c0, ox: c0.r * rnd(-.15, .15), oy: c0.r * rnd(0, .2), x: c0.x, y: c0.y, sc: .66 + .3 * u * u, t: -12, life: c0.life - 26, vx: 0, vy: 0, ph: rnd(0, 9)}); },
+        detach: function(){ L.length = 0; }};
     })();
     // ---- coastal fishing boats: many small boats close to the shore near settlements/harbours. They potter between
     // fishing spots, stop to fish (bobbing, net drifting) and carry one lantern at night. Not in the abandoned south.
@@ -2035,7 +2036,7 @@
       stats: function(){ return {ships: ships.length, wakes: wakes.length, wakePts: wakes.reduce(function(n, w){ return n + w.pts.length; }, 0), galleon: (function(){ var g = ships.filter(function(k){ return k.type === "galleon" && k.t > 300; })[0]; if (!g) return null; var q = shipPos(g); return [Math.round(q.x), Math.round(q.y)]; })(), fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
         harb: ships.filter(function(k){ return k.port && (k.t < 260 || k.run - k.t < 260); }).slice(0, 8).map(function(k){ var q = shipPos(k); return [Math.round(q.x), Math.round(q.y), k.type]; }),
         portShips: ships.filter(function(k){ return k.port; }).length, routes: PORTR ? PORTR.length : 0, sinking: ships.filter(function(k){ return k.sink >= 0; }).length, pirate: PIRATE.p ? PIRATE.p.st : null, pirPos: PIRATE.p ? [Math.round(PIRATE.p.x), Math.round(PIRATE.p.y), +PIRATE.p.t.toFixed(1)] : null, pirates: PIRATE.list(), pirCount: PIRATE.counts(), nat: NAT.st(),
-        tornado: TORN.list(), airships: AIRS.list(), airWant: AIRS.want(), tornNext: TORN.nextIn(), storms: STORM.count(), sand: +STORM.sand.a.toFixed(2), fishing: FISHB.length, fishPts: fishPts ? fishPts.length : 0, fishPos: FISHB.slice(0, 4).map(function(b){ return [Math.round(b.x), Math.round(b.y)]; }), snow: SNOW.n(),
+        tornado: TORN.list(), airships: AIRS.list(), airWant: AIRS.want(), tornNext: TORN.nextIn(), storms: STORM.count(), wxTiers: STORM.tiers(), wxInfo: STORM.info(), sand: +STORM.sand.a.toFixed(2), fishing: FISHB.length, fishPts: fishPts ? fishPts.length : 0, fishPos: FISHB.slice(0, 4).map(function(b){ return [Math.round(b.x), Math.round(b.y)]; }), snow: SNOW.n(),
         shipPos: ships.slice(0, 6).map(function(k){ var q = shipPos(k); return [Math.round(q.x), Math.round(q.y)]; }),
         net: !!NET, netEdges: netEdges.length, armies: armies, lights: LN, pools: NGL.pools, dynLights: NGL.dyn, kinds: cars.reduce(function(o, k){ o[k.kind] = (o[k.kind] || 0) + 1; return o; }, {}), hops: cars.filter(function(k){ return k.hops; }).length,
         cars: cars.length, carRoads: cars.reduce(function(o, k){ var j = roadGeo().indexOf(k.g); o[j] = (o[j] || 0) + 1; return o; }, {}), gates: cars.filter(function(k){ return k.gate; }).length, flocks: flocks.length, roads: roadGeo().length, lanes: lanes.length, smoke: smoke.length, land: landPts.length,
@@ -2044,64 +2045,83 @@
         carPos: cars.slice(0, 4).map(function(k){ var q = at(k, k.d); return [Math.round(q.x), Math.round(q.y)]; })}; }};
   })();
 
-  // ---------------------------------------------------------------- storm cells (rendered in the shader) + desert sandstorm
-  // At most 3 storm cells on the whole map at once (rotating dark cloud mass, rain, lightning), over sea or land. Never over
-  // the Southern Lands (abandoned desert): there a sandstorm forms now and then instead. Tornadoes/waterspouts are a separate,
-  // rare event (LIFE TORN), not part of every storm. Toggles: ALL weather (storms, rain, tornadoes, sandstorm, snow) runs only
-  // while the weather toggle is on; hiding the clouds also hides the storm clouds, rain, tornadoes and the sandstorm.
+  // ---------------------------------------------------------------- tiered weather cells (rendered in the shader) + desert sandstorm
+  // t132/t133 tiers, most -> least common (weights of a new cell; at most 4 cells on the map, usually 0-2):
+  //   1 light drizzle under a few pale clouds (46 %)   2 rain under dense grey clouds (28 %)   3 rain under dark clouds (17 %)
+  //   4 thunderstorm: black clouds, heavy rain, lightning + thunder (9 %; max 2 at once)
+  //   5 tornado storm: a thunderstorm with ONE funnel (LIFE TORN). Own timer: never at map open, first after 5-8 min,
+  //     then 8-15 min after the previous one ended; max 1. No cell lives longer than one day+night cycle (2 min).
+  // No rain over the Southern Lands (an occasional orange sandstorm there). Thunder (audio near()) and lightning only for 4-5.
+  // Rainbows: sometimes after a rain cell ends (daytime, NAT). Toggles: everything only while weather AND clouds are on.
   function wxActive(){ return wxOn && cloudsOn; }
   var STORM = (function(){
-    var NC = 3, cells = [mk(), mk(), mk()], last = 0, ended = [], first = true;
-    cells[1].wait = 25 + Math.random() * 50; cells[2].wait = 70 + Math.random() * 90;   // the others brew up later
+    var NC = 4, cells = [mk(), mk(), mk(), mk()], last = 0, ended = [], clock = 0;
+    var TI = [null,   // r: radius range, life (s), dark 0-1, rain 0-1, rot: slow drift of the cloud mass (no vortex look)
+      {w: .46, r: [190, 290], life: [40, 80], dark: 0, rain: .35, rot: 0},
+      {w: .28, r: [250, 360], life: [50, 95], dark: .4, rain: .62, rot: 0},
+      {w: .17, r: [290, 410], life: [60, 105], dark: .72, rain: .86, rot: 0},
+      {w: .09, r: [330, 470], life: [65, 110], dark: 1, rain: 1, rot: .01},
+      {w: 0, r: [350, 450], life: [85, 115], dark: 1, rain: 1, rot: .01}];
+    var cap = 1 + ((Math.random() * 2) | 0), nextCap = 90 + Math.random() * 110, nextSpawn = 4 + Math.random() * 10, nextT5 = 300 + Math.random() * 180, log = [0, 0, 0, 0, 0, 0];
     var sand = {x: -9999, y: -9999, r: 420, a: 0, life: 0, age: 0, vx: 0, vy: 0, next: 30 + Math.random() * 60};
-    function mk(){ return {x: -9999, y: -9999, r: 300, a: 0, fl: 0, life: 0, age: 0, vx: 0, vy: 0, next: 0, f2: 0, rot: 1, land: 0, wait: 0}; }
+    function mk(){ return {x: -9999, y: -9999, r: 300, a: 0, fl: 0, life: 0, age: 0, vx: 0, vy: 0, next: 0, f2: 0, rot: 0, land: 0, tier: 0, dark: 0, rain: 0}; }
     function south(x, y){ return y > 3550 && x > 1150 && x < 3500; }
-    function spawn(c0, t){
-      var ok = false, overLand = Math.random() < .45;
+    function rr(a){ return a[0] + Math.random() * (a[1] - a[0]); }
+    function active(){ var n = 0; for (var i = 0; i < NC; i++) if (cells[i].age < cells[i].life) n++; return n; }
+    function nTier(lo){ var n = 0; for (var i = 0; i < NC; i++) if (cells[i].age < cells[i].life && cells[i].tier >= lo) n++; return n; }
+    function free(){ for (var i = 0; i < NC; i++) if (cells[i].age >= cells[i].life) return cells[i]; return null; }
+    function spawn(c0, tier, t, fx, fy){
+      var P = TI[tier], r = rr(P.r), ok = fx != null, overLand = Math.random() < .5, x = fx, y = fy;
       for (var i = 0; i < 80 && !ok; i++){
-        var x, y;
-        if (overLand){ var lp = LIFE.landPt(); if (!lp) break; x = lp[0] - 160; y = lp[1] - 40; }
-        else { x = 300 + Math.random() * (W - 600); y = 300 + Math.random() * (H - 600); var d = LIFE.coastDist(x, y); if (d < 160 || d > 560) continue; }
-        if (south(x, y) || south(x + 400, y + 150)) continue;
-        for (var j = 0; j < NC; j++){ var o = cells[j]; if (o !== c0 && o.a > 0 && Math.hypot(o.x - x, o.y - y) < o.r + 500){ x = null; break; } }   // keep cells apart
-        if (x == null) continue;
-        c0.x = x; c0.y = y; ok = true;
+        if (overLand){ var lp = LIFE.landPt(); if (!lp) break; x = lp[0] - 120; y = lp[1] - 30; }
+        else { x = 300 + Math.random() * (W - 600); y = 300 + Math.random() * (H - 600); var d = LIFE.coastDist(x, y); if (d < 120 || d > 560) continue; }
+        if (south(x, y) || south(x + 300, y + 120)) continue;
+        var clash = false; for (var j = 0; j < NC; j++){ var o = cells[j]; if (o !== c0 && o.age < o.life && Math.hypot(o.x - x, o.y - y) < o.r + r + 250){ clash = true; break; } }   // keep cells apart
+        if (!clash) ok = true;
       }
-      if (!ok){ c0.life = 1; c0.age = 1; c0.a = 0; c0.x = -9999; c0.wait = 15; return; }
-      c0.land = overLand ? 1 : 0; c0.r = 360 + Math.random() * 240; c0.age = 0; c0.life = 150 + Math.random() * 150;
-      c0.vx = 4 + Math.random() * 5; c0.vy = 1 + Math.random() * 3; c0.next = t + 3 + Math.random() * 6; c0.rot = Math.random() < .5 ? 1 : -1;
+      if (!ok) return false;
+      c0.x = x; c0.y = y; c0.r = r; c0.tier = tier; c0.dark = P.dark; c0.rain = P.rain; c0.rot = P.rot * (Math.random() < .5 ? 1 : -1);
+      c0.land = overLand ? 1 : 0; c0.age = 0; c0.life = Math.min(118, rr(P.life)); c0.a = 0; c0.fl = 0;
+      c0.vx = 3 + Math.random() * 5; c0.vy = .5 + Math.random() * 2.5; c0.next = t + 6 + Math.random() * 6; log[tier]++;
+      if (tier === 5 && LIFE.dbg && LIFE.dbg.torn) LIFE.dbg.torn.attach(c0);
+      return true;
     }
+    function pickTier(){ var u = Math.random(), k = 1; for (; k < 4; k++){ if (u < TI[k].w) break; u -= TI[k].w; } if (k === 4 && (nTier(4) >= 2 || clock < 45)) k = 3; return k; }
     function step(t){
       var dt = last ? Math.min(.2, t - last) : 0; last = t; var on = wxActive();
+      if (on) clock += dt;
+      if (on){
+        nextCap -= dt; if (nextCap <= 0){ var u = Math.random(); cap = u < .12 ? 0 : u < .4 ? 1 : u < .72 ? 2 : u < .92 ? 3 : 4; nextCap = 90 + Math.random() * 110; }
+        nextT5 -= dt; if (nextT5 <= 0){ var f5 = nTier(5) < 1 && nTier(4) < 2 ? free() : null; if (f5 && spawn(f5, 5, t)) nextT5 = 1e9; else nextT5 = 20; }
+        nextSpawn -= dt; if (nextSpawn <= 0){ nextSpawn = 8 + Math.random() * 22; if (active() < cap){ var fc = free(); if (fc) spawn(fc, pickTier(), t); } }
+      }
       for (var i = 0; i < NC; i++){
         var c0 = cells[i];
-        if (!on){ c0.a = Math.max(0, c0.a - dt / 5); c0.fl = 0; if (c0.a <= 0){ c0.age = c0.life = 0; c0.x = -9999; c0.wait = 4 + i * 20 + Math.random() * 30; } continue; }
-        if (c0.age >= c0.life){
-          if (c0.life && c0.x > -9000){ ended.push({x: c0.x, y: c0.y, r: c0.r, t: t}); c0.x = -9999; c0.a = 0; c0.wait = 25 + Math.random() * 60; }
-          c0.wait -= dt;
-          if (first && i === 0){ spawn(c0, t); c0.age = 20; first = false; }                       // one storm already brewing on open
-          else if (c0.wait <= 0) spawn(c0, t);
-          continue;
-        }
+        if (c0.age >= c0.life){ if (c0.x > -9000){ if (c0.life > 0 && on) ended.push({x: c0.x, y: c0.y, r: c0.r, t: t, tier: c0.tier}); if (c0.tier === 5) nextT5 = 480 + Math.random() * 420; c0.x = -9999; c0.a = 0; c0.fl = 0; c0.tier = 0; } continue; }
+        if (!on){ c0.life = Math.min(c0.life, c0.age + 5); }
         c0.age += dt; c0.x += c0.vx * dt; c0.y += c0.vy * dt;
-        if (south(c0.x, c0.y)) c0.life = Math.min(c0.life, c0.age + 12);   // drifting toward the desert: rain out before it
-        c0.a = Math.max(0, Math.min(1, c0.age / 14, (c0.life - c0.age) / 14));
-        if (t > c0.next){ c0.f2 = t; c0.next = t + 3 + Math.random() * 9; c0.bolt = (c0.bolt || 0) + 1; }
-        var e = t - c0.f2; c0.fl = e < 0 || e > .7 ? 0 : (e < .08 ? 1 : e < .16 ? .25 : e < .24 ? .8 : Math.max(0, .8 - (e - .24) * 2));
+        if (south(c0.x, c0.y)) c0.life = Math.min(c0.life, c0.age + 10);   // drifting toward the desert: rain out before it
+        var fin = c0.tier >= 4 ? 14 : 10; c0.a = Math.max(0, Math.min(1, c0.age / fin, (c0.life - c0.age) / fin));
+        if (c0.tier >= 4){ if (t > c0.next){ c0.f2 = t; c0.next = t + 3 + Math.random() * 9; c0.bolt = (c0.bolt || 0) + 1; }
+          var e = t - c0.f2; c0.fl = e < 0 || e > .7 ? 0 : (e < .08 ? 1 : e < .16 ? .25 : e < .24 ? .8 : Math.max(0, .8 - (e - .24) * 2)); } else c0.fl = 0;
       }
       // sandstorm over the Southern Lands: forms, drifts with the wind for a while, dissipates (weather off: fades away)
       if (!on){ sand.a = Math.max(0, sand.a - dt / 5); if (sand.a <= 0) sand.age = sand.life; }
       else if (sand.age >= sand.life){ sand.a = 0; sand.next -= dt; if (sand.next <= 0){ var lp2 = null; for (var k = 0; k < 40; k++){ var q = LIFE.landPt(); if (q && q[1] > 3900 && q[0] > 1500 && q[0] < 3100){ lp2 = q; break; } }
-          if (lp2){ sand.x = lp2[0] - 220; sand.y = lp2[1]; sand.r = 600 + Math.random() * 300; sand.age = 0; sand.life = 120 + Math.random() * 90; sand.vx = 7 + Math.random() * 6; sand.vy = (Math.random() - .5) * 4; }
+          if (lp2){ sand.x = lp2[0] - 220; sand.y = lp2[1]; sand.r = 600 + Math.random() * 300; sand.age = 0; sand.life = 70 + Math.random() * 45; sand.vx = 7 + Math.random() * 6; sand.vy = (Math.random() - .5) * 4; }
           sand.next = 140 + Math.random() * 160; } }
-      else { sand.age += dt; sand.x += sand.vx * dt; sand.y += sand.vy * dt; sand.a = Math.max(0, Math.min(1, sand.age / 22, (sand.life - sand.age) / 28)); }
+      else { sand.age += dt; sand.x += sand.vx * dt; sand.y += sand.vy * dt; sand.a = Math.max(0, Math.min(1, sand.age / 18, (sand.life - sand.age) / 20)); }
     }
-    function near(x, y){ var b = 0; for (var i = 0; i < NC; i++){ var c0 = cells[i]; if (c0.a > .05) b = Math.max(b, c0.a * (1 - Math.min(1, Math.hypot(c0.x - x, c0.y - y) / (c0.r * 2.2)))); } return b; }
+    // storm audio (rain + thunder loop) only near thunderstorms (tiers 4-5)
+    function near(x, y){ var b = 0; for (var i = 0; i < NC; i++){ var c0 = cells[i]; if (c0.tier >= 4 && c0.a > .05) b = Math.max(b, c0.a * (1 - Math.min(1, Math.hypot(c0.x - x, c0.y - y) / (c0.r * 2.2)))); } return b; }
     function nearSand(x, y){ return sand.a > .05 ? sand.a * (1 - Math.min(1, Math.hypot(sand.x - x, sand.y - y) / (sand.r * 2))) : 0; }
     return {cells: cells, step: step, near: near, nearSand: nearSand, sand: sand, ended: ended, south: south,
       count: function(){ var n = 0; for (var i = 0; i < NC; i++) if (cells[i].a > .05) n++; return n; },
-      force: function(kind, x, y){ if (kind === 'sand'){ sand.x = x; sand.y = y; sand.r = 750; sand.age = 23; sand.life = 200; sand.vx = 9; sand.vy = 0; }
-        else { var c0 = cells[kind === 'land' ? 1 : 0]; c0.x = x; c0.y = y; c0.r = 460; c0.age = 15; c0.life = 260; c0.vx = 5; c0.vy = 1.5; c0.next = 0; c0.land = kind === 'land' ? 1 : 0; } }};
+      tiers: function(){ return cells.filter(function(c0){ return c0.age < c0.life; }).map(function(c0){ return [c0.tier, Math.round(c0.age), Math.round(c0.life)]; }); },
+      info: function(){ return {clock: +clock.toFixed(1), cap: cap, nextT5: +nextT5.toFixed(0), spawned: log.slice(1)}; },
+      force: function(kind, x, y){ if (kind === 'sand'){ sand.x = x; sand.y = y; sand.r = 750; sand.age = 19; sand.life = 110; sand.vx = 9; sand.vy = 0; return; }
+        var tier = kind === 't1' ? 1 : kind === 't2' ? 2 : kind === 't3' ? 3 : kind === 't5' ? 5 : 4;
+        var c0 = free() || cells[0]; if (c0.tier === 5) LIFE.dbg.torn.detach(); c0.life = 0; spawn(c0, tier, last, x, y); c0.age = 12; }};
   })();
   var cloudsOn = true; try { cloudsOn = localStorage.getItem('ulv-map-clouds') !== '0'; } catch(e){}
   // ---------------------------------------------------------------- day/night cycle: 1 min day + 1 min night; paused = eases back to noon
@@ -2126,13 +2146,13 @@
 
   // ---------------------------------------------------------------- atmosphere (WebGL)
   var FXL = (function(){
-    var STA = new Float32Array(16), RN = [0, 0, 0], SNX = [0, 0, 0], SNY = [0, 0, 0], lastFx = 0;
+    var STA = new Float32Array(16), SQA = new Float32Array(16), RN = [0, 0, 0], SNX = [0, 0, 0], SNY = [0, 0, 0], lastFx = 0;
     var gl = null, prog = null, U = {}, tex = null, tex2 = null, hasBase = false, ok = false, ratio = 0.5, tried = false, fallback = null;
     var VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
     var FS = [
       'precision mediump float;',
       'uniform sampler2D uField;uniform vec2 uRes;uniform float uK;uniform vec3 uView;uniform vec2 uMap;uniform vec2 uCenter;',
-      'uniform float uTime;uniform float uZoom;uniform float uLite;uniform vec4 uFogP;uniform float uCloud;uniform vec2 uWind;uniform vec4 uSt[4];uniform vec4 uFl;uniform vec4 uSr;uniform vec4 uSand;uniform vec3 uRn;uniform vec3 uSnX;uniform vec3 uSnY;',
+      'uniform float uTime;uniform float uZoom;uniform float uLite;uniform vec4 uFogP;uniform float uCloud;uniform vec2 uWind;uniform vec4 uSt[4];uniform vec4 uFl;uniform vec4 uSr;uniform vec4 uSq[4];uniform vec4 uSand;uniform vec3 uRn;uniform vec3 uSnX;uniform vec3 uSnY;',
       'uniform sampler2D uBase;uniform float uHasBase;uniform vec4 uDN;uniform vec2 uSun;uniform float uWx;',
       'float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
@@ -2194,20 +2214,20 @@
       ' over(o,fogC,fogA);',
       // storm cells: wet darkened ground, three depth layers of angled rain streaks (varied lengths/speeds) + splashes,
       // a dense dark cloud mass rotating slowly (faster near the core) with gaps, lit from inside by lightning
-      ' if(uLite<.5){for(int k=0;k<3;k++){vec4 S=uSt[k]; if(S.w<.01)continue; vec2 rel=w-S.xy; float r=length(rel)/S.z; if(r>1.45)continue;',
-      '  float ro=uSr[k]*t*.035*(1.3-min(r,1.)); float ca=cos(ro),sa=sin(ro); vec2 rr=vec2(ca*rel.x-sa*rel.y,sa*rel.x+ca*rel.y);',
-      '  float cn=fb3(rr/(S.z*.42)+float(k)*7.3)*.85+n(rr/(S.z*.06))*.15; float dd=r+(cn-.5)*.8; float m=(1.-smoothstep(.15,1.,dd))*S.w; if(m<.003)continue;',
-      '  float fl=uFl[k]; over(o,vec3(.02,.025,.04),m*.5);',
-      '  float ra=smoothstep(.2,.65,m)*smoothstep(.06,.3,uZoom); if(ra>.01){float rain=0.;',
-      '   for(int L=0;L<3;L++){float fL=float(L); float cw=7.+fL*5.; float xs=css.x+css.y*(.30+fL*.04); float col=floor(xs/cw); float hc=h(vec2(col,fL*13.1+float(k))); float h2=h(vec2(col*1.7,fL+3.3));',
+      ' if(uLite<.5){for(int k=0;k<4;k++){vec4 S=uSt[k]; if(S.w<.01)continue; vec2 rel=w-S.xy; float r=length(rel)/S.z; if(r>1.45)continue;',
+      '  vec4 Q=uSq[k]; float D=Q.x; float ro=Q.z*t; float ca=cos(ro),sa=sin(ro); vec2 rr=vec2(ca*rel.x-sa*rel.y,sa*rel.x+ca*rel.y)-vec2(t*1.5,0.);',
+      '  float cn=fb3(rr/(S.z*.42)+float(k)*7.3)*.85+n(rr/(S.z*.06))*.15; float dd=r+(cn-.5)*(1.3-.5*D); float m=(1.-smoothstep(.15,1.,dd))*S.w; if(m<.003)continue;',
+      '  float fl=k==0?uFl.x:k==1?uFl.y:k==2?uFl.z:uFl.w; over(o,vec3(.02,.025,.04),m*(.1+.4*D));',
+      '  float nL=Q.y<.5?1.:Q.y<.8?2.:3.; float ra=smoothstep(.2,.65,m)*smoothstep(.06,.3,uZoom)*(.45+.55*Q.y); if(ra>.01){float rain=0.;',
+      '   for(int L=0;L<3;L++){float fL=float(L); if(fL>=nL)break; float cw=7.+fL*5.; float xs=css.x+css.y*(.30+fL*.04); float col=floor(xs/cw); float hc=h(vec2(col,fL*13.1+float(k))); float h2=h(vec2(col*1.7,fL+3.3));',
       '    float PL=90.+fL*35.; float Pc=PL*exp2(floor(hc*2.99)); float off=L==0?uRn.x:L==1?uRn.y:uRn.z; float yy=fract((css.y-off)/Pc+h2*5.)*Pc; float len=PL*(.25+.5*h2);',
       '    float st=smoothstep(0.,len*.15,yy)*(1.-smoothstep(len*.5,len,yy)); float xl=abs(fract(xs/cw)-.5)*cw-(h2-.5)*cw*.5; rain+=(1.-smoothstep(.5+fL*.3,1.6+fL*.7,abs(xl)))*st*step(.35-fL*.1,hc)*(.30+fL*.25);}',
       '   over(o,vec3(.70,.75,.84),min(rain,1.)*ra*.42);',
-      '   vec2 sid=floor(css/5.); float sph=fract(uRn.x*.013+h(sid)*7.); float sp=step(.975,h(sid+floor(uRn.x*.013+h(sid)*7.)))*(1.-smoothstep(0.,.25,sph));o.rgb+=vec3(.78,.83,.92)*sp*ra*.22*smoothstep(.3,.6,uZoom);}',
+      '   if(Q.y>.8){vec2 sid=floor(css/5.); float sph=fract(uRn.x*.013+h(sid)*7.); float sp=step(.975,h(sid+floor(uRn.x*.013+h(sid)*7.)))*(1.-smoothstep(0.,.25,sph));o.rgb+=vec3(.78,.83,.92)*sp*ra*.22*smoothstep(.3,.6,uZoom);}}',
       '  float cn2=n(rr/70.+vec2(t*.04,0.))*.6+n(rr/26.-vec2(0.,t*.05))*.4; float body=smoothstep(.22,.6,cn+cn2*.28)*smoothstep(0.,.5,m)*S.w;',
-      '  float cnl=fb3((rr-uSun*S.z*.06)/(S.z*.42)+float(k)*7.3)*.85+n((rr-uSun*S.z*.06)/(S.z*.06))*.15; float lit=clamp((cn-cnl)*5.+.35,0.,1.);',
-      '  vec3 cc=mix(vec3(.06,.065,.08),vec3(.36,.38,.43),clamp(cn2*.9-.15+lit*.55,0.,1.));',
-      '  over(o,cc,min(body*.9,.88)); o.rgb+=vec3(.82,.87,1.)*fl*(body*.85+m*.25);}}',
+      '  float lit=.5; if(D>.3){float cnl=fb3((rr-uSun*S.z*.06)/(S.z*.42)+float(k)*7.3)*.85+n((rr-uSun*S.z*.06)/(S.z*.06))*.15; lit=clamp((cn-cnl)*5.+.35,0.,1.);}',
+      '  vec3 cc=mix(mix(vec3(.66,.68,.72),vec3(.06,.065,.08),D),mix(vec3(.95,.95,.97),vec3(.36,.38,.43),D),clamp(cn2*.9-.15+lit*.55,0.,1.));',
+      '  over(o,cc,min(body*.9,.62+.26*D)); o.rgb+=vec3(.82,.87,1.)*fl*(body*.85+m*.25);}}',
       // sandstorm (Southern Lands): a dense orange dust wall with turbulent billows and fast streaks; ground dims beneath
       ' if(uSand.w>.01){vec2 rel=w-uSand.xy; float r=length(rel*vec2(.8,1.25))/uSand.z; if(r<1.6){',
       '  vec2 q2=rel/(uSand.z*.55)-vec2(t*.05,0.); float d1=fb3(q2+fb3(q2*1.7+vec2(t*.03,0.))*1.3); float m=(1.-smoothstep(.1,1.05,r+(d1-.5)*.9))*uSand.w;',
@@ -2264,7 +2284,7 @@
       gl.useProgram(prog);
       var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['uField','uRes','uK','uView','uMap','uCenter','uTime','uZoom','uLite','uFogP','uCloud','uWind','uSt','uFl','uSr','uSand','uRn','uSnX','uSnY','uBase','uHasBase','uDN','uSun','uWx'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
+      ['uField','uRes','uK','uView','uMap','uCenter','uTime','uZoom','uLite','uFogP','uCloud','uWind','uSt','uFl','uSr','uSq','uSand','uRn','uSnX','uSnY','uBase','uHasBase','uDN','uSun','uWx'].forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
       tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 1, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, new Uint8Array([255]));
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -2319,8 +2339,9 @@
       gl.uniform4f(U.uFogP, F.clearPx || 70, F.densePx || 420, F.edge || 0.14, F.strength == null ? 1 : F.strength);
       gl.uniform1f(U.uCloud, cloudsOn ? (C.strength == null ? 1 : C.strength) * (lt ? 0.8 : 1) : 0);
       STORM.step(time); var SC = STORM.cells, off = lt || reduce;
-      for (var si = 0; si < 3; si++){ var Sx = SC[si]; STA[si * 4] = Sx.x; STA[si * 4 + 1] = Sx.y; STA[si * 4 + 2] = Sx.r; STA[si * 4 + 3] = off ? 0 : Sx.a; }
-      gl.uniform4fv(U.uSt, STA); gl.uniform4f(U.uFl, SC[0].fl, SC[1].fl, SC[2].fl, 0); gl.uniform4f(U.uSr, SC[0].rot, SC[1].rot, SC[2].rot, 1);
+      for (var si = 0; si < 4; si++){ var Sx = SC[si]; STA[si * 4] = Sx.x; STA[si * 4 + 1] = Sx.y; STA[si * 4 + 2] = Sx.r; STA[si * 4 + 3] = off ? 0 : Sx.a;
+        SQA[si * 4] = Sx.dark; SQA[si * 4 + 1] = Sx.rain; SQA[si * 4 + 2] = Sx.rot; SQA[si * 4 + 3] = 0; }
+      gl.uniform4fv(U.uSt, STA); gl.uniform4fv(U.uSq, SQA); gl.uniform4f(U.uFl, SC[0].fl, SC[1].fl, SC[2].fl, SC[3].fl);
       var SD = STORM.sand; gl.uniform4f(U.uSand, SD.x, SD.y, SD.r, reduce ? 0 : SD.a);
       // fast-moving rain / snow offsets integrated here and wrapped (keeps shader numbers small: mediump-safe on phones)
       var fdt = lastFx ? Math.min(.1, Math.max(0, time - lastFx)) : 0; lastFx = time;
@@ -2386,7 +2407,7 @@
     view: function(){ return {s: view.s, x: view.x, y: view.y, fit: fitScale(), vw: vw, vh: vh}; },
     zoomTo: function(s, wx, wy){ var p = toScreen(wx, wy); view.x += vw / 2 - p.x; view.y += vh / 2 - p.y; zoomAt(s, vw / 2, vh / 2); kick(); },
     stats: function(){ return {fx: FXL.ok, gl: !!(cvF.getContext && FXL.ok), lite: lite(), tiles: tileCount, loaded: loaded, km: km(totalPx()), places: PLACES.length, roads: ROADS.length, life: LIFE.stats()}; },
-    fx: function(k, x, y, sc){ if (k === 'storm' || k === 'land' || k === 'sand') STORM.force(k === 'storm' ? 'sea' : k, x, y); else if (k === 'pirate') LIFE.dbg.pirate.force(); else if (k === 'tornado') LIFE.dbg.torn.force(x, y, sc); else if (k === 'airship') LIFE.dbg.air.force(x); else LIFE.dbg.nat.force(k, x, y); kick(); },
+    fx: function(k, x, y, sc){ if (k === 'storm' || k === 'land' || k === 'sand' || /^t[1-5]$/.test(k)) STORM.force(k, x, y); else if (k === 'pirate') LIFE.dbg.pirate.force(); else if (k === 'tornado') LIFE.dbg.torn.force(x, y, sc); else if (k === 'airship') LIFE.dbg.air.force(x); else LIFE.dbg.nat.force(k, x, y); kick(); },
     wx: function(on){ if (on != null){ wxOn = !!on; try { localStorage.setItem('ulv-map-wx', wxOn ? '1' : '0'); } catch(e){} syncToggles(); kick(); } return wxOn; },
     cfg: function(){ return CFG; }, clouds: function(){ return cloudsOn; }, spawnFlock: function(){ LIFE.spawn(); }, redraw: function(){ dirty = true; kick(); },
     isOpen: function(){ return isOpen; }, dn: function(p, run){ if (run != null) DN.setRun(run); if (p != null) DN.setPhase(p); kick(); return DN.v; },

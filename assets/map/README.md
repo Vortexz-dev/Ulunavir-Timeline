@@ -111,3 +111,17 @@ Circular, de-squashed crop of the painted whirlpool (centre ~4503,1380 full-res 
   chip opens the place's own tag card (`tagId` or `tag` field in places.json).
 - Test hooks: `__ulvMap.fx('tornado', x, y, scale)`, `__ulvMap.fx('airship', n)`, `__ulvMap.wx(on)`; stats: `tornado`,
   `storms`, `sand`, `fishing`, `snow`, `airships`, `pirCount`, `harb`.
+
+## t132/t133 tiered weather (replaces the t127 storm/tornado scheduling)
+- `STORM` keeps up to 4 cells (target count re-rolled every 90–200 s: 0 → 12 %, 1 → 28 %, 2 → 32 %, 3 → 20 %, 4 → 8 %;
+  a spawn attempt every 8–30 s, the first after 4–14 s). New cell tier weights, most → least common:
+  1 light drizzle, pale patchy clouds (46 %, life 40–80 s) · 2 rain, dense grey clouds (28 %, 50–95 s) ·
+  3 rain, dark clouds (17 %, 60–105 s) · 4 thunderstorm, black clouds + heavy rain + lightning + thunder (9 %, 65–110 s,
+  max 2 at once, none in the first 45 s) · 5 tornado storm = thunderstorm with one funnel (`TORN.attach`, funnel
+  appears ~12 s in, ropes out before the cell ends; own timer: first 5–8 min after open, then 8–15 min after the previous
+  one ended; max 1; never in the south). Every cell lives < 118 s (one day+night = 120 s); fade in/out 10–14 s.
+- Shader: per-cell `uSq[k]` = (darkness, rain amount, drift rotation). Tiers 1–2 draw 1–2 rain layers, no splashes and skip
+  the cloud-lighting noise (cheap); no vortex rotation any more (the t127 core-spinning cells read as tornadoes).
+- Thunder/rain audio (`STORM.near`) and lightning only for tiers 4–5. Rainbows: 30 % of daytime endings of tiers 1–3, 10 % of 4–5.
+- Southern Lands: no rain, sandstorm only (life 70–115 s). Weather or clouds toggle off → everything fades out in ~5 s.
+- Debug: `__ulvMap.fx('t1'..'t5', x, y)`; `stats().life.wxTiers` ([tier, age, life] per cell), `wxInfo` {clock, cap, nextT5, spawned per tier}.
