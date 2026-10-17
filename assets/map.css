@@ -117,6 +117,7 @@ body.fx-lite .mapx{backdrop-filter:none}
 
 /* ---- t121: night lights canvas, place labels, history pins, place/event panel */
 .mapx-night{position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none}
+.mapx-sky{position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none}
 .mapx-pins{position:absolute;inset:0;pointer-events:none}
 .mapx-pins.off{display:none}
 .mp-place{position:absolute;left:0;top:0;pointer-events:auto;padding:2px 6px;border:0;background:none;cursor:pointer;white-space:nowrap;transform-origin:50% 50%;
