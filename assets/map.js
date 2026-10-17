@@ -827,6 +827,7 @@
     var o = (lite() || reduce) ? 0 : Math.max(0, Math.min(1, (LIFE.zoomF() - .3) / .45)); o = Math.round(o * 20) / 20;
     if (o === tiltO) return; tiltO = o; dirty = true;
   }
+  var frameErr = {};
   function kick(){ if (!raf && isOpen) raf = requestAnimationFrame(frame); }
   function frame(t){
     raf = 0; if (!isOpen) return;
@@ -848,8 +849,8 @@
     DN.step(t / 1000);
     var animFx = FXL.ok && !reduce, period = lite() ? 33 : 0;
     var DBG = window.__ulvMapDbg || 0;
-    if (FXL.ok && !DBG.nofx && (t - fxLast >= period || reduce || moved)){ FXL.draw(t / 1000); fxLast = t; }
-    if (loaded && !reduce && !DBG.nolife && (t - lifeLast >= period || moved)){ LIFE.draw(t / 1000); lifeLast = t; }
+    if (FXL.ok && !DBG.nofx && (t - fxLast >= period || reduce || moved)){ fxLast = t; try { FXL.draw(t / 1000); } catch (e){ if (!frameErr.fx){ frameErr.fx = 1; console.error('[map] fx draw failed:', e); } } }
+    if (loaded && !reduce && !DBG.nolife && (t - lifeLast >= period || moved)){ lifeLast = t; try { LIFE.draw(t / 1000); } catch (e){ if (!frameErr.life){ frameErr.life = 1; console.error('[map] life draw failed:', e); } } }
     if (loaded && window.__ulvMapAudio && t - sndLast > 250){ sndLast = t; var cw0 = toWorld(vw / 2, vh / 2), pr = LIFE.probe(cw0.x, cw0.y); pr.zf = LIFE.zoomF(); pr.night = DN.v.night; pr.storm = Math.max(STORM.near(cw0.x, cw0.y), (pr.torn || 0) * .7); pr.desert = Math.max(pr.desert || 0, STORM.nearSand(cw0.x, cw0.y));
       pr.snow = wxOn ? Math.max(1 - lin(560, 980, cw0.y), 1 - lin(260, 520, Math.hypot(cw0.x - 2290, (cw0.y - 700) * 1.5))) : 0; window.__ulvMapAudio.update(pr); }
     // auto light: sustained < 32fps while open
@@ -1770,8 +1771,14 @@
             [[Sh, 'rgba(0,0,0,' + (.14 * fa) + ')'], [E, 'rgba(26,22,20,' + (.9 * fa * nightA) + ')']].forEach(function(o){ var X = o[0]; c.fillStyle = o[1]; c.beginPath(); c.moveTo(X.x + cx2 * es * .5, X.y + sx2 * es * .5);
               c.quadraticCurveTo(X.x - sx2 * es * .6, X.y + cx2 * es * .6 - es * .25, X.x - sx2 * es * 1.3 - cx2 * es * .2, X.y + cx2 * es * 1.3 - sx2 * es * .2); c.lineTo(X.x - cx2 * es * .5, X.y - sx2 * es * .5);
               c.lineTo(X.x + sx2 * es * 1.3 - cx2 * es * .2, X.y - cx2 * es * 1.3 - sx2 * es * .2); c.quadraticCurveTo(X.x + sx2 * es * .6, X.y - cx2 * es * .6 - es * .25, X.x + cx2 * es * .5, X.y + sx2 * es * .5); c.fill(); });
-          } else if (k.k === 'dragon' || k.k === 'serp'){ if (k.k === 'serp' && !k.sum){ drawHigh(k, fa); c.globalAlpha = 1; } else { var c00 = c; c = skyCtx(); drawHigh(k, fa); c.globalAlpha = 1; c = c00; } }
+          } else if (k.k === 'dragon' || k.k === 'serp'){ if (k.k === 'serp' && !k.sum){ drawHigh(k, fa); c.globalAlpha = 1; } else { var c00 = c; try { c = skyCtx(); drawHigh(k, fa); c.globalAlpha = 1; } finally { c = c00; } } }
         }
+        // rainbows + lightning bolts (t139: these lines had slipped into drawHigh, where day/t/i are undefined -> ReferenceError
+        // every frame a dragon/serpent was up: the frame died, c stayed on the sky canvas and the loop stopped)
+        if (day > .3) for (i = 0; i < bows.length; i++){ var b = bows[i], R0 = b.r * s, Bc = toScreen(b.x, b.y); if (!vis(Bc, R0 * 1.2)) continue; var ba = Math.min(1, b.t / 8, (b.life - b.t) / 12) * .26 * day;
+          var g = c.createRadialGradient(Bc.x, Bc.y, R0 * .86, Bc.x, Bc.y, R0); ['rgba(140,60,200,0)', 'rgba(140,60,200,1)', 'rgba(60,110,255,1)', 'rgba(60,200,120,1)', 'rgba(250,230,70,1)', 'rgba(255,150,40,1)', 'rgba(240,50,40,1)', 'rgba(240,50,40,0)'].forEach(function(cl, ci){ g.addColorStop(ci / 7, cl); });
+          c.globalAlpha = ba; c.strokeStyle = g; c.lineWidth = R0 * .14; c.beginPath(); c.arc(Bc.x, Bc.y, R0 * .93, Math.PI * 1.08, Math.PI * 1.92); c.stroke(); c.globalAlpha = 1; }
+        for (i = 0; i < bolts.length; i++) drawBolt(bolts[i], t);
       }
       function drawHigh(k, fa){
         var s = view.s, zf = zoomF(), nightA = 1 - DN.v.night * .65;
@@ -1790,10 +1797,6 @@
               c.beginPath(); c.moveTo(bx - ca4 * ssz, by - sa4 * ssz); c.quadraticCurveTo(bx, by - ssz * 1.3 * ar, bx + ca4 * ssz, by + sa4 * ssz); c.stroke(); }
             c.globalAlpha = 1; }
         }
-        if (day > .3) for (i = 0; i < bows.length; i++){ var b = bows[i], R0 = b.r * s, Bc = toScreen(b.x, b.y); if (!vis(Bc, R0 * 1.2)) continue; var ba = Math.min(1, b.t / 8, (b.life - b.t) / 12) * .26 * day;
-          var g = c.createRadialGradient(Bc.x, Bc.y, R0 * .86, Bc.x, Bc.y, R0); ['rgba(140,60,200,0)', 'rgba(140,60,200,1)', 'rgba(60,110,255,1)', 'rgba(60,200,120,1)', 'rgba(250,230,70,1)', 'rgba(255,150,40,1)', 'rgba(240,50,40,1)', 'rgba(240,50,40,0)'].forEach(function(cl, ci){ g.addColorStop(ci / 7, cl); });
-          c.globalAlpha = ba; c.strokeStyle = g; c.lineWidth = R0 * .14; c.beginPath(); c.arc(Bc.x, Bc.y, R0 * .93, Math.PI * 1.08, Math.PI * 1.92); c.stroke(); c.globalAlpha = 1; }
-        for (i = 0; i < bolts.length; i++) drawBolt(bolts[i], t);
       }
       return {step: step, draw: draw, st: function(){ return {herds: herds ? herds.length : 0, sea: sea.length, sky: sky.map(function(k){ return k.k; }), bows: bows.length, bolts: bolts.length}; },
         force: function(k, x, y){ if (k === 'whale' || k === 'dolph') sea.push({k: k, x: x, y: y, a: .3, t: 0, life: k === 'whale' ? 9 : 5, n: 4}); else if (k === 'bow') bows.push({x: x, y: y, r: 300, t: 8, life: 60}); else if (k === 'dragon') sky.push({k: 'dragon', x: x - 300, y: y, vx: 30, vy: 4, t: 5, life: 30}); else if (k === 'eagle') sky.push({k: 'eagle', x: x, y: y, t: 5, life: 40, r: 45, a0: 0}); else if (k === 'serp') sky.push({k: 'serp', x: x, y: y, a: .2, t: 3, life: 14}); }};
@@ -2015,7 +2018,9 @@
       return {step: step, draw: draw, n: function(){ return A.length; }, want: function(){ return want; }, list: function(){ return A.map(function(k){ return [Math.round(k.x), Math.round(k.y)]; }); },
         force: function(n){ want = Math.max(want, n || 3); for (var i = A.length; i < want; i++){ spawn(false); A[A.length - 1].t = 5; } }};
     })();
-    var simAcc = 0;
+    var simAcc = 0, layerErr = {};
+    // one layer's exception must not kill the frame: log it once, reset the canvas state and go on with the next layer
+    function L(n, f){ try { f(); } catch (e){ if (!layerErr[n]){ layerErr[n] = 1; try { console.error('[map] layer ' + n + ' failed:', e); } catch (_){} } try { c.restore(); } catch (_){} c.setTransform(dpr, 0, 0, dpr, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; } }
     function draw(t){
       var dt = lastT ? Math.min(.1, t - lastT) : .016; lastT = t;
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, vw, vh); skyBegin();
@@ -2025,10 +2030,12 @@
       simAcc += dt; if (simAcc >= (zf < .28 ? (lt ? .05 : .033) : 0)){ stepCars(simAcc, lt); stepBirds(simAcc, lt); stepShips(simAcc, lt); simAcc = 0; }
       var sv = stepSmoke(dt, lt, zf);
       NGL.begin(); var D = window.__ulvMapDbg || 0;
-      NAT.step(dt, t, lt); PIRATE.step(t, dt, lt); TORN.step(dt, lt); AIRS.step(dt, lt); stepFish(dt, lt); SNOW.step(dt, t, lt, zf);
-      drawWhirl(t, lt); drawGlow(t, lt); if (!D.nonat) NAT.draw(t, lt); if (!D.noships){ drawFish(t, nv, zf); drawShips(t, nv); PIRATE.draw(t, clamp(40 * view.s, 7, 30)); drawBattle(t, dt); } if (!D.nocars) drawCars(t, nv); if (!D.nosmoke) drawSmoke(sv, zf);
-      if (!D.nonat) TORN.draw(t); if (!D.noships) AIRS.draw(t, nv, zf, lt); drawBirds(lt); SNOW.draw(zf);
-      if (!D.nonight) NGL.flush(t, nv, zf, lt);
+      L('s-nat', function(){ NAT.step(dt, t, lt); }); L('s-pirate', function(){ PIRATE.step(t, dt, lt); }); L('s-torn', function(){ TORN.step(dt, lt); }); L('s-air', function(){ AIRS.step(dt, lt); }); L('s-fish', function(){ stepFish(dt, lt); }); L('s-snow', function(){ SNOW.step(dt, t, lt, zf); });
+      L('whirl', function(){ drawWhirl(t, lt); }); L('glow', function(){ drawGlow(t, lt); }); if (!D.nonat) L('nat', function(){ NAT.draw(t, lt); });
+      if (!D.noships){ L('fish', function(){ drawFish(t, nv, zf); }); L('ships', function(){ drawShips(t, nv); }); L('pirate', function(){ PIRATE.draw(t, clamp(40 * view.s, 7, 30)); }); L('battle', function(){ drawBattle(t, dt); }); }
+      if (!D.nocars) L('cars', function(){ drawCars(t, nv); }); if (!D.nosmoke) L('smoke', function(){ drawSmoke(sv, zf); });
+      if (!D.nonat) L('torn', function(){ TORN.draw(t); }); if (!D.noships) L('air', function(){ AIRS.draw(t, nv, zf, lt); }); L('birds', function(){ drawBirds(lt); }); L('snow', function(){ SNOW.draw(zf); });
+      if (!D.nonight) L('night', function(){ NGL.flush(t, nv, zf, lt); });
     }
     // what is around a world point (for the soundscape)
     function probe(x, y){
