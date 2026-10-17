@@ -25,7 +25,6 @@
   };
   I.lock = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path class="shut" d="M8 10.5V8a4 4 0 018 0v2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path class="open" d="M8 10.5V8a4 4 0 017.6-1.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="15.5" r="1.5" fill="currentColor"/></svg>';
   I.wx = '<svg viewBox="0 0 24 24"><path d="M6.5 13.5h9a3.2 3.2 0 00.3-6.4A4.7 4.7 0 006.8 6.1 3.7 3.7 0 006.5 13.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 16.5v4M6.3 17.5l3.4 2M9.7 17.5l-3.4 2M15.5 16l-1.2 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
-  I.drag = '<svg viewBox="0 0 24 24"><path d="M3 15c2.5-.3 4.2-1.6 5.3-3.6L10 8l2.2 2.6L16 6.5l-.6 4.2 4.6-1.4-3 3.6c1.6.4 3 1.4 4 2.8-2.2-.6-4.2-.5-6 .4-1.5.8-3.4 1.2-5.2.8L7 19l.4-2.6C5.8 16.4 4.3 15.9 3 15z" fill="currentColor"/><circle cx="15.3" cy="9.2" r=".8" fill="#0d0912"/></svg>';
   I.roads = '<svg viewBox="0 0 24 24"><path d="M3.5 19.5c3-1 4-4 7-5.5s7.5-.5 10-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 9.5c2.5-.5 3.5-3 6.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.2" stroke-linecap="round"/><circle cx="3.5" cy="19.5" r="1.6" fill="currentColor"/><circle cx="20.5" cy="9" r="1.6" fill="currentColor"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
   I.plan = '<svg viewBox="0 0 24 24"><path d="M6 21V4M6 4.5h10l-2.2 3.2L16 11H6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="17.5" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 18.5h6.5" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.8 1.8"/></svg>';
   var PIN_I = {
@@ -72,7 +71,6 @@
         '<button type="button" class="mt-pins" aria-pressed="true" title="Tarihî olay iğneleri">' + I.pin + '</button>' +
         '<button type="button" class="mt-roads" aria-pressed="false" title="Yollar">' + I.roads + '</button>' +
         '<button type="button" class="mt-wx" aria-pressed="false" title="Mevsim ve hava">' + I.wx + '</button>' +
-        '<button type="button" class="mt-summon" title="Ejderha ve deniz yılanını çağır" aria-label="Ejderha ve deniz yılanını çağır">' + I.drag + '</button>' +
         '<button type="button" class="mt-edit" aria-pressed="false" title="İğne ve yer adı düzenleme (kilidi aç, sürükle)">' + I.lock + '</button>' +
         '<div class="mt-sndwrap"><button type="button" class="mt-snd" aria-pressed="true" title="Harita sesleri">' + I.snd + '</button>' +
         '<div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div>' +
@@ -105,7 +103,6 @@
   var W = 5112, H = 4920;
   var vw = 0, vh = 0, dpr = 1;
   var view = {s: 0.2, x: 0, y: 0}, minS = 0.1, maxS = 2.5;
-  var fly = null;           // camera flight {s0, s1, x0, y0, x1, y1, u, d} (summon)
   var anim = null;          // smooth zoom target {s, ax, ay}
   var vel = {x: 0, y: 0}, inertia = false;
   var tool = 'nav', route = [], isOpen = false, dirty = true, raf = 0;
@@ -696,7 +693,7 @@
     if (ev.button && ev.button !== 0) return;
     pop.hidden = true;
     var p = local(ev); ptrs[ev.pointerId] = p; try { stage.setPointerCapture(ev.pointerId); } catch(e){}
-    anim = null; fly = null; fly2 = null; inertia = false; vel.x = vel.y = 0;
+    anim = null; inertia = false; vel.x = vel.y = 0;
     var ids = Object.keys(ptrs);
     if (ids.length === 2){
       var a = ptrs[ids[0]], b = ptrs[ids[1]];
@@ -745,7 +742,7 @@
   }
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
   stage.addEventListener('wheel', function(ev){
-    ev.preventDefault(); fly = null; fly2 = null;
+    ev.preventDefault();
     var p = local(ev), dy = ev.deltaMode === 1 ? ev.deltaY * 33 : ev.deltaMode === 2 ? ev.deltaY * vh : ev.deltaY;
     if (ev.ctrlKey) dy *= 3;   // trackpad pinch
     var base = anim ? anim.s : view.s, f = Math.exp(-Math.max(-300, Math.min(300, dy)) * 0.0017);
@@ -766,7 +763,6 @@
     else if (b.classList.contains('mt-snd')){ if (window.__ulvMapAudio){ window.__ulvMapAudio.setOn(!window.__ulvMapAudio.isOn()); } syncToggles(); }
     else if (b.classList.contains('mt-dn')){ DN.setRun(!DN.run); syncToggles(); kick(); }
     else if (b.classList.contains('mt-roads')){ roadsOn = !roadsOn; try { localStorage.setItem('ulv-map-roads', roadsOn ? '1' : '0'); } catch(e){} syncToggles(); dirty = true; kick(); }
-    else if (b.classList.contains('mt-summon')) summon();
     else if (b.classList.contains('mt-wx')){ wxOn = !wxOn; try { localStorage.setItem('ulv-map-wx', wxOn ? '1' : '0'); } catch(e){} syncToggles(); kick(); }
     else if (b.classList.contains('mt-plan')){ togglePlan(); }
     else if (b.classList.contains('mt-edit')){ PE.toggle(); }
@@ -831,29 +827,10 @@
     var o = (lite() || reduce) ? 0 : Math.max(0, Math.min(1, (LIFE.zoomF() - .3) / .45)); o = Math.round(o * 20) / 20;
     if (o === tiltO) return; tiltO = o; dirty = true;
   }
-  // t134: one-shot summon of the rare dragon (Deathwing'in İni) + sea serpent (fog belt); camera flies to show them
-  var fly2 = null;
-  function flyTo(s1, x1, y1, then){
-    s1 = Math.max(minS, Math.min(maxS, s1)); var c0 = toWorld(vw / 2, vh / 2); anim = null; inertia = false;
-    if (reduce){ view.s = s1; view.x = vw / 2 - x1 * s1; view.y = vh / 2 - y1 * s1; clampView(); dirty = true; kick(); if (then) setTimeout(function(){ flyTo(then[0], then[1], then[2]); }, then[3]); return; }
-    fly = {s0: view.s, s1: s1, x0: c0.x, y0: c0.y, x1: x1, y1: y1, u: 0, d: 1700}; fly2 = then || null; kick();
-  }
-  function summon(){
-    if (!loaded) return; var r = LIFE.summon(); if (!r) return;
-    var fit = fitScale(), sz = function(f){ return fit * Math.pow(maxS / fit, f); };   // view scale for a zoom fraction
-    var dx = r.d[0], dy = r.d[1], sp = r.s;
-    if (sp){ var mx = (dx + sp[0]) / 2, my = (dy + sp[1]) / 2, need = Math.min(vw / (Math.abs(dx - sp[0]) + 700), vh / (Math.abs(dy - sp[1]) + 600));
-      if (need >= sz(.24)) flyTo(Math.min(need, sz(.42)), mx, my);                                  // both fit in one view
-      else flyTo(sz(.36), dx, dy, [sz(.4), sp[0], sp[1], 6500]);                                    // dragon first, then the serpent
-    } else flyTo(sz(.36), dx, dy);
-  }
   function kick(){ if (!raf && isOpen) raf = requestAnimationFrame(frame); }
   function frame(t){
     raf = 0; if (!isOpen) return;
     var dt = lastT ? Math.min(64, t - lastT) : 16; lastT = t;
-    if (fly){ fly.u = Math.min(1, fly.u + dt / fly.d); var fu = fly.u, fe = fu < .5 ? 2 * fu * fu : 1 - Math.pow(2 - 2 * fu, 2) / 2;
-      view.s = Math.exp(Math.log(fly.s0) + (Math.log(fly.s1) - Math.log(fly.s0)) * fe); var fx0 = fly.x0 + (fly.x1 - fly.x0) * fe, fy0 = fly.y0 + (fly.y1 - fly.y0) * fe;
-      view.x = vw / 2 - fx0 * view.s; view.y = vh / 2 - fy0 * view.s; clampView(); dirty = true; if (fu >= 1){ fly = null; if (fly2){ var f2 = fly2; fly2 = null; setTimeout(function(){ flyTo(f2[0], f2[1], f2[2]); }, f2[3]); } } }
     if (anim){
       var k = 1 - Math.pow(0.0009, dt / 1000 * 2.2), ns = view.s + (anim.s - view.s) * k;
       if (Math.abs(anim.s - ns) / anim.s < 0.002){ ns = anim.s; zoomAt(ns, anim.ax, anim.ay); anim = null; } else zoomAt(ns, anim.ax, anim.ay);
@@ -1613,7 +1590,7 @@
       c.restore();
     }
     function resize(){ cv.width = cvN.width = Math.round(vw * dpr); cv.height = cvN.height = Math.round(vh * dpr); if (cvS){ cvS.width = cv.width; cvS.height = cv.height; skyUsed = true; } }
-    // high flyers (dragon, a summoned serpent) on their own 2D canvas ABOVE the fog/cloud layer; cleared only after use
+    // high flyers (dragon) on their own 2D canvas ABOVE the fog/cloud layer; cleared only after use
     var cvS = ov.querySelector('.mapx-sky'), cS = cvS ? cvS.getContext('2d') : null, skyUsed = false, skyNow = false;
     function skyBegin(){ skyNow = false; if (skyUsed && cS){ cS.setTransform(1, 0, 0, 1, 0, 0); cS.clearRect(0, 0, cvS.width, cvS.height); skyUsed = false; } }
     function skyCtx(){ if (!cS) return c; if (!skyNow){ cS.setTransform(dpr, 0, 0, dpr, 0, 0); skyNow = true; } skyUsed = true; return cS; }
@@ -1818,16 +1795,7 @@
           c.globalAlpha = ba; c.strokeStyle = g; c.lineWidth = R0 * .14; c.beginPath(); c.arc(Bc.x, Bc.y, R0 * .93, Math.PI * 1.08, Math.PI * 1.92); c.stroke(); c.globalAlpha = 1; }
         for (i = 0; i < bolts.length; i++) drawBolt(bolts[i], t);
       }
-      // one-shot summon (toolbar button): a dragon circling in over the lair and a clearly visible serpent in the nearest fog-belt sea
-      function summon(){
-        var L0 = [2233, 450], a0 = rnd(0, 6.28), dr = {k: 'dragon', x: L0[0] - Math.cos(a0) * 330, y: L0[1] - Math.sin(a0) * 240, vx: Math.cos(a0) * 22, vy: Math.sin(a0) * 16, t: 0, life: 32, sum: 1};
-        sky = sky.filter(function(k){ return !k.sum; }); sky.push(dr);
-        var best = null, bd = 1e9; for (var i = 0; i < 700; i++){ var x = rnd(150, W - 150), y = rnd(150, H - 150); if (isLand(x, y) || STORM.south(x, y)) continue; var d = coastDist(x, y); if (d < 220 || d > 380) continue;
-          var dd = Math.hypot(x - L0[0], y - L0[1]); if (dd < bd){ bd = dd; best = [x, y]; } }
-        if (best) sky.push({k: 'serp', x: best[0], y: best[1], a: rnd(0, 6.28), t: 0, life: 30, sum: 1});
-        return {d: [L0[0], L0[1] + 30], s: best};
-      }
-      return {summon: summon, step: step, draw: draw, st: function(){ return {herds: herds ? herds.length : 0, sea: sea.length, sky: sky.map(function(k){ return k.k; }), bows: bows.length, bolts: bolts.length}; },
+      return {step: step, draw: draw, st: function(){ return {herds: herds ? herds.length : 0, sea: sea.length, sky: sky.map(function(k){ return k.k; }), bows: bows.length, bolts: bolts.length}; },
         force: function(k, x, y){ if (k === 'whale' || k === 'dolph') sea.push({k: k, x: x, y: y, a: .3, t: 0, life: k === 'whale' ? 9 : 5, n: 4}); else if (k === 'bow') bows.push({x: x, y: y, r: 300, t: 8, life: 60}); else if (k === 'dragon') sky.push({k: 'dragon', x: x - 300, y: y, vx: 30, vy: 4, t: 5, life: 30}); else if (k === 'eagle') sky.push({k: 'eagle', x: x, y: y, t: 5, life: 40, r: 45, a0: 0}); else if (k === 'serp') sky.push({k: 'serp', x: x, y: y, a: .2, t: 3, life: 14}); }};
     })();
     // ---- tornadoes / waterspouts: a RARE event of its own (not every storm). At most 2 at once, anywhere on land or near
@@ -2075,7 +2043,7 @@
       return {town: town, land: landF / n, coast: coastDist(x, y), ship: sh, car: ca, harbor: near(PORTS, 70, 300), eerie: near(BLAV, 110, 430), torn: TORN.near(x, y), forge: near(FORGES, 40, 220), waterfall: near(FALLS, 40, 240), temple: near(TEMPLES, 50, 260), desert: desert};
     }
     function landPt(){ return landPts.length ? landPts[(Math.random() * landPts.length) | 0] : null; }
-    return {summon: function(){ return NAT.summon(); }, init: init, resize: resize, draw: draw, zoomF: zoomF, landPt: landPt, spawn: spawnFlock, probe: probe, coastDist: coastDist, isLand: isLand, dbg: {pirate: PIRATE, nat: NAT, torn: TORN, air: AIRS},
+    return {init: init, resize: resize, draw: draw, zoomF: zoomF, landPt: landPt, spawn: spawnFlock, probe: probe, coastDist: coastDist, isLand: isLand, dbg: {pirate: PIRATE, nat: NAT, torn: TORN, air: AIRS},
       stats: function(){ return {ships: ships.length, wakes: wakes.length, wakePts: wakes.reduce(function(n, w){ return n + w.pts.length; }, 0), galleon: (function(){ var g = ships.filter(function(k){ return k.type === "galleon" && k.t > 300; })[0]; if (!g) return null; var q = shipPos(g); return [Math.round(q.x), Math.round(q.y)]; })(), fleets: ships.filter(function(k){ return k.lat; }).length, types: ships.reduce(function(o, k){ o[k.type] = (o[k.type] || 0) + 1; return o; }, {}),
         harb: ships.filter(function(k){ return k.port && (k.t < 260 || k.run - k.t < 260); }).slice(0, 8).map(function(k){ var q = shipPos(k); return [Math.round(q.x), Math.round(q.y), k.type]; }),
         portShips: ships.filter(function(k){ return k.port; }).length, routes: PORTR ? PORTR.length : 0, sinking: ships.filter(function(k){ return k.sink >= 0; }).length, pirate: PIRATE.p ? PIRATE.p.st : null, pirPos: PIRATE.p ? [Math.round(PIRATE.p.x), Math.round(PIRATE.p.y), +PIRATE.p.t.toFixed(1)] : null, pirates: PIRATE.list(), pirCount: PIRATE.counts(), nat: NAT.st(),
