@@ -86,3 +86,19 @@ All loops: 40 s, mono MP3 64 kbps, trimmed and loop-crossfaded (3 s), loudness-n
 | `sfx-howl.mp3` | one-shot: distant werewolf howl (Blavinken, night, close zoom; every ~10–28 s) | synthesised (no external source) — same script |
 | `sfx-bats.mp3` | one-shot: a flutter of bats with faint squeaks (Blavinken, night; rare) | synthesised (no external source) — same script |
 | `sfx-creature.mp3` | one-shot: low growl/snarl of an unseen creature (Blavinken, night; rarer) | synthesised (no external source) — same script |
+
+## 3D map sound beta (`assets/sfx/map3d/` + the world-map loops above)
+
+The 3D map (`assets/map3d.js`) reuses the world-map soundscape engine (`assets/map-audio.js`) and its loops in `assets/sfx/map/`: high wind when zoomed out, zoom-dependent wind/birds/breeze, town murmur near settlements (by camera distance), surf near coasts, harbours, dwarf forges, waterfalls (Arowhul, Narnia), İlgen temple, Southern Lands desert wind, snowstorm wind on the Ice Isles / high peaks, crickets/owls at night, and Blavinken nights (eerie bed + werewolf howls, bats, creature). Same mute button and 50 % default volume slider. On the globe (space view) the map sounds stop and only a deep, low space drone plays.
+New files (mono MP3, 48–64 kbps, lazy-loaded on first use):
+
+| file | use | source · author · licence |
+|---|---|---|
+| `ui-hover.mp3` | hovering a 3D map button | Kenney — “Interface Sounds” 1.0 (`tick_004.ogg`) — CC0 — https://kenney.nl/assets/interface-sounds |
+| `ui-click.mp3` | clicking a 3D map button | Kenney — “Interface Sounds” 1.0 (`click_002.ogg`) — CC0 — https://kenney.nl/assets/interface-sounds |
+| `ui-label.mp3` | clicking a place / faction label | Kenney — “Interface Sounds” 1.0 (`select_002.ogg`) — CC0 — https://kenney.nl/assets/interface-sounds |
+| `ui-open.mp3` | info card opens | Kenney — “Interface Sounds” 1.0 (`open_002.ogg`) — CC0 — https://kenney.nl/assets/interface-sounds |
+| `ui-close.mp3` | info card closes | Kenney — “Interface Sounds” 1.0 (`close_002.ogg`) — CC0 — https://kenney.nl/assets/interface-sounds |
+| `whoosh.mp3` | cloud/wind transition from the map up to the globe | synthesised (no external source) — `frp-timeline/site-build/map3d/audio/synth_3d.py` |
+| `dive.mp3` | dive from the globe down through the clouds to the map | synthesised (no external source) — same script |
+| `space-drone.mp3` | globe/space view: very faint, continuous deep low hum/rumble (40 s seamless loop) | synthesised (no external source) — same script |

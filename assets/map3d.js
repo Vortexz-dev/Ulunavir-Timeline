@@ -87,7 +87,7 @@ function makeDom(){
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'Horaghfus 3D haritası');
   root.innerHTML = '<canvas class="m3d-cv"></canvas><div class="m3d-labels"></div>' +
     '<div class="m3d-top"><div class="m3d-title"><b>Horaghfus</b><span>3D Harita · beta</span></div>' +
-    '<div class="m3d-btns"><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
+    '<div class="m3d-btns"><div class="mt-sndwrap m3d-sndwrap"><button type="button" class="m3d-snd" aria-pressed="true" title="Harita sesleri"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="on" d="M15.5 9a4.2 4.2 0 010 6M18 6.5a7.6 7.6 0 010 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button><div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
     '<div class="m3d-hint">Sol tık + sürükle: kaydır · Sağ tık + sürükle: döndür / eğ · Tekerlek: yakınlaş · İsme tıkla: bilgi kartı</div>' +
     '<div class="m3d-scale"><i></i><span></span></div>' +
     '<aside class="m3d-card" hidden><button type="button" class="m3d-cx" aria-label="Kartı kapat">✕</button><div class="m3d-ci"></div></aside>' +
@@ -107,7 +107,7 @@ function makeDom(){
     const z = root.querySelector('.m3d-zoom'); if (z){ z.remove(); return; }
     if (!cardEl.hidden) closeCard(); else close();
   });
-  bindInput();
+  bindInput(); sndBindUI();   // t161
 }
 function progress(p){ const s = loadEl.querySelector('span'); if (s) s.textContent = Math.round(p * 100) + '%'; }
 
@@ -1211,8 +1211,8 @@ function updateLabels(){
 // ------------------------------------------------------------ cards
 function TC(){ return window.__ulv && window.__ulv.TagCard; }
 function tagType(tag){ const I = window.TAGINFO || {}; return (I[tag] && I[tag].t) || 'p'; }
-function openCard(html){ cardEl.querySelector('.m3d-ci').innerHTML = html; cardEl.hidden = false; requestAnimationFrame(() => cardEl.classList.add('on')); cardEl.querySelector('.m3d-ci').scrollTop = 0; }
-function closeCard(){ cardEl.classList.remove('on'); setTimeout(() => { if (!cardEl.classList.contains('on')) cardEl.hidden = true; }, 260); U.hover.value.set(0, 0, 0, 0); pinFac = null; }
+function openCard(html){ if (cardEl.hidden) sndPlay('open'); cardEl.querySelector('.m3d-ci').innerHTML = html; cardEl.hidden = false; requestAnimationFrame(() => cardEl.classList.add('on')); cardEl.querySelector('.m3d-ci').scrollTop = 0; }
+function closeCard(){ if (!cardEl.hidden && cardEl.classList.contains('on')) sndPlay('close'); cardEl.classList.remove('on'); setTimeout(() => { if (!cardEl.classList.contains('on')) cardEl.hidden = true; }, 260); U.hover.value.set(0, 0, 0, 0); pinFac = null; }
 let gal = null;
 function photoHtml(ph){
   if (!ph || !ph.length) return ''; gal = ph;
@@ -1357,6 +1357,7 @@ function frame(now){
   raf = requestAnimationFrame(frame);
   if (lastT) perfGuard((now - lastT) / 1000);
   const dt = Math.min((now - (lastT || now)) / 1000, .05); lastT = now;
+  sndTick(now);   // t161
   if (GLB.on && GLB.g){ renderer.shadowMap.needsUpdate = false; GLB.g.frame(dt); return; }   // H2: küre modu: düz sahne tamamen duraklatılır (saat, güncellemeler, çizim, gölge yok)
   clock += dt; U.time.value = clock; FLATN++;
   const r = 1 - Math.exp(-dt * (flying ? 2.6 : 9));
@@ -1416,6 +1417,7 @@ export async function open(){
     if (!built){ if (!building) building = build(); await building; }
     loadEl.classList.add('done'); resize(); applyCam(); refreshNearTrees(true);
     if (!raf){ lastT = 0; raf = requestAnimationFrame(frame); }
+    sndOpen();   // t161
     setTimeout(() => hintEl.classList.add('fade'), 7000);
   } catch (err){
     console.warn('3D map failed', err); loadEl.classList.add('err'); building = null;
@@ -1427,11 +1429,12 @@ export async function open(){
 export function close(){
   if (!isOpen) return; isOpen = false; root.classList.remove('on'); document.body.classList.remove('m3d-open');
   if (raf){ cancelAnimationFrame(raf); raf = 0; }
+  sndClose();   // t161
   setTimeout(() => { if (!isOpen) root.hidden = true; }, 380);
   setTimeout(() => { if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
 }
 window.__ulvMap3D = {open, close, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
-  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), globe: (v) => v ? enterGlobe() : exitGlobe(null), glook: (ll, d) => GLB.g && (ll.length === 3 ? GLB.g.lookDir(ll, d) : GLB.g.lookAt(ll, d)), stats: () => renderer ? {flatN: FLATN, glb: GLB.on && GLB.g ? GLB.g.stats() : null, thin: TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
+  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), globe: (v) => v ? enterGlobe() : exitGlobe(null), glook: (ll, d) => GLB.g && (ll.length === 3 ? GLB.g.lookDir(ll, d) : GLB.g.lookAt(ll, d)), snd: () => ({gest: !!SND.gest, ctx: SND.ctx && SND.ctx.state, lvl: sndLevel(), mapOn: SND.mapOn, drone: !!SND.drone, droneG: SND.droneG ? +SND.droneG.gain.value.toFixed(3) : 0, bufs: Object.keys(SND.buf), map: sndA() && sndA().state(), probe: built && !GLB.on ? sndProbe() : null}), stats: () => renderer ? {flatN: FLATN, glb: GLB.on && GLB.g ? GLB.g.stats() : null, thin: TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
   prof: () => { const out = []; scene.traverseVisible((o) => { const g = o.geometry; if (!g || !(o.isMesh || o.isPoints)) return; let n = g.index ? g.index.count : g.attributes.position.count; n = Math.min(n, g.drawRange.count); let t = o.isPoints ? n : n / 3; const ic = o.isInstancedMesh ? o.count : g.isInstancedBufferGeometry ? g.instanceCount : 1; out.push([o.type + ':' + (o.material && o.material.type) + ':ro' + o.renderOrder + (o.castShadow ? ':S' : '') + ':' + (o.name || ''), Math.round(t), ic === Infinity ? -1 : ic, Math.round(t * (ic === Infinity ? 1 : ic))]); }); out.sort((a, b) => b[3] - a[3]); return {n: out.length, sh: renderer.shadowMap.enabled, top: out.slice(0, 18)}; }};
 
 // ------------------------------------------------------------ v3: farm fields (crisp meshes draped on the terrain)
@@ -2095,7 +2098,7 @@ function releaseFlat(){       // küre görünürken düz haritanın ağır ayr�
 }
 async function enterGlobe(){
   if (GLB.on || GLB.busy || !built || CTX_LOST) return; GLB.busy = true; GLB.pull = 0; closeCard();
-  goal.d = DZOOM; flying = 1; windIn(); await gwait(700);
+  goal.d = DZOOM; flying = 1; windIn(); sndPlay('whoosh'); await gwait(700);
   try {
     if (!GLB.mod) GLB.mod = await import('./map3d_globe.js?v=' + V);
     if (!GLB.g) GLB.g = await GLB.mod.createGlobe({renderer, cv, labelsEl, url, onDive: (t) => exitGlobe(t)});
@@ -2106,10 +2109,119 @@ async function enterGlobe(){
   await gwait(120); windOut(); GLB.busy = false;
 }
 async function exitGlobe(t){
-  if (!GLB.on || GLB.busy) return; GLB.busy = true; windIn(); await gwait(700);
+  if (!GLB.on || GLB.busy) return; GLB.busy = true; windIn(); sndPlay('dive'); await gwait(700);
   GLB.on = false; root.classList.remove('m3d-glb');
   if (GLB.g){ GLB.g.show(false); GLB.g.dispose(); GLB.g = null; }     // tersi: düz haritadayken kürenin GPU belleği serbest
   t = t || {x: 512, z: 400, d: 1000};
   Object.assign(cam, {x: t.x, z: t.z, d: DZOOM * .9, yaw: 0, tilt: 0}); Object.assign(goal, {x: t.x, z: t.z, d: t.d, yaw: 0, tilt: 0}); flying = 1;
   refreshNearTrees(true); await gwait(350); windOut(); GLB.busy = false;
+}
+
+// ------------------------------------------------------------ t161: ses (beta). 2D haritanın ses motoru (assets/map-audio.js) 3D'ye bağlanır;
+// arayüz/geçiş sesleri ve uzay uğultusu ayrı küçük bir WebAudio grafiğinde (tembel yüklenir, ilk kullanıcı hareketinden önce çalmaz).
+const SND = {ctx: null, master: null, buf: {}, busy: {}, last: {}, t: 0, mapOn: false, feat: null, drone: null, droneG: null, droneOff: 0};
+const SDIR = new URL('./sfx/map3d/', import.meta.url).href;
+const SFILES = {hover: 'ui-hover.mp3', click: 'ui-click.mp3', label: 'ui-label.mp3', open: 'ui-open.mp3', close: 'ui-close.mp3', whoosh: 'whoosh.mp3', dive: 'dive.mp3', drone: 'space-drone.mp3'};
+const SGAIN = {hover: .22, click: .45, label: .5, open: .45, close: .4, whoosh: .9, dive: .95};
+const sst = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const sndA = () => window.__ulvMapAudio || null;
+const sndLevel = () => { const A = sndA(); return A && A.isOn() && isOpen ? .5 * A.getVol() / 100 : 0; };   // map-audio ile aynı ölçek (LEVEL .5 x ses %)
+function sndCtx(){
+  if (SND.ctx) return SND.ctx; const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+  try { SND.ctx = new AC(); } catch (e){ return null; }
+  SND.master = SND.ctx.createGain(); SND.master.gain.value = 0; SND.master.connect(SND.ctx.destination); return SND.ctx;
+}
+function sndLoad(k){
+  if (SND.buf[k] || SND.busy[k] || !SND.ctx) return; SND.busy[k] = 1;
+  fetch(SDIR + SFILES[k]).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then((ab) => new Promise((res, rej) => { const p = SND.ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); }))
+    .then((b) => { SND.buf[k] = b; }).catch((e) => { SND.busy[k] = 0; console.warn('3D ses: ' + SFILES[k], e); });
+}
+function sndPlay(k, g = 1){
+  if (!sndLevel() || !sndCtx() || SND.ctx.state !== 'running') return;
+  if (!SND.buf[k]){ sndLoad(k); return; }
+  const now = SND.ctx.currentTime; if (SND.last[k] && now - SND.last[k] < .07) return; SND.last[k] = now;
+  const s = SND.ctx.createBufferSource(), gn = SND.ctx.createGain(); s.buffer = SND.buf[k]; gn.gain.value = (SGAIN[k] || .5) * g; s.connect(gn); gn.connect(SND.master); s.start();
+}
+function sndGesture(){     // otomatik oynatma kuralı: bağlamlar yalnızca bir kullanıcı hareketiyle başlar
+  if (!isOpen) return; const c = sndCtx(); if (c && c.state === 'suspended') c.resume().catch(() => {});
+  if (!SND.buf.click) ['hover', 'click', 'label', 'open', 'close', 'whoosh', 'dive'].forEach(sndLoad);
+  SND.gest = true; if (!GLB.on && !SND.mapOn && sndA()){ sndA().open(); SND.mapOn = true; }
+}
+function sndOpen(){ if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return; sndGesture(); }
+function sndClose(){
+  const A = sndA(); if (A && SND.mapOn){ A.close(); SND.mapOn = false; }
+  if (SND.ctx){ const t = SND.ctx.currentTime; SND.master.gain.setTargetAtTime(0, t, .2); setTimeout(() => { if (!isOpen && SND.ctx.state === 'running') SND.ctx.suspend().catch(() => {}); }, 1200); }
+}
+function sndDrone(on){
+  if (on){
+    if (!sndCtx() || SND.ctx.state !== 'running') return;
+    if (!SND.buf.drone){ sndLoad('drone'); return; }
+    if (!SND.drone){ const s = SND.ctx.createBufferSource(), g = SND.ctx.createGain(); s.buffer = SND.buf.drone; s.loop = true; s.loopStart = .06; s.loopEnd = SND.buf.drone.duration - .06;
+      g.gain.value = 0; s.connect(g); g.connect(SND.master); s.start(0, .06 + Math.random() * 30); SND.drone = s; SND.droneG = g; }
+    SND.droneG.gain.setTargetAtTime(.32, SND.ctx.currentTime, 1.2); SND.droneOff = 0;
+  } else if (SND.drone){
+    SND.droneG.gain.setTargetAtTime(0, SND.ctx.currentTime, .5);
+    if (!SND.droneOff) SND.droneOff = performance.now(); else if (performance.now() - SND.droneOff > 3000){ try { SND.drone.stop(); } catch (e) {} SND.drone.disconnect(); SND.drone = null; SND.droneOff = 0; }
+  }
+}
+// 3D'de "görüş merkezinin altında ne var" (2D LIFE.probe'un 3D karşılığı; km)
+function sndFeatures(){
+  const towns = [], forges = [], falls = [], temples = [], blav = [], ports = [];
+  const R = {capital: 7, city: 3.5, floating: 2, fortline: 2, district: 2.2, village: 1.2};
+  for (const p of D.places){
+    const r = p.id === 'balahnur' ? 16 : R[p.kind]; if (r) towns.push([p.x, p.z, r]);
+    if (p.fac === 'dwarf' && (p.kind === 'capital' || p.kind === 'city')) forges.push([p.x, p.z]);
+    if (p.id === 'arowhul' || p.id === 'narnia') falls.push([p.x, p.z]);
+    if (p.id === 'ilgen') temples.push([p.x, p.z]);
+    if (/^blavinken/.test(p.id)) blav.push([p.x, p.z]);
+    if (r && r >= 1.2 && sndCoast(p.x, p.z, 4) < 4) ports.push([p.x, p.z]);
+  }
+  return {towns, forges, falls, temples, blav, ports};
+}
+function hAt3(x, z){ if (x >= 0 && x < WK && z >= 0 && z < HK) return yAt(x, z); return EXT.W ? extY(x, z) : -3; }
+function sndCoast(x, z, maxR = 64){
+  const L0 = hAt3(x, z) > .01;
+  for (let r = .5; r <= maxR; r *= 2) for (let a = 0; a < 8; a++){ const q = a * Math.PI / 4; if ((hAt3(x + Math.cos(q) * r, z + Math.sin(q) * r) > .01) !== L0) return r; }
+  return maxR * 2;
+}
+function sndProbe(){
+  const x = cam.x, z = cam.z, d = cam.d, F = SND.feat || (SND.feat = sndFeatures());
+  const zf = 1 - Math.min(1, Math.max(0, (Math.log(d) - Math.log(DMIN)) / (Math.log(1150) - Math.log(DMIN))));
+  let town = 0; for (const s of F.towns){ const dd = Math.hypot(s[0] - x, s[1] - z); if (dd < s[2] * 2.2) town = Math.max(town, 1 - sst(s[2] * .6, s[2] * 2.2, dd)); }
+  const rr = Math.max(.6, d * .12); let land = 0; for (let a = 0; a < 5; a++) land += hAt3(x + (a ? Math.cos(a * 1.57) * rr : 0), z + (a ? Math.sin(a * 1.57) * rr : 0)) > .01 ? .2 : 0;
+  const near = (L, r0, r1) => { let b = 0; for (const p of L) b = Math.max(b, 1 - sst(r0, r1, Math.hypot(p[0] - x, p[1] - z))); return b; };
+  const h = hAt3(x, z), inB = (x0, z0, x1, z1) => x >= x0 && x < x1 && z >= z0 && z < z1 ? 1 : 0;
+  const snow = Math.max(inB(1028, -64, 1344, 198) * land, sst(3.3, 4.8, h / EX) * land);
+  return {zf, town, land, coast: sndCoast(x, z) * 40, night: U.nightK.value, storm: 0, ship: 0, car: 0,
+    harbor: near(F.ports, 1.5, 6), forge: near(F.forges, 1.5, 7), waterfall: near(F.falls, 1, 5), temple: near(F.temples, 1.5, 7), eerie: near(F.blav, 4, 18),
+    desert: inB(413, 1712, 1073, 2022) * land, snow};
+}
+function sndTick(now){
+  if (now - SND.t < 250) return; SND.t = now;
+  const A = sndA(), lv = sndLevel();
+  if (SND.ctx){ SND.master.gain.setTargetAtTime(lv, SND.ctx.currentTime, .25); }
+  if (!SND.gest) return;
+  if (GLB.on){ if (A && SND.mapOn){ A.close(); SND.mapOn = false; } sndDrone(lv > 0); return; }   // uzayda harita sesleri yok, yalnızca derin uğultu
+  sndDrone(false);
+  if (A){ if (!SND.mapOn){ A.open(); SND.mapOn = true; } if (built) try { A.update(sndProbe()); } catch (e){ if (!SND.err){ SND.err = 1; console.warn('3D ses probe', e); } } }
+}
+function sndBindUI(){
+  const wrap = root.querySelector('.m3d-sndwrap'), sb = wrap.querySelector('.m3d-snd'), vr = wrap.querySelector('.mt-vol'), vo = wrap.querySelector('.mt-volv');
+  const sync = () => { const A = sndA(); if (!A){ wrap.hidden = true; return; } const on = A.isOn(), v = A.getVol();
+    sb.classList.toggle('is-off', !on); sb.setAttribute('aria-pressed', on ? 'true' : 'false'); sb.title = on ? 'Harita seslerini kapat' : 'Harita seslerini aç';
+    vr.value = v; vr.style.setProperty('--v', v + '%'); vo.textContent = v; };
+  SND.sync = sync; sync();
+  let lpT = 0, lpFired = false;
+  sb.addEventListener('click', (e) => { if (lpFired){ lpFired = false; e.preventDefault(); return; } const A = sndA(); if (!A) return; A.setOn(!A.isOn()); sync(); sndGesture(); });
+  sb.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; lpFired = false; clearTimeout(lpT); lpT = setTimeout(() => { lpFired = true; wrap.classList.add('show'); }, 450); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => sb.addEventListener(t, () => clearTimeout(lpT)));
+  vr.addEventListener('input', () => { const A = sndA(); if (!A) return; const v = +vr.value; A.setVol(v); if (v > 0 && !A.isOn()) A.setOn(true); sync(); });
+  root.addEventListener('pointerdown', (e) => { sndGesture(); if (!wrap.contains(e.target)) wrap.classList.remove('show'); }, true);
+  root.addEventListener('keydown', sndGesture, true);
+  const btns = root.querySelector('.m3d-btns');
+  btns.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !b.classList.contains('m3d-snd')) sndPlay('click'); });
+  btns.addEventListener('pointerover', (e) => { const b = e.target.closest('button'); if (b && e.pointerType === 'mouse' && b !== SND.hovB){ SND.hovB = b; sndPlay('hover'); } });
+  btns.addEventListener('pointerleave', () => { SND.hovB = null; });
+  labelsEl.addEventListener('click', (e) => { if (e.target.closest('.m3l')) sndPlay('label'); });
 }
