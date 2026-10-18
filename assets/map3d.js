@@ -1998,11 +1998,14 @@ function buildNightLights(){
   const cell = new Map(), sp = [];
   for (const b of BLD.list || []){
     if (/^(rk_|st_|cactus|ruin|pier|flag|wall|tree|fisle|campfire|pyramid|temple|arch)/.test(b.m)) continue;
-    const k = Math.floor(b.x / 1.2) + ',' + Math.floor(b.z / 1.2); const c = cell.get(k) || [0, 0, 0, 0]; c[0] += b.x; c[1] += b.z; c[2] += b.top || b.y; c[3]++; cell.set(k, c);
-    sp.push(b.x, (b.top || b.y) * .5 + b.y * .5 + .03, b.z, hash(Math.round(b.x * 977 + b.z * 131)));
+    const hb = hash(Math.round(b.x * 977 + b.z * 131)), ox = hash(Math.floor(b.z / 3.1) * 7 + 3) * 1.2, oz = hash(Math.floor(b.x / 3.1) * 11 + 5) * 1.2;   // E3: cell grid shifted per 3 km band -> no straight rows
+    const k = Math.floor((b.x + ox) / 1.2) + ',' + Math.floor((b.z + oz) / 1.2); const c = cell.get(k) || [0, 0, 0, 0, -1]; c[3]++; if (hb > c[4]){ c[4] = hb; c[0] = b.x; c[1] = b.z; c[2] = b.top || b.y; } cell.set(k, c);
+    const jx = (hash(Math.round(b.x * 311 + b.z * 719)) - .5) * .07, jz = (hash(Math.round(b.x * 523 + b.z * 197)) - .5) * .07;
+    if (hb > .12) sp.push(b.x + jx, (b.top || b.y) * .5 + b.y * .5 + .03, b.z + jz, hb);
   }
   if (EXT.W) for (const [x, z, s] of EXT.W.lights) if (s <= 2){ sp.push(x, yAt(x, z) + .05, z, .99); }   // camps
-  const gp = []; for (const c of cell.values()) if (c[3] >= 2) gp.push(c[0] / c[3], c[2] / c[3] + .25, c[1] / c[3], c[3]);
+  const CC = (D.places || []).filter((p) => p.kind === 'capital' || p.kind === 'city').map((p) => [p.x, p.z, p.kind === 'capital' ? 20 : 9]);   // E3: denser toward city centres
+  const gp = []; for (const c of cell.values()) if (c[3] >= 2){ let f = 1; for (const q of CC){ const r = Math.hypot(c[0] - q[0], c[1] - q[1]) / q[2]; if (r < 1.6) f = Math.min(f, Math.max(0, (r - .25) / 1.1)); } if (f > 0 && hash(Math.round(c[0] * 419 + c[1] * 283)) < f * .6) continue; const r1 = hash(Math.round(c[0] * 131 + c[1] * 977)), r2 = hash(Math.round(c[0] * 733 + c[1] * 59)); gp.push(c[0] + (r1 - .5) * .35, c[2] + .25, c[1] + (r2 - .5) * .35, c[3] * (.6 + .8 * r1) * (1.6 - .9 * f)); }
   const mk = (arr, glow) => {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr.filter((_, i) => i % 4 < 3), 3)); g.setAttribute('w', new THREE.Float32BufferAttribute(arr.filter((_, i) => i % 4 === 3), 1));
     const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {nightK: U.nightK, time: U.time, pxK: U.pxK, camPos: U.camPos, fogK: U.fogK},
