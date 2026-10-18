@@ -2415,7 +2415,7 @@
     if (opener && opener.focus) try { opener.focus({preventScroll: true}); } catch(e){}
   }
   // t141: harita butonu 2D / 3D seçimini aşağı kaydırır (3D yalnız masaüstü)
-  var M3D_V = '4a76ed061b';
+  var M3D_V = '75bc0a40e7';
   var choice = document.createElement('div'); choice.className = 'map-choice'; choice.setAttribute('role', 'menu');
   choice.innerHTML = '<button type="button" class="mc-2d" role="menuitem" title="2D harita">2D</button><button type="button" class="mc-3d" role="menuitem" title="3D harita (deneme)">3D</button>';
   document.body.appendChild(choice);
@@ -2427,6 +2427,7 @@
       .catch(function(e){ m3dMod = null; if (window.console) console.warn('3D map load failed', e); open(); });
   }
   btn.addEventListener('click', function(ev){ ev.stopPropagation(); if (isOpen){ close(); return; } showChoice(!choice.classList.contains('on')); });
+  try { if (sessionStorage.getItem('m3dReopen') === '1'){ sessionStorage.removeItem('m3dReopen'); setTimeout(open3D, 600); } } catch(e){}   // v4 hotfix: reopen 3D after a GPU context-loss restart
   choice.querySelector('.mc-2d').addEventListener('click', function(ev){ ev.stopPropagation(); showChoice(false); open(); });
   choice.querySelector('.mc-3d').addEventListener('click', function(ev){ ev.stopPropagation(); open3D(); });
   document.addEventListener('click', function(ev){ if (choice.classList.contains('on') && !choice.contains(ev.target)) showChoice(false); });

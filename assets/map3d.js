@@ -19,7 +19,7 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({'&': '
 
 let root, cv, renderer, scene, camera, labelsEl, cardEl, loadEl, hintEl, scaleEl;
 let D = null, HGT = null, HW = 2048, HH = 1536, FAC = null, META = null, MODELS = null, MBUF = null;
-let built = false, building = null, isOpen = false, raf = 0, lastT = 0, clock = 0;
+let built = false, building = null, isOpen = false, raf = 0, lastT = 0, clock = 0, SAFE = false, DPR_MAX = 1.5, CTX_LOST = false;
 const SUN = new THREE.Vector3(-0.78, 0.52, 0.2).normalize();
 const U = {time: {value: 0}, sun: {value: SUN}, hover: {value: new THREE.Vector4(0, 0, 0, 0)}, borderVis: {value: 1}, camPos: {value: new THREE.Vector3()},
   fogCol: {value: new THREE.Color(0.58, 0.70, 0.84)}, fogK: {value: 0.0012}, hazeK: {value: 1}, sunCol: {value: new THREE.Color(1.0, 0.93, 0.82).multiplyScalar(2.1)},
@@ -114,14 +114,20 @@ function progress(p){ const s = loadEl.querySelector('span'); if (s) s.textConte
 // ------------------------------------------------------------ build scene
 let sunLight, hemi;
 async function build(){
-  renderer = new THREE.WebGLRenderer({canvas: cv, antialias: true, powerPreference: 'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // v4 hotfix: GPU safety. Safe mode (after a context loss) = no MSAA, 1x pixels, smaller shadow map. Context loss -> graceful restart, never a dead page.
+  SAFE = (() => { try { return sessionStorage.getItem('m3dSafe') === '1'; } catch (e) { return false; } })();
+  const mk = (aa) => new THREE.WebGLRenderer({canvas: cv, antialias: aa, powerPreference: 'high-performance'});
+  try { renderer = mk(!SAFE); } catch (e){ console.warn('webgl retry', e); SAFE = true; renderer = mk(false); }
+  DPR_MAX = SAFE ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+  renderer.setPixelRatio(DPR_MAX);
+  cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); onCtxLost(); }, false);
+  cv.addEventListener('webglcontextrestored', () => onCtxRestored(), false);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = true;
   scene = new THREE.Scene(); scene.background = new THREE.Color(0x8fb0cc);
   scene.fog = new THREE.FogExp2(U.fogCol.value.getHex(), 0.001);
   camera = new THREE.PerspectiveCamera(36, 1, 0.1, 6000);
   sunLight = new THREE.DirectionalLight(0xfff0dc, 2.4); sunLight.castShadow = true;
-  sunLight.shadow.mapSize.set(4096, 4096); sunLight.shadow.bias = -0.0004; sunLight.shadow.normalBias = 0.02;
+  sunLight.shadow.mapSize.set(SAFE ? 2048 : 4096, SAFE ? 2048 : 4096); sunLight.shadow.bias = -0.0004; sunLight.shadow.normalBias = 0.02;
   scene.add(sunLight); scene.add(sunLight.target);
   hemi = new THREE.HemisphereLight(0xc8dcff, 0x5e5340, 1.25); scene.add(hemi);
   let done = 0; const step = (n) => (x) => { done += n; progress(Math.min(done, .99)); return x; };
@@ -411,9 +417,12 @@ function updateChunks(){
   for (const c of chunks){
     const dx = Math.max(Math.abs(cp.x - c.c.x) - CH / 2, 0), dz = Math.max(Math.abs(cp.z - c.c.z) - CH / 2, 0), dist = Math.hypot(dx, dz, cp.y);
     if (dist < 420 && !c.hi){
-      const tx = c.cx >> 1, ty = c.cy >> 1, t = tileTex(tx, ty); c.hi = true;
-      const apply = (tt) => { if (tt){ c.mesh.material.uniforms.colTex.value = tt; c.mesh.material.uniforms.tileXf.value.set(tx * 256, ty * 256, 1 / 256, 1 / 256); } };
+      const tx = c.cx >> 1, ty = c.cy >> 1, t = tileTex(tx, ty); c.hi = true; t.ref = (t.ref || 0) + 1; c.tk = tx + '_' + ty;
+      const apply = (tt) => { if (tt && c.hi){ c.mesh.material.uniforms.colTex.value = tt; c.mesh.material.uniforms.tileXf.value.set(tx * 256, ty * 256, 1 / 256, 1 / 256); } };
       if (t.t) apply(t.t); else t.p.then(apply);
+    } else if (dist > 760 && c.hi){      // v4 hotfix: unload far 2048² colour tiles (GPU memory cap)
+      c.hi = false; c.mesh.material.uniforms.colTex.value = U.loTex.value; c.mesh.material.uniforms.tileXf.value.set(0, 0, 1 / WK, 1 / HK);
+      const t = tileCache[c.tk]; if (t && --t.ref <= 0){ if (t.t) t.t.dispose(); else t.p.then((tt) => tt && tt.dispose()); delete tileCache[c.tk]; }
     }
   }
 }
@@ -1233,8 +1242,25 @@ function clickAt(x, y){
 
 // ------------------------------------------------------------ frame
 const _tv = new THREE.Vector3();
+function onCtxLost(){
+  CTX_LOST = true; if (raf){ cancelAnimationFrame(raf); raf = 0; }
+  try { sessionStorage.setItem('m3dSafe', '1'); sessionStorage.setItem('m3dReopen', '1'); } catch (e) {}
+  loadEl.classList.remove('done'); loadEl.classList.add('err');
+  loadEl.querySelector('p').textContent = 'Grafik kartı 3D haritayı kaldıramadı; hafif modda yeniden başlatılıyor…';
+  setTimeout(() => { if (CTX_LOST) location.reload(); }, 2500);
+}
+function onCtxRestored(){ if (CTX_LOST) location.reload(); }
+const PERF = {acc: 0, n: 0, slow: 0};
+function perfGuard(dtRaw){     // sustained very slow frames -> drop the pixel ratio (keeps the GPU out of driver timeouts)
+  PERF.acc += dtRaw; PERF.n++;
+  if (PERF.acc > 2){ const avg = PERF.acc / PERF.n; PERF.acc = 0; PERF.n = 0;
+    if (avg > .07 && renderer.getPixelRatio() > 1){ renderer.setPixelRatio(1); resize(); }
+    else if (avg > .1 && renderer.getPixelRatio() > .75){ renderer.setPixelRatio(.75); resize(); } }
+}
 function frame(now){
+  if (CTX_LOST) return;
   raf = requestAnimationFrame(frame);
+  if (lastT) perfGuard((now - lastT) / 1000);
   const dt = Math.min((now - (lastT || now)) / 1000, .05); lastT = now; clock += dt; U.time.value = clock;
   const r = 1 - Math.exp(-dt * (flying ? 2.6 : 9));
   const ld = Math.log(cam.d) + (Math.log(goal.d) - Math.log(cam.d)) * r;
@@ -1293,7 +1319,10 @@ export async function open(){
     if (!raf){ lastT = 0; raf = requestAnimationFrame(frame); }
     setTimeout(() => hintEl.classList.add('fade'), 7000);
   } catch (err){
-    console.warn('3D map failed', err); loadEl.classList.add('err'); loadEl.querySelector('p').textContent = '3D harita yüklenemedi (WebGL gerekli). Sayfayı yenileyip tekrar dene ya da 2D haritayı kullan.';
+    console.warn('3D map failed', err); loadEl.classList.add('err'); building = null;
+    const gl = /WebGL|context/i.test(String(err && err.message));
+    loadEl.querySelector('p').textContent = gl ? 'Tarayıcı WebGL’i geçici olarak kapattı (önceki bir grafik çökmesi yüzünden). Tarayıcıyı tamamen kapatıp yeniden açın, sonra tekrar deneyin; ya da 2D haritayı kullanın.'
+      : '3D harita yüklenemedi. Sayfayı yenileyip tekrar dene ya da 2D haritayı kullan.';
   }
 }
 export function close(){
@@ -1381,7 +1410,7 @@ function updateVeg(force){
   if (!VEG.meshes) return;
   const d = cam.d, on = d < 160;
   if (!on){ if (VEG.last){ VEG.meshes.forEach((M) => { if (M) M.im.count = 0; }); VEG.last = null; } return; }
-  const R = Math.min(60, Math.max(4, d * 1.6)); VEG.R.value = R;
+  const R = Math.min(SAFE ? 22 : 60, Math.max(4, d * 1.6)); VEG.R.value = R;
   const tx = cam.x, tz = cam.z, nb = VEG_BANDS.filter((b) => b[0] < R).length;
   VEG.bc = VEG.bc || [];
   let dirty = !!force || !VEG.last || nb !== VEG.last[2];
@@ -1711,13 +1740,16 @@ function buildExtTerrain(){
   }
 }
 function updateExt(dt){
-  const cp = camera.position;
+  const cp = camera.position; let budget = 2;     // v4 hotfix: at most 2 chunk geometries built per frame (no hitches)
   for (const k of EXT.chunks){
     const d = Math.hypot(Math.max(Math.abs(cp.x - k.cx) - k.half, 0), Math.max(Math.abs(cp.z - k.cz) - k.half, 0), cp.y);
     const want = d < 90 ? 2 : d < 300 ? 1 : 0;
-    if (want === 2 && !k.hi){ k.hi = new THREE.Mesh(extChunkGeo(k.c, k.i0, k.j0, k.n, 1), k.mat); k.hi.visible = false; scene.add(k.hi); }
-    if (want >= 1 && !k.mid){ k.mid = new THREE.Mesh(extChunkGeo(k.c, k.i0, k.j0, k.n, 3), k.mat); k.mid.visible = false; scene.add(k.mid); }
-    k.lo.visible = want === 0; if (k.mid) k.mid.visible = want === 1; if (k.hi) k.hi.visible = want === 2;
+    if (want === 2 && !k.hi && budget-- > 0){ k.hi = new THREE.Mesh(extChunkGeo(k.c, k.i0, k.j0, k.n, 1), k.mat); k.hi.visible = false; scene.add(k.hi); }
+    if (want >= 1 && !k.mid && budget-- > 0){ k.mid = new THREE.Mesh(extChunkGeo(k.c, k.i0, k.j0, k.n, 3), k.mat); k.mid.visible = false; scene.add(k.mid); }
+    const w2 = want === 2 && k.hi ? 2 : want >= 1 && k.mid ? 1 : 0; k.lo.visible = w2 === 0; if (k.mid) k.mid.visible = w2 === 1; if (k.hi) k.hi.visible = w2 === 2;
+    // v4 hotfix: free detailed geometry of chunks that have been far for a while (streaming, GPU memory cap)
+    if (want < 2 && k.hi){ k.hiT = (k.hiT || 0) + dt; if (k.hiT > 12){ scene.remove(k.hi); k.hi.geometry.dispose(); k.hi = null; k.hiT = 0; } } else k.hiT = 0;
+    if (want < 1 && k.mid){ k.midT = (k.midT || 0) + dt; if (k.midT > 20){ scene.remove(k.mid); k.mid.geometry.dispose(); k.mid = null; k.midT = 0; } } else k.midT = 0;
   }
   for (const s of EXT.ships){ const a = s.a, t = clock * a.sp + a.ph, x = a.cx + Math.cos(t) * a.r, z = a.cz + Math.sin(t) * a.r;
     s.g.position.set(x, extY(a.cx, a.cz) + a.y * EX * .5 + Math.sin(clock * .7 + a.ph) * .05, z); s.g.rotation.y = -t - Math.PI; }
@@ -1797,7 +1829,7 @@ function buildNightLights(){
       vertexShader: `attribute float w; uniform float nightK, time, pxK, fogK; uniform vec3 camPos; varying float vA; varying float vG;
         void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = -mv.z;
           ${glow ? `float sz = (1.0 + sqrt(w) * .5); vA = nightK * min(1.0, .45 + sqrt(w) * .1) * smoothstep(8.0, 40.0, d) * max(exp(-d * fogK * .3), .25);
-            gl_PointSize = clamp(sz * pxK / d, 2.0, 96.0);`
+            gl_PointSize = clamp(sz * pxK / d, 2.0, 48.0);`
           : `float on = step(.3, fract(w * 13.7 + floor(time / 23.0 + w * 9.0) * .618)); vA = nightK * on * smoothstep(1.5, 4.0, d) * (1.0 - smoothstep(60.0, 160.0, d)) * (.75 + .25 * sin(time * 2.0 + w * 40.0));
             gl_PointSize = clamp(.06 * pxK / d, 1.3, 6.0);`}
           vG = ${glow ? '1.0' : '0.0'}; gl_Position = projectionMatrix * mv; }`,
@@ -1807,7 +1839,7 @@ function buildNightLights(){
     const P = new THREE.Points(g, m); P.frustumCulled = false; P.renderOrder = 12; scene.add(P); return P;
   };
   DNC.glow = mk(gp, true); DNC.spark = mk(sp, false);
-  for (let i = 0; i < 8; i++){ const L = new THREE.PointLight(0xffb066, 0, 1.6, 2); scene.add(L); DNC.lights.push(L); }
+  for (let i = 0; i < 8; i++) DNC.lights.push({position: new THREE.Vector3(0, -99, 0), intensity: 0, userData: {}});   // v4 hotfix: uniform-only lights (fixed count, no lit-material cost, no recompiles)
   DNC.src = BLD.list ? BLD.list.filter((b) => /^(ph_|home_|elf_house|elf_hall|tavern|market|church|lighthouse|watch_big|tower_|castle|blacksmith|barracks)/.test(b.m)) : [];
 }
 function updateNightLights(dt, nk){
