@@ -1,0 +1,272 @@
+{
+ "_nasıl": "Bu dosyayı düzenleyerek 3D haritadaki yer adlarını ve açıklamalarını değiştirebilirsin. Anahtar = yer kimliği (değiştirme). Alanlar: name (ad), note (kısa açıklama), desc (paragraf listesi), sub (alt başlık), tag (etiket kartı adı). Silinen alanlar varsayılana döner. Ayrıntı: README.md",
+ "balahnur": {
+  "name": "Balahnur",
+  "note": "İnsan İmparatorluğu’nun başkenti ve diyarın en büyük şehri: bir uçtan öbür uca at arabasıyla günler süren dev bir megakent. Valdoran Nehri şehrin ortasından geçip limana dökülür.",
+  "tag": "Balahnur",
+  "sub": "İmparatorluğun başkenti",
+  "desc": [
+   "Batı kıyısında, surlarla çevrili büyük bir liman şehri; imparatorluk sarayı buradadır. Eski Kobold başkentinin yerine 7822’de kuruldu.",
+   "Kuzey Sanayi Bölgesi’nde Ark Armatech’in eski atölyesi, 69. Cadde’de Pox Master karakolu vardı. Son olaylarda yandı; halkın büyük kısmı Mital Alari’ye tahliye edildi."
+  ]
+ },
+ "narnia": {
+  "name": "Narnia",
+  "tag": "Narnia",
+  "sub": "Buzlu denizde kristal kuleli şehir",
+  "desc": [
+   "Buzlu denizde, renkli kristal kuleli bir kanal şehri. Kötü kalpler için daralan Sırat Köprüsü ve Baş Büyücü Nebukadnezar’ın Nasihir Akademisi buradadır. Ayrton Narnia yarışını burada kazandı."
+  ]
+ },
+ "blavinken-sehri": {
+  "name": "Blavinken Şehri",
+  "tag": "Blavinken",
+  "sub": "8102’de kurulan şehir",
+  "desc": [
+   "8102’de kuruldu; Narnold soyunun kökeni. Blavinken ormanlarında River’ın ailesinin zamanda donmuş evi bulunur."
+  ]
+ },
+ "balahnur-kuzey-sanayi-bolgesi": {
+  "name": "Balahnur Kuzey Sanayi Bölgesi",
+  "note": "Balahnur’un kuzeyindeki atölye ve demirhane semti.",
+  "tag": "Balahnur Kuzey Sanayi Bölgesi",
+  "sub": "Balahnur’un sanayi bölgesi",
+  "desc": [
+   "Balahnur’un kuzey sanayi bölgesi. Ark Armatech’in eski dökümhane atölyesi buradaydı; Aldric de bu bölgeden, silahçı Arkwright ailesinden gelir."
+  ]
+ },
+ "balahnur-liman-bolgesi": {
+  "name": "Balahnur Liman Bölgesi",
+  "note": "Balahnur’un körfez kıyısındaki liman semti.",
+  "tag": "Balahnur limanı",
+  "sub": "Balahnur’un limanı",
+  "desc": [
+   "Balahnur’un limanı. Aetherion Magnus’un yapıldığı dönemde ve Gideon’un odun pazarlığı sırasında (Man o’ War saldırısı) olaylara sahne oldu.",
+   "Tahliye gecesi korsanlar ve Amanar limana saldırdı; su Amanar’ın sırtıyla ikiye ayrıldı."
+  ]
+ },
+ "balahnur-sehir-kapisi": {
+  "name": "Balahnur Şehir Kapısı",
+  "note": "Balahnur’un doğu surundaki anıtsal şehir kapısı."
+ },
+ "askar-universitesi": {
+  "name": "Askar Üniversitesi",
+  "note": "Balahnur’un batı yakasındaki üniversite semti.",
+  "tag": "Askar Üniversitesi"
+ },
+ "liegendorf-hex-sanctum-karakolu": {
+  "name": "Liegendorf Hex Sanctum Karakolu"
+ },
+ "skeldhavn": {
+  "name": "Skeldhavn Köyü"
+ },
+ "vaelskar": {
+  "name": "Vaelskar Köyü"
+ },
+ "norrhild": {
+  "name": "Norrhild Köyü"
+ },
+ "folken": {
+  "name": "Folken Köyü",
+  "note": "İnsan İmparatorluğu’na bağlı köy (Falkenried’den ayrı bir köy)."
+ },
+ "thornwick": {
+  "name": "Thornwick Köyü"
+ },
+ "kuzey-halic": {
+  "name": "Kuzey Haliç Köyü"
+ },
+ "guney-halic": {
+  "name": "Güney Haliç Köyü"
+ },
+ "falkenried": {
+  "name": "Falkenried Köyü",
+  "note": "İnsan İmparatorluğu’na bağlı köy (Folken’den ayrı bir köy)."
+ },
+ "valenhof": {
+  "name": "Valenhof Köyü"
+ },
+ "halldor": {
+  "name": "Halldor",
+  "tag": "Halldor krallığı",
+  "desc": [
+   "Balahnur’un kuzeyindeki krallık."
+  ]
+ },
+ "torvask": {
+  "name": "Torvask Köyü"
+ },
+ "strombah": {
+  "name": "Strömbah",
+  "tag": "Strömbah dağı",
+  "sub": "Cüce dağı",
+  "desc": [
+   "Cüce dağı ve başkenti; Dempur madeni bu dağda kuruldu."
+  ]
+ },
+ "karasirt-kuleleri": {
+  "name": "Karasırt Kuleleri",
+  "note": "İnsan sınırı boyunca dağların eteğinde güneyden kuzeye uzanan cüce kule-kaleleri ve surlar hattı.",
+  "tag": "Karasırt",
+  "sub": "Yeraltı şehri",
+  "desc": [
+   "2125’te kurulan yeraltı şehirlerinden; 2799’da Manayutanlar tarafından basıldı.",
+   "Profesör Regan’ın bir mektubunda, Karduwh ormanlarından kuzeye, Karasırt kulelerinin bulunduğu dağlara uzanan bir yol tarif edilir."
+  ]
+ },
+ "dempur": {
+  "name": "Dempur",
+  "tag": "Dempur madeni",
+  "sub": "Cüce madeni",
+  "desc": [
+   "Strömbah dağında kurulan cüce madeni (2119); Kanunsuz Dönem’de güvenli yerlerden biriydi. Rat’tor Garaz baskını burada yaşandı (5113)."
+  ]
+ },
+ "kharadum": {
+  "name": "Kharadûm",
+  "note": "Cücelerin yeni kurulan şehri."
+ },
+ "koumtagar": {
+  "name": "Koumtagar",
+  "note": "Cücelerin şehirlerinden biri."
+ },
+ "varkhun": {
+  "name": "Varkhûn Köyü"
+ },
+ "gromhild": {
+  "name": "Gromhild Köyü"
+ },
+ "bronzkhar": {
+  "name": "Bronzkhar Köyü"
+ },
+ "arowhul": {
+  "name": "Arowhul",
+  "tag": "Arowhul",
+  "sub": "Güneydeki elf krallığı",
+  "desc": [
+   "Kral Revalor Olawarin’in güneydeki elf krallığı; şelaleli bir uçurumun üstünde beyaz saray şehri. Şelale 3426’da dev Ægnádr tarafından oluşturuldu, krallık 3499’da kuruldu. Xar’koth alt koridorlarındaki karaborsada doğdu."
+  ]
+ },
+ "gimbatul": {
+  "name": "Gimbatul",
+  "tag": "Gimbatul",
+  "sub": "Merkezî bölge",
+  "desc": [
+   "Haritanın merkezindeki bölge; Akan Kazan Savaşı (9577) ve Dwarrebanih Savaşı’nın yeri."
+  ]
+ },
+ "singulken": {
+  "name": "Singulken",
+  "tag": "Singulken",
+  "desc": [
+   "Boraldmir’in Horaghfus Savaşı’nda ilk ele geçirdiği yer."
+  ]
+ },
+ "luminaraeth": {
+  "name": "Luminaraeth",
+  "note": "Denizin üstünde, bulutların üzerinde uçan dev adalara kurulmuş Işık Elfi şehri. Elf Krallığı'na bağlı.",
+  "tag": "Işık Elfleri",
+  "sub": "Işık büyüsü yapan elfler",
+  "desc": [
+   "2370’te High Elflerden ayrıldıkları keşfedilen, ışık büyüsü yapabilen elfler; Orman Elfleriyle tarımı mümkün kıldılar. Güneş Savaşları’nda kızıl yaratıkları savuşturdular.",
+   "9735’te Işık Elfleri Orc’a dönüştürüldü (yalnızca başlık olarak kayıtlı)."
+  ]
+ },
+ "calenor": {
+  "name": "Calenor Köyü"
+ },
+ "vaeloria": {
+  "name": "Vaeloria Köyü"
+ },
+ "ithryndor": {
+  "name": "Ithryndor Köyü"
+ },
+ "faerindel": {
+  "name": "Faerindel Köyü"
+ },
+ "letharwyn": {
+  "name": "Letharwyn Köyü"
+ },
+ "thalenvyr": {
+  "name": "Thalenvyr Köyü"
+ },
+ "lorenval": {
+  "name": "Lórenval Köyü"
+ },
+ "tidehaven-adaciklari": {
+  "name": "Tidehaven Adacıkları",
+  "note": "Elflere ait küçük adacıklar. Üzerlerinde küçük balıkçı yerleşimleri var."
+ },
+ "deathwing-in-ini": {
+  "name": "Deathwing'in İni",
+  "note": "Kıtanın kuzeydoğusunda, kızıl adadaki etkin yanardağ. Hiçbir faction’a ait değil; cüceler sık sık ziyaret eder ama yasal olarak tarafsız topraktır.",
+  "tag": "Deathwing’in İni",
+  "sub": "Bir ejderha ini",
+  "desc": [
+   "Arşivde bu inle ilgili ayrıntılı bir kayıt yok. Adından, kadim ejderha Deathwing’e ait olduğu tahmin ediliyor."
+  ]
+ },
+ "ankaltvarg-buzul-adalari": {
+  "name": "Ankaltvarg Buzul Adaları"
+ },
+ "sturmkranz-adalari": {
+  "name": "Sturmkranz Adaları"
+ },
+ "kaisersee-donmus-golu": {
+  "name": "Kaisersee Donmuş Gölü"
+ },
+ "falkensee-golu": {
+  "name": "Falkensee Gölü"
+ },
+ "thyra-golu": {
+  "name": "Thyra Gölü"
+ },
+ "vaelmyr-golu": {
+  "name": "Vaelmyr Gölü"
+ },
+ "nymrael-golu": {
+  "name": "Nymrael Gölü"
+ },
+ "valdoran-nehri": {
+  "name": "Valdoran Nehri",
+  "note": "Falkensee Gölü'nden Balahnur Liman Bölgesi'ne akar."
+ },
+ "eberlauf-dereleri": {
+  "name": "Eberlauf Dereleri"
+ },
+ "kaiserfluss-nehri": {
+  "name": "Kaiserfluss Nehri"
+ },
+ "balahnur-kir-tepeleri": {
+  "name": "Balahnur Kır Tepeleri"
+ },
+ "kaltvar-kir-tepeleri": {
+  "name": "Kaltvar Kır Tepeleri"
+ },
+ "singulken-duzlukleri": {
+  "name": "Singulken Düzlükleri"
+ },
+ "dornensumpf-batakligi": {
+  "name": "Dornensumpf Bataklığı"
+ },
+ "karduwh-ormanlari": {
+  "name": "Karduwh Ormanları",
+  "tag": "Karduwh Ormanları",
+  "sub": "Ormanlık bölge",
+  "desc": [
+   "Profesör Regan’ın bir mektubunda geçer: Karduwh ormanlarından başlayıp kuzeye, Karasırt kulelerinin bulunduğu dağlara giden yolda bir nehir geçilir; ardından bard melodilerini taklit eden, bölgeye özgü perilerin yaşadığı bir bataklığa varılır."
+  ]
+ },
+ "balahnur-ormanlari": {
+  "name": "Balahnur Ormanları"
+ },
+ "blavinken-ormanlari": {
+  "name": "Blavinken Ormanları"
+ },
+ "singulken-ormanlari": {
+  "name": "Singulken Ormanları"
+ },
+ "louteberehn-ormanlari": {
+  "name": "Louteberehn Ormanları"
+ }
+}

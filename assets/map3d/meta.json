@@ -1,4 +1,5 @@
 {
+ "v": 2,
  "kmPerPixel": 0.125,
  "srcSize": [
   8192,
@@ -12,14 +13,20 @@
   2048,
   1536
  ],
+ "ngrid": [
+  4096,
+  3072
+ ],
  "hmin": -2.5,
- "hmax": 5.0,
+ "hmax": 6.0,
+ "ex": 3.0,
  "tiles": [
   4,
   3
  ],
  "tileKm": 256,
- "trees": 88471,
+ "trees": 669796,
+ "buildings": 20487,
  "continent": "Horaghfus",
- "note": "Diğer kıtalar eklenince her kıta kendi meta + offset ile yüklenecek (globe için lat/lon eşlemesi sonraki tur)."
+ "note": "Diğer kıtalar eklenince her kıta kendi meta + offset ile yüklenecek."
 }

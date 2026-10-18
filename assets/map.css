@@ -257,20 +257,20 @@ p .mpl-est{font-size:9px;vertical-align:1px}
 .m3d-cv{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none}
 .m3d-labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .m3l{position:absolute;left:0;top:0;pointer-events:none;opacity:0;transition:opacity .3s;border:0;background:none;padding:2px 6px;white-space:nowrap;cursor:pointer;color:#f4ead2;
-  font:600 13px/1.1 Cormorant,Georgia,serif;text-shadow:0 0 3px #000,0 1px 2px #000,0 0 10px #000c;will-change:transform}
+  font:600 15px/1.1 Cormorant,Georgia,serif;text-shadow:0 0 3px #000,0 1px 2px #000,0 0 10px #000c;will-change:transform}
 .m3l.on{opacity:1;pointer-events:auto}
 .m3l:hover{color:#fff;text-shadow:0 0 3px #000,0 0 12px #e2b45a}
-.m3l-fac{font:700 30px/1 Cinzel,serif;letter-spacing:.28em;color:#f3e2b8;text-shadow:0 2px 6px #000,0 0 22px #000b;transition:opacity .4s,letter-spacing .4s,color .3s}
+.m3l-fac{font:700 34px/1.12 Cinzel,serif;letter-spacing:.24em;text-align:center;color:#f3e2b8;text-shadow:0 2px 6px #000,0 0 22px #000b;transition:opacity .4s,letter-spacing .4s,color .3s}
 .m3l-fac.hov{letter-spacing:.34em;color:#fff6dc}
 .m3l-human.hov{text-shadow:0 2px 6px #000,0 0 24px #e0483d}.m3l-dwarf.hov{text-shadow:0 2px 6px #000,0 0 24px #58a6ff}
 .m3l-elf.hov{text-shadow:0 2px 6px #000,0 0 24px #f4d35a}.m3l-halldor.hov{text-shadow:0 2px 6px #000,0 0 24px #e8ecff}
-.m3l-cap{font:700 17px/1 Cinzel,serif;letter-spacing:.06em;color:#ffe6a8}
-.m3l-cap i{font-style:normal;color:#e2b45a;margin-right:5px;font-size:13px}
-.m3l-city{font:700 14px/1 Cinzel,serif;letter-spacing:.04em;color:#f6e9c8}
-.m3l-vil{font-size:13px;color:#efe4cb}
-.m3l-poi{font-size:13px;font-style:italic;color:#f0d9a8}
-.m3l-nat{font-style:italic;font-weight:500;color:#cfe7d0;font-size:14px;letter-spacing:.03em}
-.m3l-lake,.m3l-river{color:#bfe3ff}.m3l-forest{color:#c4e6b0}.m3l-islands{color:#e3eef5;font-size:15px}
+.m3l-cap{font:700 21px/1 Cinzel,serif;letter-spacing:.06em;color:#ffe6a8}
+.m3l-cap i{font-style:normal;color:#e2b45a;margin-right:6px;font-size:15px}
+.m3l-city{font:700 17px/1 Cinzel,serif;letter-spacing:.04em;color:#f6e9c8}
+.m3l-vil{font-size:15px;font-weight:600;color:#efe4cb}
+.m3l-poi{font-size:15px;font-weight:600;font-style:italic;color:#f0d9a8}
+.m3l-nat{font-style:italic;font-weight:600;color:#cfe7d0;font-size:16px;letter-spacing:.03em}
+.m3l-lake,.m3l-river{color:#bfe3ff}.m3l-forest{color:#c4e6b0}.m3l-islands{color:#e3eef5;font-size:17px}
 .m3l.f-human.m3l-cap,.m3l.f-human.m3l-city{color:#ffd9c8}.m3l.f-dwarf.m3l-cap,.m3l.f-dwarf.m3l-city{color:#d4e8ff}.m3l.f-elf.m3l-cap,.m3l.f-elf.m3l-city{color:#fff1b8}.m3l.f-halldor.m3l-cap{color:#eef0f8}
 .m3d-top{position:absolute;top:14px;left:18px;right:18px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
 .m3d-title{display:flex;flex-direction:column;gap:3px;text-shadow:0 2px 8px #000}
