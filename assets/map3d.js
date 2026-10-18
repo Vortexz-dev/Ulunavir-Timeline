@@ -117,7 +117,7 @@ async function build(){
   // v4 hotfix: GPU safety. Safe mode (after a context loss) = no MSAA, 1x pixels, smaller shadow map. Context loss -> graceful restart, never a dead page.
   SAFE = (() => { try { return sessionStorage.getItem('m3dSafe') === '1'; } catch (e) { return false; } })();
   const mk = (aa) => new THREE.WebGLRenderer({canvas: cv, antialias: aa, powerPreference: 'high-performance'});
-  try { renderer = mk(false); }   // E1: MSAA off (Phoenix: stipple/shimmer on moving trees)
+  try { renderer = mk(!SAFE); }   // H1: MSAA on (trees: alpha test, no alpha-to-coverage -> no stipple); safe mode stays without MSAA
    catch (e){ console.warn('webgl retry', e); SAFE = true; renderer = mk(false); }
   DPR_MAX = SAFE ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
   renderer.setPixelRatio(DPR_MAX);
@@ -675,8 +675,8 @@ function buildTileGroup(t){
 function updateBuildings(){
   const cp = camera.position, todo = [];
   for (const t of BLD.tiles.values()){
-    if (t.group) continue;
     const dist = Math.hypot(Math.max(Math.abs(cp.x - t.cx) - BT / 2, 0), Math.max(Math.abs(cp.z - t.cz) - BT / 2, 0), cp.y - yAt(t.cx, t.cz));
+    if (t.group){ t.group.visible = dist < 360; continue; }   // H3
     const mon = t.items.some((b) => b.f & 4);
     if ((dist < NEAR_B + 6 || (mon && dist < 300))) todo.push([dist, t]);
   }
@@ -895,8 +895,8 @@ function buildImpostors(){
       const grp = new THREE.Group();
       for (const part of modelGeo(sp, 'n')){
         let mat;
-        if (pass === 0) mat = new THREE.MeshLambertMaterial({map: MAT.leaf[LEAFMAT[part.mat]], alphaTest: .45, side: THREE.DoubleSide});
-        else { const leaf = part.mat.startsWith('leaf'); const k = part.mat; mat = maskMats[k] || (maskMats[k] = new THREE.MeshBasicMaterial({color: leaf ? 0xffffff : 0x000000, map: MAT.leaf[LEAFMAT[part.mat]], alphaTest: .45, side: THREE.DoubleSide})); if (leaf) mat.color.setRGB(1, 1, 1); }
+        if (pass === 0) mat = new THREE.MeshLambertMaterial({map: MAT.leaf[LEAFMAT[part.mat]], alphaTest: .45, alphaToCoverage: false, side: THREE.DoubleSide});
+        else { const leaf = part.mat.startsWith('leaf'); const k = part.mat; mat = maskMats[k] || (maskMats[k] = new THREE.MeshBasicMaterial({color: leaf ? 0xffffff : 0x000000, map: MAT.leaf[LEAFMAT[part.mat]], alphaTest: .45, alphaToCoverage: false, side: THREE.DoubleSide})); if (leaf) mat.color.setRGB(1, 1, 1); }
         if (pass === 1 && part.mat.startsWith('leaf')){ mat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb = vec3(1.0);'); }; }
         grp.add(new THREE.Mesh(part.g, mat));
       }
@@ -1351,12 +1351,14 @@ function perfGuard(dtRaw){     // sustained very slow frames -> drop the pixel r
     if (avg > .07 && renderer.getPixelRatio() > 1){ renderer.setPixelRatio(1); resize(); }
     else if (avg > .1 && renderer.getPixelRatio() > .75){ renderer.setPixelRatio(.75); resize(); } }
 }
+let FLATN = 0;
 function frame(now){
   if (CTX_LOST) return;
   raf = requestAnimationFrame(frame);
   if (lastT) perfGuard((now - lastT) / 1000);
-  const dt = Math.min((now - (lastT || now)) / 1000, .05); lastT = now; clock += dt; U.time.value = clock;
-  if (GLB.on && GLB.g){ GLB.g.frame(dt); return; }   // Step 3: küre modu (düz sahne çizilmez)
+  const dt = Math.min((now - (lastT || now)) / 1000, .05); lastT = now;
+  if (GLB.on && GLB.g){ renderer.shadowMap.needsUpdate = false; GLB.g.frame(dt); return; }   // H2: küre modu: düz sahne tamamen duraklatılır (saat, güncellemeler, çizim, gölge yok)
+  clock += dt; U.time.value = clock; FLATN++;
   const r = 1 - Math.exp(-dt * (flying ? 2.6 : 9));
   const ld = Math.log(cam.d) + (Math.log(goal.d) - Math.log(cam.d)) * r;
   const moving = Math.abs(goal.x - cam.x) + Math.abs(goal.z - cam.z) + Math.abs(goal.d - cam.d) > .01;
@@ -1429,7 +1431,7 @@ export function close(){
   setTimeout(() => { if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
 }
 window.__ulvMap3D = {open, close, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
-  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), globe: (v) => v ? enterGlobe() : exitGlobe(null), glook: (ll, d) => GLB.g && (ll.length === 3 ? GLB.g.lookDir(ll, d) : GLB.g.lookAt(ll, d)), stats: () => renderer ? {glb: GLB.on && GLB.g ? GLB.g.stats() : null, thin: TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
+  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), globe: (v) => v ? enterGlobe() : exitGlobe(null), glook: (ll, d) => GLB.g && (ll.length === 3 ? GLB.g.lookDir(ll, d) : GLB.g.lookAt(ll, d)), stats: () => renderer ? {flatN: FLATN, glb: GLB.on && GLB.g ? GLB.g.stats() : null, thin: TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
   prof: () => { const out = []; scene.traverseVisible((o) => { const g = o.geometry; if (!g || !(o.isMesh || o.isPoints)) return; let n = g.index ? g.index.count : g.attributes.position.count; n = Math.min(n, g.drawRange.count); let t = o.isPoints ? n : n / 3; const ic = o.isInstancedMesh ? o.count : g.isInstancedBufferGeometry ? g.instanceCount : 1; out.push([o.type + ':' + (o.material && o.material.type) + ':ro' + o.renderOrder + (o.castShadow ? ':S' : '') + ':' + (o.name || ''), Math.round(t), ic === Infinity ? -1 : ic, Math.round(t * (ic === Infinity ? 1 : ic))]); }); out.sort((a, b) => b[3] - a[3]); return {n: out.length, sh: renderer.shadowMap.enabled, top: out.slice(0, 18)}; }};
 
 // ------------------------------------------------------------ v3: farm fields (crisp meshes draped on the terrain)
