@@ -122,7 +122,7 @@ async function build(){
   renderer.setPixelRatio(DPR_MAX);
   cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); onCtxLost(); }, false);
   cv.addEventListener('webglcontextrestored', () => onCtxRestored(), false);
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = true;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;   // D4
   scene = new THREE.Scene(); scene.background = new THREE.Color(0x8fb0cc);
   scene.fog = new THREE.FogExp2(U.fogCol.value.getHex(), 0.001);
   camera = new THREE.PerspectiveCamera(36, 1, 0.1, 6000);
@@ -1365,7 +1365,9 @@ function updateFrame(dt){
     sunLight.target.position.set(sx, ty, sz); sunLight.position.set(sx + SUN.x * 150, ty + SUN.y * 150, sz + SUN.z * 150);
     const sc = sunLight.shadow.camera; sc.left = -S; sc.right = S; sc.top = S; sc.bottom = -S; sc.near = 1; sc.far = 320; sc.updateProjectionMatrix();
     sunLight.target.updateMatrixWorld(); sunLight.updateMatrixWorld();
-  }
+    const key = sx.toFixed(4) + ',' + sz.toFixed(4) + ',' + S.toFixed(2) + ',' + (ty * 50 | 0) + ',' + (SUN.x * 400 | 0) + ',' + (SUN.y * 400 | 0) + ',' + (TR.lastX || 0) + ',' + (TR.lastZ || 0) + ',' + (TR.lastY || 0);   // D4
+    if (key !== DNC.shKey || clock - (DNC.shT || 0) > .4){ DNC.shKey = key; DNC.shT = clock; renderer.shadowMap.needsUpdate = true; }
+  } else renderer.shadowMap.needsUpdate = false;
   routeMats.forEach(({m, kind}) => { m.uniforms.op.value = kind === 'dirt' ? Math.min(1, Math.max(0, (160 - d) / 80)) : kind === 'road' ? Math.min(.85, Math.max(0, (d - 70) / 80)) * Math.min(1, Math.max(0, (420 - d) / 160))
     : kind === 'trade' ? Math.min(1, Math.max(0, (d - 60) / 90)) * Math.min(1, Math.max(.35, (900 - d) / 300)) : Math.min(1, Math.max(.3, (900 - d) / 300)); });
   if (TR.imp) TR.imp.visible = d < 520;
