@@ -10,7 +10,7 @@ let EX = 3.0; let VEGP = null;                        // dikey abartı (meta.jso
 const WK = 1024, HK = 768;           // dünya boyutu (km)
 const CH = 128, NCX = 8, NCY = 6, SEG = 256;   // arazi parçaları: hepsi tam çözünürlük (LOD geçişi yok)
 const DMIN = 4, DMAX = 1150, DZOOM = 3000;   // v4 B: zoom out to the whole world
-const NEAR_T = 8.5;                  // bu mesafeye kadar ağaçlar gerçek 3D model
+const NEAR_T = 3.8;   // C3 perf: was 8.5 (15M tris + shadow pass in flat views); impostors take over beyond (~70 px trees)                  // bu mesafeye kadar ağaçlar gerçek 3D model
 const NEAR_B = 75;                   // bu mesafeye kadar binalar ayrıntılı model
 const CONTINENTS = [{id: 'horaghfus', name: 'Horaghfus', ox: 0, oz: 0}];
 const KIND_TR = {capital: 'Başkent', city: 'Şehir', village: 'Köy', district: 'Şehir semti', landmark: 'Önemli yer', forest: 'Orman', lake: 'Göl', river: 'Nehir',
@@ -24,7 +24,7 @@ const SUN = new THREE.Vector3(-0.78, 0.52, 0.2).normalize();
 const U = {time: {value: 0}, sun: {value: SUN}, hover: {value: new THREE.Vector4(0, 0, 0, 0)}, borderVis: {value: 1}, camPos: {value: new THREE.Vector3()},
   fogCol: {value: new THREE.Color(0.58, 0.70, 0.84)}, fogK: {value: 0.0012}, hazeK: {value: 1}, sunCol: {value: new THREE.Color(1.0, 0.93, 0.82).multiplyScalar(2.1)},
   skyCol: {value: new THREE.Color(0.42, 0.55, 0.75)}, gndCol: {value: new THREE.Color(0.30, 0.27, 0.22)}, ex: {value: 3.0}, camD: {value: 1000},
-  shMap: {value: null}, shMat: {value: new THREE.Matrix4()}, shOn: {value: 0}, nearT: {value: NEAR_T}, pxK: {value: 600}, swampC: {value: new THREE.Vector3(0, 0, 0)}, fineK: {value: 0}, nightK: {value: 0}, bakeK: {value: 1}, skyZen: {value: new THREE.Color(.11, .27, .55)}, plP: {value: [0, 1, 2, 3, 4, 5, 6, 7].map(() => new THREE.Vector4(0, -99, 0, 0))}};
+  shMap: {value: null}, shMat: {value: new THREE.Matrix4()}, shOn: {value: 0}, nearT: {value: NEAR_T}, pxK: {value: 600}, swampC: {value: new THREE.Vector3(0, 0, 0)}, fineK: {value: 0}, nightK: {value: 0}, bakeK: {value: 1}, skyZen: {value: new THREE.Color(.11, .27, .55)}, plP: {value: Array.from({length: 50}, () => new THREE.Vector4(0, -99, 0, 0))}, plN: {value: 0}, vAct: {value: new Float32Array(24)}};
 const cam = {x: 512, z: 400, d: 1000, yaw: 0, tilt: 0};
 const goal = {x: 512, z: 400, d: 1000, yaw: 0, tilt: 0};
 let flying = 0;
@@ -76,9 +76,9 @@ vec3 atmo(vec3 col, vec3 P, vec3 C){
   vec2 ob = max(vec2(-150.0, -170.0) - P.xz, P.xz - vec2(2310.0, 2290.0)); float edge = smoothstep(0.0, 260.0, max(ob.x, ob.y));
   return mix(col, fogCol, clamp(f + mist + edge, 0.0, 1.0));
 }
-uniform vec4 plP[8];
+uniform vec4 plP[50]; uniform int plN;
 vec3 nightLit(vec3 P, vec3 N){ vec3 s = vec3(0.0);
-  for (int i = 0; i < 8; i++){ vec3 d = plP[i].xyz - P; float l2 = dot(d, d); s += vec3(1.0, .62, .3) * plP[i].w * max(dot(N, d * inversesqrt(l2 + 1e-6)), 0.0) * .012 / (l2 + .004) * smoothstep(2.6, .4, l2); }
+  for (int i = 0; i < 50; i++){ if (i >= plN) break; vec3 d = plP[i].xyz - P; float l2 = dot(d, d); s += vec3(1.0, .62, .3) * plP[i].w * max(dot(N, d * inversesqrt(l2 + 1e-6)), 0.0) * .012 / (l2 + .004) * smoothstep(2.6, .4, l2); }
   return s; }`;
 
 // ------------------------------------------------------------ DOM
@@ -404,7 +404,7 @@ function buildTerrain(){
     const m = new THREE.ShaderMaterial({vertexShader: TERR_V, fragmentShader: TERR_F, uniforms: {
       colTex: {value: U.loTex.value}, tileXf: {value: new THREE.Vector4(0, 0, 1 / WK, 1 / HK)}, nTex: U.nTex, mTex: U.mTex, facTex: U.facTex, auxTex: U.auxTex, gTex: U.gTex, gNrm: U.gNrm,
       sun: U.sun, camPos: U.camPos, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, hover: U.hover, borderVis: U.borderVis, time: U.time, ex: U.ex, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol,
-      shMap: U.shMap, shMat: U.shMat, shOn: U.shOn, camD: U.camD, volc: {value: VOLC}, swampC: U.swampC, fineK: U.fineK, bakeK: U.bakeK, plP: U.plP}});
+      shMap: U.shMap, shMat: U.shMat, shOn: U.shOn, camD: U.camD, volc: {value: VOLC}, swampC: U.swampC, fineK: U.fineK, bakeK: U.bakeK, plP: U.plP, plN: U.plN}});
     const mesh = new THREE.Mesh(chunkGeo(cx, cy), m); mesh.castShadow = true; mesh.receiveShadow = false; scene.add(mesh);
     chunks.push({cx, cy, mesh, hi: false, c: new THREE.Vector3(cx * CH + CH / 2, 0, cy * CH + CH / 2)});
   }
@@ -760,7 +760,12 @@ function treeMaterial(matName){
     if (isLeaf) sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `
       #if defined( USE_COLOR )
       { vec3 tc = vColor; float l = dot(diffuseColor.rgb, vec3(.3, .59, .11)); if (tc.r + tc.g + tc.b < 2.95) diffuseColor.rgb = l * tc * 2.7; }
-      #endif`);
+      #endif
+      { float hj = fract(sin(dot(vIp.xz, vec2(12.9898, 78.233))) * 43758.5453); diffuseColor.rgb *= vec3(.92 + .16 * hj, .95 + .1 * fract(hj * 7.3), .9 + .12 * fract(hj * 3.1));
+        diffuseColor.rgb *= mix(.55, 1.12, smoothstep(-.1, 1.0, vLy)); }
+`);
+    if (isLeaf){ sh.vertexShader = 'varying vec3 vIp; varying float vLy;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vIp = instanceMatrix[3].xyz; vLy = position.y / 1.6;');
+      sh.fragmentShader = 'varying vec3 vIp; varying float vLy;\n' + sh.fragmentShader.replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n #if NUM_DIR_LIGHTS > 0\n reflectedLight.indirectDiffuse += diffuseColor.rgb * .045 * max(dot(-geometryNormal, directionalLights[0].direction), 0.0) * directionalLights[0].color;\n #endif'); }   // C3: per-tree hue jitter, crown AO, back-lit wrap
   };
   return m;
 }
@@ -830,8 +835,8 @@ function buildTrees(buf){
 }
 function refreshNearTrees(force){
   const cp = camera.position, gx = cp.x, gz = cp.z;
-  const R = NEAR_T + 1.2, groundY = yAt(gx, gz);
-  if (!force && Math.hypot(gx - TR.lastX, gz - TR.lastZ) < .6 && Math.abs(cp.y - (TR.lastY || 0)) < .6) return;
+  const R = NEAR_T + .6, groundY = yAt(gx, gz);
+  if (!force && Math.hypot(gx - TR.lastX, gz - TR.lastZ) < .25 && Math.abs(cp.y - (TR.lastY || 0)) < .25) return;
   TR.lastX = gx; TR.lastZ = gz; TR.lastY = cp.y;
   const per = TREE_SP.map(() => []);
   if (cp.y - groundY < R){
@@ -886,7 +891,7 @@ function buildImpostors(){
   renderer.setRenderTarget(prevRT); renderer.setViewport(prevVp); renderer.autoClear = prevAuto;
   U.impC = {value: rtC.texture}; U.impM = {value: rtM.texture};
   // instanced quads
-  const n = TR.n, base = new THREE.PlaneGeometry(1, 1), TS = 128, tw = Math.ceil(TWW / TS), th = Math.ceil(THH / TS);
+  const n = TR.n, base = new THREE.PlaneGeometry(1, 1), TS = 64, tw = Math.ceil(TWW / TS), th = Math.ceil(THH / TS);
   const tc = new Uint32Array(tw * th + 1);
   const tileOf = (i) => Math.min(Math.max(((TR.z[i] - TZ0) / TS) | 0, 0), th - 1) * tw + Math.min(Math.max(((TR.x[i] - TX0) / TS) | 0, 0), tw - 1);
   // v4b perf: counting sort by (tile, keep-bucket) so each tile's instances are ordered by their keep hash -> per frame we draw only the prefix that can pass the shader's density test (identical image, far fewer vertices)
@@ -918,7 +923,7 @@ function buildImpostors(){
         vec3 p = c + R * (position.x + sw) * E + upv * position.y * E;
         float col = mod(float(sp), 8.0), row = floor(float(sp) / 8.0);
         vUv = vec2((col + uv.x) / 8.0, 1.0 - (row + 1.0 - uv.y) / 4.0); vUv2 = vec2(vUv.x, vUv.y - .5);
-        vFade = smoothstep(nearT, nearT + 1.5, dist); vTint = iD.z; vP = c;
+        vFade = smoothstep(nearT, nearT + .5, dist); vTint = iD.z; vP = c;
         gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
       }`,
     fragmentShader: `uniform sampler2D impC, impM, auxTex; uniform vec3 tints[12], sun, sunCol, skyCol, gndCol, camPos; varying vec2 vUv, vUv2; varying float vView, vFade, vTint; varying vec3 vP;
@@ -927,7 +932,7 @@ function buildImpostors(){
       void main(){
         vec4 a = texture2D(impC, vUv), b = texture2D(impC, vUv2); vec4 c = mix(a, b, vView);
         float lm = mix(texture2D(impM, vUv).r, texture2D(impM, vUv2).r, vView);
-        float cov = clamp((c.a - .35) / max(fwidth(c.a), .05) * .5 + .5, 0.0, 1.0) * vFade;   // v4b: alpha-to-coverage (MSAA) instead of hard cut -> no shimmer
+        float cov = clamp((c.a - .42) / max(fwidth(c.a) * 1.2, .02) + .5, 0.0, 1.0); cov = vFade < .999 ? cov * vFade : cov; cov = cov > .98 ? 1.0 : cov;   // C3: narrower AA band -> no stipple on distant trees   // v4b: alpha-to-coverage (MSAA) instead of hard cut -> no shimmer
         if (cov < .02) discard;
         vec3 col = c.rgb / max(c.a, .001);
         int ti = int(vTint + .5); vec3 tc = tints[ti];
@@ -948,11 +953,14 @@ function buildImpostors(){
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, 4, cz), TS * .75); g.boundingBox = new THREE.Box3(new THREE.Vector3(cx - TS / 2, -2, cz - TS / 2), new THREE.Vector3(cx + TS / 2, 20, cz + TS / 2));
     const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = true; mesh.renderOrder = 1; grp.add(mesh);
     const hm = Math.min(2.56, thMax[t] + .01), bb = g.boundingBox, b0 = t * NB;
-    mesh.onBeforeRender = (r, sc_, camr) => { const p = camr.position; const dx = Math.max(bb.min.x - p.x, 0, p.x - bb.max.x), dz = Math.max(bb.min.z - p.z, 0, p.z - bb.max.z), dy = Math.max(bb.min.y - p.y, 0, p.y - bb.max.y);
+    mesh.userData.upd = (p) => { const dx = Math.max(bb.min.x - p.x, 0, p.x - bb.max.x), dz = Math.max(bb.min.z - p.z, 0, p.z - bb.max.z), dy = Math.max(bb.min.y - p.y, 0, p.y - bb.max.y);
       const px = hm / Math.max(Math.hypot(dx, dy, dz), .01) * U.pxK.value, keep = Math.min(1, px * px / 3 * 1.03);
-      g.instanceCount = bk[b0 + Math.min(NB, Math.ceil(keep * NB) + 1)] - bk[b0]; };
+      const nb = Math.ceil(keep * NB); g.instanceCount = nb < 1 && keep < .002 ? 0 : bk[b0 + Math.min(NB, nb + 1)] - bk[b0]; mesh.visible = g.instanceCount > 0; };
   }
   scene.add(grp); TR.imp = grp;
+}
+// v4 C3 perf: per-frame impostor tile pass (64 km tiles): exact per-tile density prefix, empty tiles skipped before culling
+function updateImpostors(){ if (!TR.imp) return; const p = camera.position; for (const m of TR.imp.children) m.userData.upd(p);
 }
 
 // ------------------------------------------------------------ smoke: chimneys, forges, the volcano
@@ -969,8 +977,8 @@ function buildSmoke(){
   const g = new THREE.InstancedBufferGeometry(); g.index = base.index; g.setAttribute('position', base.attributes.position); g.setAttribute('uv', base.attributes.uv);
   const e = new Float32Array(MAXP * 4), sd = new Float32Array(MAXP);
   g.setAttribute('iE', new THREE.InstancedBufferAttribute(e, 4)); g.setAttribute('iS', new THREE.InstancedBufferAttribute(sd, 1)); g.instanceCount = 0;
-  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, uniforms: {map: {value: softTex(3)}, time: U.time, camPos: U.camPos, sun: U.sun, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, op: {value: 1}},
-    vertexShader: `attribute vec4 iE; attribute float iS; uniform float time; varying vec2 vUv; varying float vA, vK, vT; varying vec3 vP;
+  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, uniforms: {map: {value: softTex(3)}, time: U.time, camPos: U.camPos, sun: U.sun, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, op: {value: 1}, vAct: U.vAct},
+    vertexShader: `attribute vec4 iE; attribute float iS; uniform float time; uniform float vAct[24]; varying vec2 vUv; varying float vA, vK, vT; varying vec3 vP;
       void main(){
         float k = iE.w; float sp = k > 1.5 ? .018 : k > .5 ? .07 : .09; float t = fract(time * sp + iS);
         float H = k > 1.5 ? 12.0 : k > .5 ? .55 : .38, S = k > 1.5 ? 1.5 : k > .5 ? .14 : .085;
@@ -979,7 +987,7 @@ function buildSmoke(){
         vec3 R = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]), Up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
         float rot = iS * 6.283 + t * 1.5; vec2 q = mat2(cos(rot), sin(rot), -sin(rot), cos(rot)) * position.xy;
         vec3 p = c + (R * q.x + Up * q.y) * size;
-        vA = sin(3.14159 * t) * smoothstep(0.0, .12, t); vK = k; vT = t; vUv = uv; vP = c;
+        vA = sin(3.14159 * t) * smoothstep(0.0, .12, t) * (k > 1.5 ? vAct[int((k - 2.0) * 64.0 + .5)] : 1.0); vK = k; vT = t; vUv = uv; vP = c;
         gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
       }`,
     fragmentShader: `uniform sampler2D map; uniform float op; uniform vec3 camPos; varying vec2 vUv; varying float vA, vK, vT; varying vec3 vP;
@@ -999,10 +1007,10 @@ function updateSmoke(){
   const cp = camera.position; const moved = !SMK.last || Math.hypot(cp.x - SMK.last.x, cp.z - SMK.last.z) > 2 || Math.abs(cp.y - SMK.last.y) > 3;
   if (!smokeDirty && !moved) return; smokeDirty = false; SMK.last = cp.clone();
   const L = [];
-  for (const s of D.smoke || []) L.push([s[0], yAt(s[0], s[1]) + .3, s[1], 2, 0]);
+  for (const s of D.smoke || []) L.push([s[0], yAt(s[0], s[1]) + .3, s[1], 2 + (s[2] === -1 ? s[3] : 23) / 64, 0]);
   const near = BLD.smokeSrc.map((s) => [s, Math.hypot(s[0] - cp.x, s[2] - cp.z, s[1] - cp.y)]).filter((a) => a[1] < 60).sort((a, b) => a[1] - b[1]);
   let n = 0;
-  for (const s of L){ for (let k = 0; k < 90 && n < SMK.MAXP; k++, n++){ SMK.e.set([s[0] + (hash(k) - .5) * .8, s[1], s[2] + (hash(k + 9) - .5) * .8, 2], n * 4); SMK.sd[n] = k / 90; } }
+  for (const s of L){ for (let k = 0; k < 90 && n < SMK.MAXP; k++, n++){ SMK.e.set([s[0] + (hash(k) - .5) * .8, s[1], s[2] + (hash(k + 9) - .5) * .8, s[3]], n * 4); SMK.sd[n] = k / 90; } }
   for (const [s] of near){ const P = s[3] ? 7 : 5; if (n + P > SMK.MAXP) break; for (let k = 0; k < P; k++, n++){ SMK.e.set([s[0], s[1], s[2], s[3]], n * 4); SMK.sd[n] = (k + hash(s[0] * 31 + s[2])) / P; } }
   SMK.g.instanceCount = n; SMK.g.attributes.iE.needsUpdate = true; SMK.g.attributes.iS.needsUpdate = true;
 }
@@ -1016,7 +1024,7 @@ function cloudTexture(){
   const lat = (P, seed) => { const g = new Float32Array(P * P); for (let i = 0; i < P * P; i++) g[i] = hash(i * 7919 + seed * 104729); return g; };
   const oct = (P, seed) => ({P, g: lat(P, seed)});
   const sm = (t) => t * t * (3 - 2 * t);
-  const val = (o, u, v) => { const x = u * o.P, y = v * o.P, i = Math.floor(x), j = Math.floor(y), fx = sm(x - i), fy = sm(y - j), P = o.P, g = o.g;
+  const val = (o, u, v) => { const x = u * o.P, y = v * o.P, P = o.P, i0 = Math.floor(x), j0 = Math.floor(y), fx = sm(x - i0), fy = sm(y - j0), i = ((i0 % P) + P) % P, j = ((j0 % P) + P) % P, g = o.g;   // C3 fix: negative lattice index -> NaN seam band (Phoenix: streak over the Elf islands)
     const a = g[(j % P) * P + (i % P)], b = g[(j % P) * P + ((i + 1) % P)], c = g[((j + 1) % P) * P + (i % P)], d = g[((j + 1) % P) * P + ((i + 1) % P)]; return (a + (b - a) * fx) + ((c + (d - c) * fx) - (a + (b - a) * fx)) * fy; };
   const F = (seed, base, n) => { const os = []; for (let k = 0; k < n; k++) os.push(oct(base << k, seed + k)); return (u, v) => { let s = 0, w = 0, a = 1; for (const o of os){ s += a * val(o, u, v); w += a; a *= .5; } return s / w; }; };
   const fA = F(11, 4, 5), fB = F(31, 6, 5), fD = F(51, 16, 4), fC = F(71, 2, 2);
@@ -1031,9 +1039,9 @@ function buildClouds(){
   const mk = (y, hk, sc, cover, k, n) => {
     const g = new THREE.PlaneGeometry(6000, 6000, 1, 1); g.rotateX(-Math.PI / 2); g.translate(1080, y, 1060);
     const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false,
-      uniforms: {cT: {value: cT}, time: U.time, camPos: U.camPos, sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, fogCol: U.fogCol, op: DECK.op, nightK: U.nightK, hk: {value: hk}, sc: {value: sc}, cover: {value: cover}, sl: {value: 1 / n}},
+      uniforms: {cT: {value: cT}, time: U.time, camPos: U.camPos, sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, fogCol: U.fogCol, op: DECK.op, nightK: U.nightK, hk: {value: hk}, sc: {value: sc}, cover: {value: cover}, sl: {value: 1 / n}, k: {value: k}},
       vertexShader: 'varying vec3 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
-      fragmentShader: `uniform sampler2D cT; uniform float time, op, nightK, hk, sc, cover, sl; uniform vec3 camPos, sun, sunCol, skyCol, fogCol; varying vec3 vP;
+      fragmentShader: `uniform sampler2D cT; uniform float time, op, nightK, hk, sc, cover, sl, k; uniform vec3 camPos, sun, sunCol, skyCol, fogCol; varying vec3 vP;
         float dens(vec2 p){
           vec2 u = p * sc + vec2(time * .00055, time * .00018);
           vec4 a = texture2D(cT, u), b = texture2D(cT, p * sc * 4.3 + vec2(time * .0012, -time * .0004));
@@ -1044,6 +1052,7 @@ function buildClouds(){
         void main(){
           float dist = length(vP - camPos);
           float fade = smoothstep(4200.0, 1400.0, dist) * smoothstep(1.0, 9.0, dist) * op;
+          float dy = abs(camPos.y - vP.y); fade *= mix(.12, 1.0, smoothstep(2.0, 60.0 + 40.0 * (1.0 - k), dy)) * (k > .5 ? .62 : 1.0);   // C3: layers thin out as the camera approaches -> fly through to the ground
           if (fade < .01) discard;
           float d = dens(vP.xz); if (d < .015) discard;
           float ds = dens(vP.xz + normalize(sun.xz + 1e-4) * 9.0 * (1.0 - sun.y * .5));
@@ -1240,7 +1249,7 @@ function applyCam(){
   camera.position.set(cam.x - Math.sin(cam.yaw) * ch, ty + cy, cam.z + Math.cos(cam.yaw) * ch);
   const minY = Math.max(yAt(camera.position.x, camera.position.z), yAt((camera.position.x + cam.x) / 2, (camera.position.z + cam.z) / 2)) + .45; if (camera.position.y < minY) camera.position.y = minY;
   camera.lookAt(cam.x, ty, cam.z);
-  camera.near = Math.min(Math.max(cam.d * .02, .03), 25); camera.far = Math.max(cam.d * 6, 4200); camera.updateProjectionMatrix();
+  const hag = camera.position.y - yAt(camera.position.x, camera.position.z); camera.near = Math.min(Math.max(Math.min(cam.d * .02, hag * .35), .02), 25);   // C3: low flat views keep foreground foliage (near plane follows height above ground) camera.far = Math.max(cam.d * 6, 4200); camera.updateProjectionMatrix();
   camera.updateMatrixWorld(); U.camPos.value.copy(camera.position); U.camD.value = cam.d;
 }
 function flyTo(x, z, d){ goal.x = x; goal.z = z; goal.d = d; flying = 1; }
@@ -1335,7 +1344,7 @@ function frame(now){
 }
 function updateFrame(dt){
   const d = cam.d, tN = Math.min(Math.max((Math.log(d) - Math.log(DMIN)) / (Math.log(DMAX) - Math.log(DMIN)), 0), 1);
-  updateChunks(); updateBuildings(); refreshNearTrees(false); updateSmoke(); updateVeg(false);
+  updateChunks(); updateBuildings(); updateImpostors(); if (BLD.far) for (const m of BLD.far) m.visible = camera.position.y < 330; refreshNearTrees(false); updateSmoke(); updateVeg(false);
   U.fineK.value = 1 - Math.min(1, Math.max(0, (d - 6) / 22));
   if (FIELDM) FIELDM.uniforms.op.value = Math.min(1, Math.max(0, (260 - d) / 90));
   if (MIST) MIST.material.uniforms.op.value = Math.min(1, Math.max(0, (200 - d) / 80));
@@ -1389,7 +1398,9 @@ export function close(){
   setTimeout(() => { if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
 }
 window.__ulvMap3D = {open, close, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
-  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), stats: () => renderer ? {tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; }};
+  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), stats: () => renderer ? {tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
+  dbg: (c) => eval(c),
+  prof: () => { const out = []; scene.traverseVisible((o) => { const g = o.geometry; if (!g || !(o.isMesh || o.isPoints)) return; let n = g.index ? g.index.count : g.attributes.position.count; n = Math.min(n, g.drawRange.count); let t = o.isPoints ? n : n / 3; const ic = o.isInstancedMesh ? o.count : g.isInstancedBufferGeometry ? g.instanceCount : 1; out.push([o.type + ':' + (o.material && o.material.type) + ':ro' + o.renderOrder + (o.castShadow ? ':S' : '') + ':' + (o.name || ''), Math.round(t), ic === Infinity ? -1 : ic, Math.round(t * (ic === Infinity ? 1 : ic))]); }); out.sort((a, b) => b[3] - a[3]); return {n: out.length, sh: renderer.shadowMap.enabled, top: out.slice(0, 18)}; }};
 
 // ------------------------------------------------------------ v3: farm fields (crisp meshes draped on the terrain)
 const FIELD_F = `
@@ -1456,7 +1467,7 @@ function buildVeg(){
   VEG.meshes = VEG.names.map((n) => { if (!MODELS[n]) return null; const part = modelGeo(n, 'n')[0]; const im = new THREE.InstancedMesh(part.g, VEG.mat, 512); im.count = 0; im.frustumCulled = false; im.receiveShadow = true; scene.add(im); return {im, part, cap: 512}; });
 }
 // v4b: world-anchored deterministic placement (fixed cell grids per band -> a plant never moves when the camera moves), 3 bands out to 60 km
-const VEG_BANDS = [[0, 6.5, .09, 1], [6, 22, .28, 2.1], [21, 60, .75, 3.6]];
+const VEG_BANDS = [[0, 6.5, .09, 1], [6, 22, .28, 2.1], [21, 40, .75, 3.6]];
 function vegBiome(x, z){
   if (x >= 0 && z >= 0 && x <= WK && z <= HK){ const ai = Math.min(Math.max(z * 2 | 0, 0), HH - 1) * HW + Math.min(Math.max(x * 2 | 0, 0), HW - 1); return AUXP[ai * 4 + 1] < 200 ? -1 : 0; }
   const c = contAt(x, z); if (!c) return -1;
@@ -1469,7 +1480,7 @@ function updateVeg(force){
   if (!on){ if (VEG.last){ VEG.meshes.forEach((M) => { if (M) M.im.count = 0; }); VEG.last = null; } return; }
   // v4b fix: rings are centred under the camera (the shader fades by camera distance) and reach far when the view is flat
   const pitch = Math.min(Math.max(tiltFor(cam.d) + cam.tilt, .16), 1.45), flat = 1 - Math.min(1, Math.max(0, (pitch - .3) / .5));
-  const R = Math.min(SAFE ? 22 : 60, Math.max(4, d * 1.6, flat * 60)); VEG.R.value = R;
+  const R = Math.min(SAFE ? 22 : 40, Math.max(4, d * 1.6, flat * 40)); VEG.R.value = R;
   const tx = camera.position.x, tz = camera.position.z, nb = VEG_BANDS.filter((b) => b[0] < R).length;
   VEG.bc = VEG.bc || [];
   let dirty = !!force || !VEG.last || nb !== VEG.last[2];
@@ -1744,7 +1755,7 @@ function initExt(X){
   // merge places / roads (labels + cards + road ribbons reuse the Horaghfus systems)
   for (const p of W.places) D.places.push(p);
   for (const r of W.roads) D.roads.push(r);
-  D.smoke = (D.smoke || []).concat((W.vents || []).filter((_, i) => i % 3 === 0).map((v) => [v[0], v[1]]));
+  D.smoke = (D.smoke || []).concat((W.vents || []).map((v, i) => [v[0], v[1], -1, i]));   // C3: every vent can smoke; activity rotates (max 6 at once)
   return X.bld;
 }
 function contAt(x, z){
@@ -1769,24 +1780,29 @@ vec3 det(float i, vec2 w){ vec3 a = mix(Lt(i, w * 3.6), Lt(i, w * .71 + .37), .4
 void main(){
   vec2 uv = (vP.xz - xf.xy) * xf.zw;
   vec3 alb = texture2D(colT, uv).rgb;
-  float bB = texture2D(bioT, uv).b * 255.0, bio = floor(bB / 20.0 + .5); float lavaK = lavaOn * smoothstep(.3, .7, (bB - 196.0) / 56.0 + (vn(vP.xz * 1.3) - .5) * .55 + (vn(vP.xz * 4.0) - .5) * .2) * step(170.0, bB);
-  if (lavaK > .5) bio = 4.0;
+  // C3: biome ids are categorical -> 4 nearest texels + bilinear weights per class (no in-between ids = no white seams, lava only where baked as 252)
+  ivec2 bsz = textureSize(bioT, 0); vec2 bt = uv * vec2(bsz) - .5; ivec2 b0 = ivec2(floor(bt)); vec2 bf = fract(bt);
+  float wSand = 0.0, wRed = 0.0, wSnowB = 0.0, wMud = 0.0, wLava = 0.0, wAsh = 0.0;
+  for (int q = 0; q < 4; q++){ ivec2 o = ivec2(q & 1, q >> 1); float w = (o.x == 1 ? bf.x : 1.0 - bf.x) * (o.y == 1 ? bf.y : 1.0 - bf.y);
+    float bb = texelFetch(bioT, clamp(b0 + o, ivec2(0), bsz - 1), 0).b * 255.0; float id = floor(bb / 20.0 + .5); bool lv = bb > 246.0;
+    if (lv) wLava += w; else { if ((id > 4.5 && id < 6.5) || abs(id - 11.0) < .5) wSand += w; if (abs(id - 6.0) < .5) wRed += w; if (abs(id - 3.0) < .5) wSnowB += w; if (abs(id - 7.0) < .5 || abs(id - 10.0) < .5) wMud += w; if (abs(id - 10.0) < .5) wAsh += w; } }
+  float lavaK = lavaOn * smoothstep(.35, .75, wLava + (vn(vP.xz * 1.3) - .5) * .45 + (vn(vP.xz * 4.0) - .5) * .15) * step(.02, wLava);
+  wAsh = max(wAsh, wLava);
   vec3 n = normalize(texture2D(nrmT, uv).xyz * 2.0 - 1.0);           // v4c: full-res per-pixel normals
   float dist = length(vP - camPos), near = 1.0 - smoothstep(20.0, 160.0, dist), dk = 1.0 - smoothstep(25.0, 95.0, dist);
   float dn = fbm(vP.xz * 1.3) * .6 + vn(vP.xz * 7.0) * .4;
   alb *= .86 + .28 * mix(.5, dn, .35 + .65 * near);
   float sl = 1.0 - n.y, hk = vP.y / 3.0;
-  bool sandy = (bio > 4.5 && bio < 6.5) || abs(bio - 11.0) < .5;
-  vec3 rockC = bio > 5.5 && bio < 6.5 ? vec3(.42, .27, .18) : vec3(.33, .31, .29);
+  vec3 rockC = mix(mix(vec3(.33, .31, .29), vec3(.42, .27, .18), wRed), vec3(.16, .145, .14), wAsh * .8);
   rockC *= .78 + .4 * vn(vP.xz * .9) + .08 * sin(vP.y * 22.0 + vn(vP.xz * .4) * 6.0);      // varied tones + strata
-  float wR = smoothstep(.22, .48, sl + (vn(vP.xz * 2.1) - .5) * .12) * (abs(bio - 3.0) < .5 ? .35 : 1.0);
+  float wR = smoothstep(.22, .48, sl + (vn(vP.xz * 2.1) - .5) * .12) * mix(1.0, .35, wSnowB);
   alb = mix(alb, rockC, wR * .85);
-  float wS = (abs(bio - 3.0) < .5 || hk > snowH + vn(vP.xz * .3) * .5) ? smoothstep(.55, .3, sl) * .85 : 0.0;
+  float wS = max(wSnowB, smoothstep(-.15, .15, hk - snowH - vn(vP.xz * .3) * .5)) * smoothstep(.55, .3, sl) * .85;
   alb = mix(alb, vec3(.86, .89, .94), wS);
   if (dk > 0.0){        // ground detail textures (same set as Horaghfus): grass / meadow / sand / rock (triplanar) / snow
     vec2 w = vP.xz;
     vec3 g = mix(det(0.0, w), det(1.0, w), smoothstep(.35, .75, fbm(w * .35)));
-    vec3 d = sandy ? det(3.0, w) * vec3(1.04, 1.0, .95) : abs(bio - 7.0) < .5 || abs(bio - 10.0) < .5 ? det(6.0, w) : g;
+    vec3 d = mix(mix(g, det(3.0, w) * vec3(1.04, 1.0, .95), wSand), det(6.0, w), wMud);
     vec3 an = abs(n);
     vec3 rk = (Lt(4.0, vec2(w.x, vP.y / 3.0) * 1.4) * an.z + Lt(4.0, vec2(w.y, vP.y / 3.0) * 1.4) * an.x + Lt(4.0, w * 1.4) * an.y) / ((an.x + an.y + an.z) * avgL(4.0));
     d = mix(d, rk, wR); d = mix(d, Lt(5.0, w * 1.1) / avgL(5.0), wS);
@@ -1799,9 +1815,10 @@ void main(){
   vec3 col = alb * (sunCol * dif * .62 + amb * .62) + alb * nightLit(vP, n);
   if (lavaK > .01){       // v4c: lava = glowing cracks in dark crust, pooled in the vent hollows (smooth mask, no biome blocks)
     vec2 q = vP.xz * 1.6 + vec2(fbm(vP.xz * .5), fbm(vP.xz * .5 + 3.3)) * 2.0;
-    float cr = (1.0 - smoothstep(.0, .06, abs(vn(q) - .5))) * smoothstep(.35, .6, vn(vP.xz * .8)), pool = smoothstep(.68, .84, fbm(vP.xz * .7 + vec2(time * .01, 0.0)));
+    float cr = (1.0 - smoothstep(.0, .035, abs(vn(q) - .5))) * smoothstep(.35, .6, vn(vP.xz * .8)), pool = smoothstep(.68, .84, fbm(vP.xz * .7 + vec2(time * .01, 0.0)));
     float l = max(cr * .85, pool) * lavaK * (.75 + .25 * sin(time * 1.7 + vP.x * 3.0));
-    col = mix(col, vec3(.035, .028, .026), lavaK * .92) + vec3(1.0, .33, .04) * l * (1.3 + 1.7 * nightK) + vec3(.8, .18, .02) * lavaK * .06 * (1.0 + 2.0 * nightK); }
+    vec3 crust = mix(vec3(.05, .045, .045), vec3(.17, .15, .14), smoothstep(.3, .8, fbm(vP.xz * 2.2))) * (sunCol * dif * .7 + amb * .6);
+    col = mix(col, crust, lavaK * .9) + vec3(1.0, .33, .04) * l * (.7 + 2.0 * nightK) + vec3(.8, .18, .02) * lavaK * pool * .05 * (1.0 + 2.0 * nightK); }
   col = atmo(col, vP, camPos);
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
@@ -1830,8 +1847,8 @@ function extChunkGeo(c, i0, j0, n, step){
 function buildExtTerrain(){
   const NC = 128;
   for (const c of EXT.conts){
-    const mat = new THREE.ShaderMaterial({vertexShader: EXT_V, fragmentShader: EXT_F, uniforms: {snowH: {value: c.k === 'guney' ? 99 : 2.3}, lavaOn: {value: 1}, colT: {value: c.colT}, bioT: {value: c.bioT}, nrmT: {value: c.nT}, gTex: U.gTex, gNrm: U.gNrm, fineK: U.fineK, xf: {value: new THREE.Vector4(c.x0, c.z0, 1 / (c.W * c.R), 1 / (c.H * c.R))},
-      sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol, camPos: U.camPos, time: U.time, nightK: U.nightK, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, plP: U.plP}});
+    const mat = new THREE.ShaderMaterial({vertexShader: EXT_V, fragmentShader: EXT_F, uniforms: {snowH: {value: c.k === 'guney' ? 99 : c.k === 'unk' ? 3.7 : 2.3}, lavaOn: {value: 1}, colT: {value: c.colT}, bioT: {value: c.bioT}, nrmT: {value: c.nT}, gTex: U.gTex, gNrm: U.gNrm, fineK: U.fineK, xf: {value: new THREE.Vector4(c.x0, c.z0, 1 / (c.W * c.R), 1 / (c.H * c.R))},
+      sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol, camPos: U.camPos, time: U.time, nightK: U.nightK, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, plP: U.plP, plN: U.plN}});
     for (let j0 = 0; j0 < c.H - 1; j0 += NC) for (let i0 = 0; i0 < c.W - 1; i0 += NC){
       const n = Math.min(NC, Math.max(c.W - 1 - i0, c.H - 1 - j0)); let mx = -99;     // v4b: square chunk may overhang the grid edge (vertices clamp) -> no holes at the ragged edge
       for (let j = j0; j <= Math.min(j0 + n, c.H - 1); j += 2) for (let i = i0; i <= Math.min(i0 + n, c.W - 1); i += 2) mx = Math.max(mx, c.Y[j * c.W + i]);
@@ -1842,12 +1859,12 @@ function buildExtTerrain(){
   }
   // v4c: Ulug'al Tamga lava vents - flickering fire glow (day + night), smoke comes from the shared smoke system
   const VN = (EXT.W.vents || []); if (VN.length){
-    const pos = new Float32Array(VN.length * 3 * 3), sd = new Float32Array(VN.length * 3);
-    VN.forEach(([x, z], i) => { for (let k = 0; k < 3; k++){ const j = i * 3 + k; pos.set([x + (hash(j) - .5) * .6, extY(x, z) + .15 + k * .25, z + (hash(j + 7) - .5) * .6], j * 3); sd[j] = hash(j * 3 + 1); } });
-    const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); gg.setAttribute('sd', new THREE.BufferAttribute(sd, 1));
-    const fm = new THREE.ShaderMaterial({transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {nightK: U.nightK, time: U.time, pxK: U.pxK},
-      vertexShader: `attribute float sd; uniform float nightK, time, pxK; varying float vA; void main(){ vec3 p = position; p.y += fract(time * .35 + sd) * .5; vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        vA = (.55 + .45 * nightK) * (.6 + .4 * sin(time * 9.0 + sd * 50.0)) * (1.0 - fract(time * .35 + sd)); gl_PointSize = clamp(1.1 * pxK / -mv.z, 2.0, 80.0); gl_Position = projectionMatrix * mv; }`,
+    const pos = new Float32Array(VN.length * 3 * 3), sd = new Float32Array(VN.length * 3), vi = new Float32Array(VN.length * 3);
+    VN.forEach(([x, z], i) => { for (let k = 0; k < 3; k++){ const j = i * 3 + k; pos.set([x + (hash(j) - .5) * .6, extY(x, z) + .15 + k * .25, z + (hash(j + 7) - .5) * .6], j * 3); sd[j] = hash(j * 3 + 1); vi[j] = i; } });
+    const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); gg.setAttribute('sd', new THREE.BufferAttribute(sd, 1)); gg.setAttribute('vi', new THREE.BufferAttribute(vi, 1));
+    const fm = new THREE.ShaderMaterial({transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {nightK: U.nightK, time: U.time, pxK: U.pxK, vAct: U.vAct},
+      vertexShader: `attribute float sd, vi; uniform float nightK, time, pxK; uniform float vAct[24]; varying float vA; void main(){ vec3 p = position; p.y += fract(time * .35 + sd) * .5; vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vA = (.55 + .45 * nightK) * (.6 + .4 * sin(time * 9.0 + sd * 50.0)) * (1.0 - fract(time * .35 + sd)) * vAct[int(vi + .5)]; gl_PointSize = clamp(1.1 * pxK / -mv.z, 2.0, 80.0); gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `varying float vA; void main(){ float r = length(gl_PointCoord - .5) * 2.0; if (r > 1.0) discard; gl_FragColor = vec4(mix(vec3(1.0, .25, .02), vec3(1.0, .75, .3), 1.0 - r) * pow(1.0 - r, 1.6) * vA, 1.0); }`});
     const P = new THREE.Points(gg, fm); P.frustumCulled = false; P.renderOrder = 12; scene.add(P);
   }
@@ -1859,6 +1876,9 @@ function buildExtTerrain(){
   }
 }
 function updateExt(dt){
+  { const N = (EXT.W && EXT.W.vents || []).length, a = U.vAct.value; a.fill(0); a[23] = 1;      // C3: 6 rotating eruption slots
+    if (N) for (let s = 0; s < 6; s++){ const P = 26, t = clock + s * P / 6, e = Math.floor(t / P), f = t / P - e, v = Math.floor(hash(s * 977 + e * 131) * N) % N;
+      a[v] = Math.max(a[v], Math.min(1, f / .12) * Math.min(1, (1 - f) / .2)); } }
   const cp = camera.position; let budget = 2;     // v4 hotfix: at most 2 chunk geometries built per frame (no hitches)
   for (const k of EXT.chunks){
     const d = Math.hypot(Math.max(Math.abs(cp.x - k.cx) - k.half, 0), Math.max(Math.abs(cp.z - k.cz) - k.half, 0), cp.y);
@@ -1947,18 +1967,19 @@ function buildNightLights(){
     const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {nightK: U.nightK, time: U.time, pxK: U.pxK, camPos: U.camPos, fogK: U.fogK},
       vertexShader: `attribute float w; uniform float nightK, time, pxK, fogK; uniform vec3 camPos; varying float vA; varying float vG;
         void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = -mv.z;
-          ${glow ? `float sz = (1.0 + sqrt(w) * .5); vA = nightK * min(1.0, .45 + sqrt(w) * .1) * smoothstep(8.0, 40.0, d) * max(exp(-d * fogK * .3), .25);
-            gl_PointSize = clamp(sz * pxK / d, 2.0, 48.0);`
+          ${glow ? `float el = clamp((camPos.y - position.y) / max(distance(camPos, position), .01), 0.0, 1.0), lowA = smoothstep(.04, .45, el);   // C3: grazing views -> smaller, fainter blobs (no merged 'sun')
+            float sz = (1.0 + sqrt(w) * .5) * mix(.45, 1.0, lowA); vA = nightK * min(1.0, .45 + sqrt(w) * .1) * smoothstep(8.0, 40.0, d) * max(exp(-d * fogK * .3), .25) * mix(.22, 1.0, lowA);
+            gl_PointSize = clamp(sz * pxK / d, 2.0, mix(14.0, 48.0, lowA));`
           : `float on = step(.3, fract(w * 13.7 + floor(time / 23.0 + w * 9.0) * .618)); vA = nightK * on * smoothstep(1.5, 4.0, d) * (1.0 - smoothstep(60.0, 160.0, d)) * (.75 + .25 * sin(time * 2.0 + w * 40.0));
             gl_PointSize = clamp(.06 * pxK / d, 1.3, 6.0);`}
           vG = ${glow ? '1.0' : '0.0'}; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `varying float vA; varying float vG; void main(){ vec2 c = gl_PointCoord - .5; float r = length(c) * 2.0; if (r > 1.0) discard;
           float a = vG > .5 ? pow(1.0 - r, 2.2) : smoothstep(1.0, .2, r); vec3 col = mix(vec3(1.0, .62, .28), vec3(1.0, .85, .6), vG > .5 ? (1.0 - r) : .5);
-          gl_FragColor = vec4(col * a * vA * (vG > .5 ? .8 : 1.4), 1.0); }`, depthTest: !glow});
+          gl_FragColor = vec4(col * a * vA * (vG > .5 ? .8 : 1.4), 1.0); }`, depthTest: true});
     const P = new THREE.Points(g, m); P.frustumCulled = false; P.renderOrder = 12; scene.add(P); return P;
   };
   DNC.glow = mk(gp, true); DNC.spark = mk(sp, false);
-  for (let i = 0; i < 8; i++) DNC.lights.push({position: new THREE.Vector3(0, -99, 0), intensity: 0, userData: {}});   // v4 hotfix: uniform-only lights (fixed count, no lit-material cost, no recompiles)
+  for (let i = 0; i < 50; i++) DNC.lights.push({position: new THREE.Vector3(0, -99, 0), intensity: 0, userData: {}});   // v4 hotfix: uniform-only lights (fixed count, no lit-material cost, no recompiles)
   DNC.src = BLD.list ? BLD.list.filter((b) => /^(ph_|home_|elf_house|elf_hall|tavern|market|church|lighthouse|watch_big|tower_|castle|blacksmith|barracks)/.test(b.m)) : [];
 }
 function updateNightLights(dt, nk){
@@ -1968,17 +1989,19 @@ function updateNightLights(dt, nk){
   if (t - DNC.lastPick > 600){
     DNC.lastPick = t;
     const cx = cam.x, cz = cam.z, near = [];
-    if (nk > .05 && cam.d < 30){
-      for (const b of DNC.src){ const d = Math.abs(b.x - cx) + Math.abs(b.z - cz); if (d < 5) near.push([d, b]); }
+    const px = camera.position.x, pz = camera.position.z;   // C3: up to 50 real lights within 40 km of the camera (uniform array, fixed shader)
+    if (nk > .05 && cam.d < 90){
+      for (const b of DNC.src){ const d = Math.hypot(b.x - px, b.z - pz); if (d < 40) near.push([d, b]); }
       near.sort((a, b) => a[0] - b[0]);
     }
     const pick = [];
-    for (const [, b] of near){ if (pick.length >= 8) break; if (pick.every((q) => Math.hypot(q.x - b.x, q.z - b.z) > .35) && hash(Math.round(b.x * 977 + b.z * 131) + Math.floor(clock / 23)) > .25) pick.push(b); }
+    for (const [, b] of near){ if (pick.length >= 50) break; if (pick.every((q) => Math.hypot(q.x - b.x, q.z - b.z) > .5) && hash(Math.round(b.x * 977 + b.z * 131) + Math.floor(clock / 23)) > .25) pick.push(b); }
     DNC.lights.forEach((L, i) => { const b = pick[i]; if (b){ L.position.set(b.x + .05, (b.top || b.y + .1) * .6 + b.y * .4, b.z + .05); L.userData.on = 1; } else L.userData.on = 0; });
   }
-  let k = 0;
+  let k = 0, nOn = 0;
   DNC.lights.forEach((L, i) => { const tgt = L.userData.on ? nk * (.9 + .1 * Math.sin(clock * 7 + i)) * .045 : 0; L.intensity += (tgt - L.intensity) * Math.min(1, dt * 4);
-    U.plP.value[i].set(L.position.x, L.position.y, L.position.z, L.intensity / .045 * nk); });
+    U.plP.value[i].set(L.position.x, L.position.y, L.position.z, L.intensity / .045 * nk); if (L.intensity > .0005) nOn = i + 1; });
+  U.plN.value = nOn;
 }
 // ---- high cirrus layer (streaky, thin; seen from below and from above when zoomed far out)
 function buildCirrus(){
