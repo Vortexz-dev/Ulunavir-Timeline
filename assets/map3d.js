@@ -1931,8 +1931,11 @@ function updateExt(dt){
     if (want < 2 && k.hi){ k.hiT = (k.hiT || 0) + dt; if (k.hiT > 12){ scene.remove(k.hi); k.hi.geometry.dispose(); k.hi = null; k.hiT = 0; } } else k.hiT = 0;
     if (want < 1 && k.mid){ k.midT = (k.midT || 0) + dt; if (k.midT > 20){ scene.remove(k.mid); k.mid.geometry.dispose(); k.mid = null; k.midT = 0; } } else k.midT = 0;
   }
-  for (const s of EXT.ships){ const a = s.a, t = clock * a.sp + a.ph, x = a.cx + Math.cos(t) * a.r, z = a.cz + Math.sin(t) * a.r;
-    s.g.position.set(x, extY(a.cx, a.cz) + a.y * EX * .5 + Math.sin(clock * .7 + a.ph) * .05, z); s.g.rotation.y = -t - Math.PI; }
+  const route = (a, tt) => { const dir = a.ph % 2.6 < 1.3 ? 1 : -1, th = dir * tt + .55 * Math.sin(tt * .37 + a.ph * 2.1) + .25 * Math.sin(tt * .91 + a.ph),
+      r = a.r * (1 + .32 * Math.sin(tt * .53 + a.ph * 1.7) + .12 * Math.sin(tt * 1.31 + a.ph * .3)); return [a.cx + Math.cos(th) * r * 1.15, a.cz + Math.sin(th) * r * .9]; };   // E6
+  for (const s of EXT.ships){ const a = s.a, t = clock * a.sp + a.ph, [x, z] = route(a, t), [x2, z2] = route(a, t + .02), vx = x2 - x, vz = z2 - z;
+    const yaw = Math.atan2(-vz, vx), dy = yaw - (s.yaw == null ? yaw : s.yaw); s.yaw = yaw; s.bank = (s.bank || 0) * .9 + Math.max(-.25, Math.min(.25, Math.atan2(Math.sin(dy), Math.cos(dy)) * 8)) * .1;
+    s.g.position.set(x, extY(a.cx, a.cz) + a.y * EX * .5 + Math.sin(clock * .7 + a.ph) * .05 + .15 * Math.sin(t * .8 + a.ph), z); s.g.rotation.set(s.bank, yaw, 0, 'YXZ'); }
 }
 
 // ------------------------------------------------------------ v4 B: day / night cycle (2 min day + 2 min night), regional atmosphere, night city lights
