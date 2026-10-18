@@ -1399,7 +1399,6 @@ export function close(){
 }
 window.__ulvMap3D = {open, close, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
   places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), stats: () => renderer ? {tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
-  dbg: (c) => eval(c),
   prof: () => { const out = []; scene.traverseVisible((o) => { const g = o.geometry; if (!g || !(o.isMesh || o.isPoints)) return; let n = g.index ? g.index.count : g.attributes.position.count; n = Math.min(n, g.drawRange.count); let t = o.isPoints ? n : n / 3; const ic = o.isInstancedMesh ? o.count : g.isInstancedBufferGeometry ? g.instanceCount : 1; out.push([o.type + ':' + (o.material && o.material.type) + ':ro' + o.renderOrder + (o.castShadow ? ':S' : '') + ':' + (o.name || ''), Math.round(t), ic === Infinity ? -1 : ic, Math.round(t * (ic === Infinity ? 1 : ic))]); }); out.sort((a, b) => b[3] - a[3]); return {n: out.length, sh: renderer.shadowMap.enabled, top: out.slice(0, 18)}; }};
 
 // ------------------------------------------------------------ v3: farm fields (crisp meshes draped on the terrain)
@@ -1767,7 +1766,8 @@ function extY(x, z){
   const c = contAt(x, z); if (!c) return -3;
   const fx = Math.min(Math.max((x - c.x0) / c.R - .5, 0), c.W - 1.001), fz = Math.min(Math.max((z - c.z0) / c.R - .5, 0), c.H - 1.001);
   const ix = fx | 0, iz = fz | 0, tx = fx - ix, tz = fz - iz, i = iz * c.W + ix, Y = c.Y;
-  return (Y[i] * (1 - tx) + Y[i + 1] * tx) * (1 - tz) + (Y[i + c.W] * (1 - tx) + Y[i + c.W + 1] * tx) * tz;
+  const A = Y[i], B = Y[i + 1], C = Y[i + c.W], D_ = Y[i + c.W + 1];     // C3r: same triangle split as the chunk mesh -> roads/objects sit exactly on the surface
+  return (tx + tz <= 1) ? A + (B - A) * tx + (C - A) * tz : D_ + (C - D_) * (1 - tx) + (B - D_) * (1 - tz);
 }
 const EXT_V = `varying vec3 vP; varying vec3 vN; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; vN = normal; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const EXT_F = `precision highp sampler2DArray;
