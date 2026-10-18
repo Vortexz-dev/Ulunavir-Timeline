@@ -87,7 +87,7 @@ function makeDom(){
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'Horaghfus 3D haritası');
   root.innerHTML = '<canvas class="m3d-cv"></canvas><div class="m3d-labels"></div>' +
     '<div class="m3d-top"><div class="m3d-title"><b>Horaghfus</b><span>3D Harita · beta</span></div>' +
-    '<div class="m3d-btns"><button type="button" class="m3d-world" title="Bütün dünyayı göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
+    '<div class="m3d-btns"><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
     '<div class="m3d-hint">Sol tık + sürükle: kaydır · Sağ tık + sürükle: döndür / eğ · Tekerlek: yakınlaş · İsme tıkla: bilgi kartı</div>' +
     '<div class="m3d-scale"><i></i><span></span></div>' +
     '<aside class="m3d-card" hidden><button type="button" class="m3d-cx" aria-label="Kartı kapat">✕</button><div class="m3d-ci"></div></aside>' +
@@ -96,8 +96,8 @@ function makeDom(){
   cv = root.querySelector('.m3d-cv'); labelsEl = root.querySelector('.m3d-labels'); cardEl = root.querySelector('.m3d-card');
   loadEl = root.querySelector('.m3d-load'); hintEl = root.querySelector('.m3d-hint'); scaleEl = root.querySelector('.m3d-scale');
   root.querySelector('.m3d-x').addEventListener('click', close);
-  root.querySelector('.m3d-home').addEventListener('click', () => { flyTo(512, 400, 1000); goal.yaw = 0; goal.tilt = 0; closeCard(); });
-  root.querySelector('.m3d-world').addEventListener('click', () => { flyTo(1080, 1000, 2700); goal.yaw = 0; goal.tilt = 0; closeCard(); });
+  root.querySelector('.m3d-home').addEventListener('click', () => { if (GLB.on){ exitGlobe(null); return; } flyTo(512, 400, 1000); goal.yaw = 0; goal.tilt = 0; closeCard(); });
+  root.querySelector('.m3d-world').addEventListener('click', () => { if (!GLB.on) enterGlobe(); });   // Step 3: Dünya = küre
   root.querySelector('.m3d-cx').addEventListener('click', closeCard);
   cardEl.addEventListener('click', onCardClick);
   labelsEl.addEventListener('click', onLabelClick);
@@ -1296,11 +1296,13 @@ function bindInput(){
   let drag = null, moved = 0;
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
   cv.addEventListener('pointerdown', (e) => {
+    if (GLB.on || GLB.busy) return;
     cv.setPointerCapture(e.pointerId); moved = 0; flying = 0;
     const rot = e.button === 2 || e.ctrlKey || e.shiftKey;
     drag = {rot, x: e.clientX, y: e.clientY, g: rot ? null : groundAt(e.clientX, e.clientY, yAt(cam.x, cam.z) * Math.min(1, 120 / cam.d) + lumiLift(cam.x, cam.z))};
   });
   cv.addEventListener('pointermove', (e) => {
+    if (GLB.on) return;
     if (!drag){ hoverAt(e.clientX, e.clientY); return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; moved += Math.abs(dx) + Math.abs(dy);
     if (drag.rot){ cam.yaw += dx * .005; cam.tilt = Math.min(Math.max(cam.tilt - dy * .004, -.3), .9); goal.yaw = cam.yaw; goal.tilt = cam.tilt; drag.x = e.clientX; drag.y = e.clientY; }
@@ -1310,7 +1312,8 @@ function bindInput(){
   const up = (e) => { if (!drag) return; const was = drag; drag = null; if (moved < 5 && !was.rot) clickAt(e.clientX, e.clientY); };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => { drag = null; });
   cv.addEventListener('wheel', (e) => {
-    e.preventDefault(); flying = 0;
+    e.preventDefault(); if (GLB.on || GLB.busy) return; flying = 0;
+    if (e.deltaY > 0 && goal.d >= DZOOM * .97){ GLB.pull += e.deltaY; if (GLB.pull > 360) enterGlobe(); return; } GLB.pull = 0;   // Step 3: en uzaktan daha da uzaklaş -> küre
     const k = Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * .0022), nd = Math.min(Math.max(goal.d * k, DMIN), DZOOM);
     const g = groundAt(e.clientX, e.clientY);
     const gp = pickTerrain(e.clientX, e.clientY) || g;
@@ -1353,6 +1356,7 @@ function frame(now){
   raf = requestAnimationFrame(frame);
   if (lastT) perfGuard((now - lastT) / 1000);
   const dt = Math.min((now - (lastT || now)) / 1000, .05); lastT = now; clock += dt; U.time.value = clock;
+  if (GLB.on && GLB.g){ GLB.g.frame(dt); return; }   // Step 3: küre modu (düz sahne çizilmez)
   const r = 1 - Math.exp(-dt * (flying ? 2.6 : 9));
   const ld = Math.log(cam.d) + (Math.log(goal.d) - Math.log(cam.d)) * r;
   const moving = Math.abs(goal.x - cam.x) + Math.abs(goal.z - cam.z) + Math.abs(goal.d - cam.d) > .01;
@@ -1398,7 +1402,7 @@ function updateFrame(dt){
   if (windG) windG.material.uniforms.op.value = Math.min(1, Math.max(0, (d - 30) / 80)) * Math.min(1, Math.max(0, (500 - d) / 200));
   updateSpecial(dt); updateFPS(dt); if (EXT.W) updateExt(dt);
 }
-function resize(){ if (!renderer) return; const w = root.clientWidth, h = root.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); labels.forEach((l) => { l.w = 0; }); }
+function resize(){ if (!renderer) return; const w = root.clientWidth, h = root.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); labels.forEach((l) => { l.w = 0; }); if (GLB.g) GLB.g.resize(w, h); }
 
 // ------------------------------------------------------------ open / close
 export async function open(){
@@ -1425,7 +1429,7 @@ export function close(){
   setTimeout(() => { if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
 }
 window.__ulvMap3D = {open, close, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
-  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), stats: () => renderer ? {thin: TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
+  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), globe: (v) => v ? enterGlobe() : exitGlobe(null), glook: (ll, d) => GLB.g && (ll.length === 3 ? GLB.g.lookDir(ll, d) : GLB.g.lookAt(ll, d)), stats: () => renderer ? {glb: GLB.on && GLB.g ? GLB.g.stats() : null, thin: TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
   prof: () => { const out = []; scene.traverseVisible((o) => { const g = o.geometry; if (!g || !(o.isMesh || o.isPoints)) return; let n = g.index ? g.index.count : g.attributes.position.count; n = Math.min(n, g.drawRange.count); let t = o.isPoints ? n : n / 3; const ic = o.isInstancedMesh ? o.count : g.isInstancedBufferGeometry ? g.instanceCount : 1; out.push([o.type + ':' + (o.material && o.material.type) + ':ro' + o.renderOrder + (o.castShadow ? ':S' : '') + ':' + (o.name || ''), Math.round(t), ic === Infinity ? -1 : ic, Math.round(t * (ic === Infinity ? 1 : ic))]); }); out.sort((a, b) => b[3] - a[3]); return {n: out.length, sh: renderer.shadowMap.enabled, top: out.slice(0, 18)}; }};
 
 // ------------------------------------------------------------ v3: farm fields (crisp meshes draped on the terrain)
@@ -2069,4 +2073,41 @@ function buildCirrus(){
         #include <colorspace_fragment>
       }`});
   const mesh = new THREE.Mesh(g, m); mesh.renderOrder = 9; mesh.frustumCulled = false; scene.add(mesh);
+}
+
+// ------------------------------------------------------------ Step 3: Dünya küresi (tembel yüklenir; düz harita ile küre aynı anda GPU'da tutulmaz)
+const GLB = {mod: null, g: null, on: false, busy: false, wind: null, pull: 0};
+const gwait = (ms) => new Promise((r) => setTimeout(r, ms));
+function windEl(){
+  if (!GLB.wind){ const w = document.createElement('div'); w.className = 'm3d-wind'; w.innerHTML = '<i></i><i></i><i></i><i></i><b></b>'; root.appendChild(w); GLB.wind = w; }
+  return GLB.wind;
+}
+function windIn(){ const w = windEl(); w.classList.remove('out'); void w.offsetWidth; w.classList.add('in'); }
+function windOut(){ const w = windEl(); w.classList.remove('in'); w.classList.add('out'); }
+function releaseFlat(){       // küre görünürken düz haritanın ağır ayrıntısını bırak (geri dönünce gerektikçe yeniden kurulur)
+  if (EXT.chunks) for (const k of EXT.chunks){
+    if (k.hi){ scene.remove(k.hi); k.hi.geometry.dispose(); k.hi = null; }
+    if (k.mid){ scene.remove(k.mid); k.mid.geometry.dispose(); k.mid = null; } }
+  labels.forEach((l) => l.el.classList.remove('on'));
+  renderer.renderLists.dispose();
+}
+async function enterGlobe(){
+  if (GLB.on || GLB.busy || !built || CTX_LOST) return; GLB.busy = true; GLB.pull = 0; closeCard();
+  goal.d = DZOOM; flying = 1; windIn(); await gwait(700);
+  try {
+    if (!GLB.mod) GLB.mod = await import('./map3d_globe.js?v=' + V);
+    if (!GLB.g) GLB.g = await GLB.mod.createGlobe({renderer, cv, labelsEl, url, onDive: (t) => exitGlobe(t)});
+    releaseFlat(); GLB.g.resize(root.clientWidth, root.clientHeight); GLB.g.show(true);
+    GLB.g.orb.d = 900; GLB.g.orb.gd = 430;        // bulutların arasından geri çekilir gibi açılış
+    GLB.on = true; root.classList.add('m3d-glb');
+  } catch (e){ console.warn('globe failed', e); if (GLB.g){ GLB.g.dispose(); GLB.g = null; } }
+  await gwait(120); windOut(); GLB.busy = false;
+}
+async function exitGlobe(t){
+  if (!GLB.on || GLB.busy) return; GLB.busy = true; windIn(); await gwait(700);
+  GLB.on = false; root.classList.remove('m3d-glb');
+  if (GLB.g){ GLB.g.show(false); GLB.g.dispose(); GLB.g = null; }     // tersi: düz haritadayken kürenin GPU belleği serbest
+  t = t || {x: 512, z: 400, d: 1000};
+  Object.assign(cam, {x: t.x, z: t.z, d: DZOOM * .9, yaw: 0, tilt: 0}); Object.assign(goal, {x: t.x, z: t.z, d: t.d, yaw: 0, tilt: 0}); flying = 1;
+  refreshNearTrees(true); await gwait(350); windOut(); GLB.busy = false;
 }
