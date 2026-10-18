@@ -232,7 +232,7 @@ ${NOISE}
 ${ATMO}
 #include <packing>
 float edge(float w){ return smoothstep(.36, .5, w) * (1.0 - smoothstep(.5, .64, w)); }
-vec3 Lt(float i, vec2 uv){ return texture(gTex, vec3(uv, i)).rgb; }
+vec3 Lt(float i, vec2 uv){ float k = smoothstep(.38, .62, vn(uv * .13 + i * 3.1)); vec3 a = texture(gTex, vec3(uv, i)).rgb; if (k < .01) return a; vec3 b = texture(gTex, vec3(mat2(.8, -.6, .6, .8) * uv + vec2(.37, .71), i)).rgb; return mix(a, b, k); }     // D3: no visible tiling
 vec3 avgL(float i){ return textureLod(gTex, vec3(.5, .5, i), 11.0).rgb + 1e-3; }
 uniform float fineK;
 vec3 det(float i, vec2 w){ vec3 a = mix(Lt(i, w * 3.6), Lt(i, w * .71 + .37), .42); return mix(a, a * Lt(i, w * 14.0) / avgL(i), fineK * .55); }
@@ -1787,7 +1787,7 @@ const EXT_F = `precision highp sampler2DArray;
 uniform sampler2D colT, bioT, nrmT; uniform highp sampler2DArray gTex, gNrm; uniform vec4 xf; uniform vec3 sun, sunCol, skyCol, gndCol, camPos; uniform float time, nightK, fineK, snowH, lavaOn; varying vec3 vP; varying vec3 vN;
 ${NOISE}
 ${ATMO}
-vec3 Lt(float i, vec2 w){ return texture(gTex, vec3(w, i)).rgb; }
+vec3 Lt(float i, vec2 uv){ float k = smoothstep(.38, .62, vn(uv * .13 + i * 3.1)); vec3 a = texture(gTex, vec3(uv, i)).rgb; if (k < .01) return a; vec3 b = texture(gTex, vec3(mat2(.8, -.6, .6, .8) * uv + vec2(.37, .71), i)).rgb; return mix(a, b, k); }     // D3: no visible tiling
 vec3 avgL(float i){ return textureLod(gTex, vec3(.5, .5, i), 11.0).rgb + 1e-3; }
 vec3 det(float i, vec2 w){ vec3 a = mix(Lt(i, w * 3.6), Lt(i, w * .71 + .37), .42); return mix(a, a * Lt(i, w * 14.0) / avgL(i), fineK * .55) / avgL(i); }
 void main(){
@@ -1823,6 +1823,8 @@ void main(){
     vec2 nG = texture(gNrm, vec3(w * 3.6, 0.0)).xy * 2.0 - 1.0, nR = texture(gNrm, vec3(w * 1.4, 1.0)).xy * 2.0 - 1.0;
     vec2 nd2 = mix(nG * .5, nR * 1.0, wR) * (1.0 - wS * .7) * dk; n = normalize(n + vec3(nd2.x, 0.0, -nd2.y));
   }
+  { float rp = sin(dot(vP.xz, vec2(.8, .6)) * 38.0 + vn(vP.xz * 2.0) * 7.0) * .5 + .5;     // D3: sand ripples + patchy tone (Güney/Unknown deserts were flat colour up close)
+    alb *= 1.0 + wSand * (1.0 - wR) * (dk * (rp - .5) * .14 + (vn(vP.xz * .55) - .5) * .16 + (vn(vP.xz * 4.5) - .5) * .08 * dk); }
   float dif = max(dot(n, sun), 0.0);
   vec3 amb = mix(gndCol, skyCol, n.y * .5 + .5) * (.75 + .25 * n.y);
   vec3 col = alb * (sunCol * dif * mix(.62, .9, wS) + amb * mix(.62, .4, wS)) + alb * nightLit(vP, n);     // C3l: snow keeps relief contrast
