@@ -1009,7 +1009,64 @@ function updateSmoke(){
 
 // ------------------------------------------------------------ clouds: lit puff clusters (volumetric look), drifting
 let CLD = null;
+// v4c cloud overhaul: stacked noise slices (pseudo-volumetric, soft self-shadowed lighting, varied coverage), a precomputed tileable
+// density texture keeps it to ~3 texture reads per pixel per slice (cheap) - replaces the sprite puffs
+function cloudTexture(){
+  const N = 512, out = new Uint8Array(N * N * 4);
+  const lat = (P, seed) => { const g = new Float32Array(P * P); for (let i = 0; i < P * P; i++) g[i] = hash(i * 7919 + seed * 104729); return g; };
+  const oct = (P, seed) => ({P, g: lat(P, seed)});
+  const sm = (t) => t * t * (3 - 2 * t);
+  const val = (o, u, v) => { const x = u * o.P, y = v * o.P, i = Math.floor(x), j = Math.floor(y), fx = sm(x - i), fy = sm(y - j), P = o.P, g = o.g;
+    const a = g[(j % P) * P + (i % P)], b = g[(j % P) * P + ((i + 1) % P)], c = g[((j + 1) % P) * P + (i % P)], d = g[((j + 1) % P) * P + ((i + 1) % P)]; return (a + (b - a) * fx) + ((c + (d - c) * fx) - (a + (b - a) * fx)) * fy; };
+  const F = (seed, base, n) => { const os = []; for (let k = 0; k < n; k++) os.push(oct(base << k, seed + k)); return (u, v) => { let s = 0, w = 0, a = 1; for (const o of os){ s += a * val(o, u, v); w += a; a *= .5; } return s / w; }; };
+  const fA = F(11, 4, 5), fB = F(31, 6, 5), fD = F(51, 16, 4), fC = F(71, 2, 2);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ const u = x / N, v = y / N, k = (y * N + x) * 4;
+    const wu = u + (fC(u + .3, v) - .5) * .08, wv = v + (fC(u, v + .7) - .5) * .08;
+    out[k] = fA(wu, wv) * 255; out[k + 1] = fD(u, v) * 255; out[k + 2] = fB(wu, wv) * 255; out[k + 3] = fC(u, v) * 255; }
+  const t = new THREE.DataTexture(out, N, N, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.generateMipmaps = true; t.needsUpdate = true; return t;
+}
+const DECK = {meshes: [], op: {value: 1}};
 function buildClouds(){
+  const cT = cloudTexture();
+  const mk = (y, hk, sc, cover, k, n) => {
+    const g = new THREE.PlaneGeometry(6000, 6000, 1, 1); g.rotateX(-Math.PI / 2); g.translate(1080, y, 1060);
+    const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false,
+      uniforms: {cT: {value: cT}, time: U.time, camPos: U.camPos, sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, fogCol: U.fogCol, op: DECK.op, nightK: U.nightK, hk: {value: hk}, sc: {value: sc}, cover: {value: cover}, sl: {value: 1 / n}},
+      vertexShader: 'varying vec3 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader: `uniform sampler2D cT; uniform float time, op, nightK, hk, sc, cover, sl; uniform vec3 camPos, sun, sunCol, skyCol, fogCol; varying vec3 vP;
+        float dens(vec2 p){
+          vec2 u = p * sc + vec2(time * .00055, time * .00018);
+          vec4 a = texture2D(cT, u), b = texture2D(cT, p * sc * 4.3 + vec2(time * .0012, -time * .0004));
+          float cov = cover + (texture2D(cT, p * sc * .21 + .37).a - .5) * .5;          // clear skies and cloudy regions
+          float d = (a.r * .62 + a.b * .38) - (1.0 - cov);
+          d -= (b.g - .5) * .22 * (.6 + hk);                                             // wispy, eroded edges (more at the tops)
+          return smoothstep(0.0, .16, d - hk * hk * .14); }
+        void main(){
+          float dist = length(vP - camPos);
+          float fade = smoothstep(4200.0, 1400.0, dist) * smoothstep(1.0, 9.0, dist) * op;
+          if (fade < .01) discard;
+          float d = dens(vP.xz); if (d < .015) discard;
+          float ds = dens(vP.xz + normalize(sun.xz + 1e-4) * 9.0 * (1.0 - sun.y * .5));
+          float lit = clamp(1.0 - (ds - d) * 1.6 - ds * .45, .2, 1.0);
+          float above = step(vP.y, camPos.y);
+          vec3 sunL = sunCol * (.38 + .25 * hk) * mix(lit, 1.0, hk * .5);
+          vec3 base = skyCol * (.7 + .3 * hk) + sunL;
+          vec3 under = mix((skyCol * .62 + fogCol * .2) * (.75 + .25 * lit), base, .2 + .8 * hk * hk);            // grey flat bases, bright sunlit tops
+          vec3 col = mix(under, base, mix(hk, 1.0, above * .6));
+          col += sunCol * pow(max(dot(normalize(camPos - vP), -sun), 0.0), 6.0) * (1.0 - d) * .25;   // silver lining against the sun
+          col = mix(col, fogCol, smoothstep(600.0, 4200.0, dist) * .6) * (1.0 - nightK * .55);
+          gl_FragColor = vec4(col, min(1.0, d * sl * 3.2) * fade);
+          #include <colorspace_fragment>
+        }`});
+    const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.userData.y = y; scene.add(mesh); DECK.meshes.push(mesh); };
+  for (let i = 0; i < 7; i++) mk(30 + i * 1.3, i / 6, .00055, .4, 0, 7);           // main cumulus deck
+  for (let i = 0; i < 3; i++) mk(13 + i * .8, i / 2, .0019, .3, 1, 3);           // low small fair-weather clouds
+  CLD = {material: {uniforms: {op: DECK.op}}};
+}
+function updateDeck(){       // draw slices back-to-front relative to the camera
+  const cy = camera.position.y; for (const m of DECK.meshes) m.renderOrder = 10 + (cy > m.userData.y ? m.userData.y : 200 - m.userData.y) * .01;
+}
+function buildCloudsOld(){
   const NC = 120, puffs = [];
   for (let c = 0; c < NC; c++){
     const cx = -150 + rnd() * 2450, cz = -170 + rnd() * 2450, cy = 30 + rnd() * 22, rx = 22 + rnd() * 40, rz = 14 + rnd() * 26, ry = 4 + rnd() * 5, n = 34 + (rnd() * 30 | 0);
@@ -1301,7 +1358,7 @@ function updateFrame(dt){
   routeMats.forEach(({m, kind}) => { m.uniforms.op.value = kind === 'dirt' ? Math.min(1, Math.max(0, (160 - d) / 80)) : kind === 'road' ? Math.min(.85, Math.max(0, (d - 70) / 80)) * Math.min(1, Math.max(0, (420 - d) / 160))
     : kind === 'trade' ? Math.min(1, Math.max(0, (d - 60) / 90)) * Math.min(1, Math.max(.35, (900 - d) / 300)) : Math.min(1, Math.max(.3, (900 - d) / 300)); });
   if (TR.imp) TR.imp.visible = d < 520;
-  if (CLD){ CLD.material.uniforms.op.value = .5 + .3 * tN; }
+  if (CLD){ CLD.material.uniforms.op.value = d > 1300 ? Math.max(.35, 1 - (d - 1300) / 1500) : 1; updateDeck(); }
   if (windG) windG.material.uniforms.op.value = Math.min(1, Math.max(0, (d - 30) / 80)) * Math.min(1, Math.max(0, (500 - d) / 200));
   updateSpecial(dt); updateFPS(dt); if (EXT.W) updateExt(dt);
 }
@@ -1742,9 +1799,9 @@ void main(){
   vec3 col = alb * (sunCol * dif * .62 + amb * .62) + alb * nightLit(vP, n);
   if (lavaK > .01){       // v4c: lava = glowing cracks in dark crust, pooled in the vent hollows (smooth mask, no biome blocks)
     vec2 q = vP.xz * 1.6 + vec2(fbm(vP.xz * .5), fbm(vP.xz * .5 + 3.3)) * 2.0;
-    float cr = 1.0 - smoothstep(.0, .09, abs(vn(q) - .5)), pool = smoothstep(.62, .8, fbm(vP.xz * .7 + vec2(time * .01, 0.0)));
+    float cr = (1.0 - smoothstep(.0, .06, abs(vn(q) - .5))) * smoothstep(.35, .6, vn(vP.xz * .8)), pool = smoothstep(.68, .84, fbm(vP.xz * .7 + vec2(time * .01, 0.0)));
     float l = max(cr * .85, pool) * lavaK * (.75 + .25 * sin(time * 1.7 + vP.x * 3.0));
-    col = mix(col, vec3(.06, .045, .04), lavaK * .75) + vec3(1.0, .33, .04) * l * (1.3 + 1.7 * nightK) + vec3(.8, .18, .02) * lavaK * .06 * (1.0 + 2.0 * nightK); }
+    col = mix(col, vec3(.035, .028, .026), lavaK * .92) + vec3(1.0, .33, .04) * l * (1.3 + 1.7 * nightK) + vec3(.8, .18, .02) * lavaK * .06 * (1.0 + 2.0 * nightK); }
   col = atmo(col, vP, camPos);
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
