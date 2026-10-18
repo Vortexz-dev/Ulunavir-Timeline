@@ -117,7 +117,8 @@ async function build(){
   // v4 hotfix: GPU safety. Safe mode (after a context loss) = no MSAA, 1x pixels, smaller shadow map. Context loss -> graceful restart, never a dead page.
   SAFE = (() => { try { return sessionStorage.getItem('m3dSafe') === '1'; } catch (e) { return false; } })();
   const mk = (aa) => new THREE.WebGLRenderer({canvas: cv, antialias: aa, powerPreference: 'high-performance'});
-  try { renderer = mk(!SAFE); } catch (e){ console.warn('webgl retry', e); SAFE = true; renderer = mk(false); }
+  try { renderer = mk(false); }   // E1: MSAA off (Phoenix: stipple/shimmer on moving trees)
+   catch (e){ console.warn('webgl retry', e); SAFE = true; renderer = mk(false); }
   DPR_MAX = SAFE ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
   renderer.setPixelRatio(DPR_MAX);
   cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); onCtxLost(); }, false);
@@ -754,11 +755,16 @@ const LEAFMAT = {leaf_n: 0, leaf_p: 1, leaf_t: 2, bark_n: 3, bark_t: 4, bark_d: 
 const TR = {n: 0, x: null, z: null, y: null, s: null, h: null, t: null, r: null, grid: null, near: [], lastX: 1e9, lastZ: 1e9};
 function treeMaterial(matName){
   const isLeaf = matName.startsWith('leaf');
-  const m = new THREE.MeshLambertMaterial({map: MAT.leaf[LEAFMAT[matName]], alphaTest: isLeaf ? .3 : 0, alphaToCoverage: isLeaf, side: isLeaf ? THREE.DoubleSide : THREE.FrontSide});
+  const m = new THREE.MeshLambertMaterial({map: MAT.leaf[LEAFMAT[matName]], alphaTest: isLeaf ? .5 : 0, alphaToCoverage: false, side: isLeaf ? THREE.DoubleSide : THREE.FrontSide});
   m.onBeforeCompile = (sh) => {
     sh.uniforms.time = U.time;
     sh.vertexShader = 'uniform float time;\n' + sh.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\n float ph = instanceMatrix[3].x * 1.7 + instanceMatrix[3].z * 1.3; transformed.x += sin(time * 1.3 + ph) * .025 * position.y * position.y; transformed.z += cos(time * 1.1 + ph) * .018 * position.y * position.y;');
+    if (isLeaf) sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', `
+      #ifdef USE_MAP
+      { vec2 tsz = vec2(textureSize(map, 0)); vec2 ddx = dFdx(vMapUv * tsz), ddy = dFdy(vMapUv * tsz); float ml = max(0.0, .5 * log2(max(dot(ddx, ddx), dot(ddy, ddy)))); diffuseColor.a *= 1.0 + ml * .25; }
+      #endif
+      #include <alphatest_fragment>`);     // E1: mip-aware alpha test
     if (isLeaf) sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `
       #if defined( USE_COLOR )
       { vec3 tc = vColor; float l = dot(diffuseColor.rgb, vec3(.3, .59, .11)); if (tc.r + tc.g + tc.b < 2.95) diffuseColor.rgb = l * tc * 2.7; }
@@ -908,7 +914,7 @@ function buildImpostors(){
   const tints = TINTS.map((t) => new THREE.Vector3(...t));
   const m = new THREE.ShaderMaterial({uniforms: {impC: U.impC, impM: U.impM, camPos: U.camPos, nearT: U.nearT, pxK: U.pxK, ext: {value: ext}, tints: {value: tints}, sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, time: U.time, auxTex: U.auxTex},
     vertexShader: `attribute vec4 iP; attribute vec4 iD; uniform vec3 camPos; uniform float nearT, pxK, time; uniform float ext[16];
-      varying vec2 vUv, vUv2; varying float vView, vFade, vTint; varying vec3 vP;
+      varying vec2 vUv, vUv2; varying float vView, vFade, vTint, vR; varying vec3 vP;
       void main(){
         vec3 iPos = vec3(iP.x * ${TWW.toFixed(1)} + ${TX0.toFixed(1)}, iP.z * 24.0 - 1.0, iP.y * ${THH.toFixed(1)} + ${TZ0.toFixed(1)});
         float h = iD.x / 100.0; int sp = int(iD.y + .5);
@@ -925,16 +931,17 @@ function buildImpostors(){
         vec3 p = c + R * (position.x + sw) * E + upv * position.y * E;
         float col = mod(float(sp), 8.0), row = floor(float(sp) / 8.0);
         vUv = vec2((col + uv.x) / 8.0, 1.0 - (row + 1.0 - uv.y) / 4.0); vUv2 = vec2(vUv.x, vUv.y - .5);
-        vFade = smoothstep(nearT, nearT + .5, dist); vTint = iD.z; vP = c;
+        vFade = smoothstep(nearT, nearT + .5, dist); vTint = iD.z; vP = c; vR = fract(iP.w * 37.13 + iD.x * .173);
         gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
       }`,
-    fragmentShader: `uniform sampler2D impC, impM, auxTex; uniform vec3 tints[12], sun, sunCol, skyCol, gndCol, camPos; varying vec2 vUv, vUv2; varying float vView, vFade, vTint; varying vec3 vP;
+    fragmentShader: `uniform sampler2D impC, impM, auxTex; uniform vec3 tints[12], sun, sunCol, skyCol, gndCol, camPos; varying vec2 vUv, vUv2; varying float vView, vFade, vTint, vR; varying vec3 vP;
       ${ATMO}
       float hh(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
       void main(){
         vec4 a = texture2D(impC, vUv), b = texture2D(impC, vUv2); vec4 c = mix(a, b, vView);
         float lm = mix(texture2D(impM, vUv).r, texture2D(impM, vUv2).r, vView);
-        float cov = clamp((c.a - .42) / max(fwidth(c.a) * 1.2, .02) + .5, 0.0, 1.0); cov = vFade < .999 ? cov * vFade : cov; cov = cov > .98 ? 1.0 : cov;   // C3: narrower AA band -> no stipple on distant trees   // v4b: alpha-to-coverage (MSAA) instead of hard cut -> no shimmer
+        vec2 dU = dFdx(vUv * vec2(2048.0, 1024.0)), dV = dFdy(vUv * vec2(2048.0, 1024.0)); float ml = max(0.0, .5 * log2(max(dot(dU, dU), dot(dV, dV))));     // E1: alpha test + mip boost, per-tree fade (no per-pixel stipple)
+        if (c.a * (1.0 + ml * .22) < .45 || vFade < vR) discard; float cov = 1.0;
         if (cov < .02) discard;
         vec3 col = c.rgb / max(c.a, .001);
         int ti = int(vTint + .5); vec3 tc = tints[ti];
@@ -944,7 +951,7 @@ function buildImpostors(){
         col = atmo(col, vP, camPos);
         gl_FragColor = vec4(col, cov);
         #include <colorspace_fragment>
-      }`, alphaToCoverage: true});
+      }`, alphaToCoverage: false});
   const grp = new THREE.Group();
   for (let t = 0; t < tw * th; t++){
     const c0 = tc[t], c1 = tc[t + 1]; if (c1 <= c0) continue;
