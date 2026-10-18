@@ -35,3 +35,8 @@ Bir alanı silersen varsayılana döner. Dosya sayfa açılırken okunur, yenide
 - `models.bin/json` paketlenmiş modeller, `tex/` zemin ve ağaç dokuları
 
 Model ve doku kaynakları / lisanslar: `CREDITS.md`.
+
+## v4 ekleri
+- `wat.png`: su türleri (R = tür·64 + kıyı mesafesi; tür 0 deniz / 1 göl / 2 nehir / 3 bataklık), G/B = akış yönü. Nehirler akar, göller durgun, bataklık bulanık.
+- `veg.png`: dağınık ağaç yoğunluğu (R), bitki sınıfı (G), orman (B). Dağınık ağaçlar tarayıcıda bu haritadan üretilir.
+- Luminaraeth: prosedürel uçan adalar, şelaleler ve ışın izlemeli (raymarch) bulut tabakası (`map3d.js` → `buildSpecial`).

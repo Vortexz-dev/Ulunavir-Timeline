@@ -331,3 +331,5 @@ body.m3d-open{overflow:hidden}
 .m3l-nat .m3l-d{background:#d8f0d2}.m3l-lake .m3l-d,.m3l-river .m3l-d{background:#cfeaff}.m3l-poi .m3l-d{background:#ffd98a}
 .m3l-dot.m3l-vil,.m3l-dot.m3l-poi{font-size:14px;font-style:normal;color:#fff}
 .m3l-dot.m3l-nat{font-size:15px}
+/* v4: tiny FPS counter */
+.m3d-fps{position:absolute;right:10px;bottom:8px;font:600 10px/1 ui-monospace,monospace;color:#fff;opacity:.35;pointer-events:none;text-shadow:0 0 2px #000;z-index:5}

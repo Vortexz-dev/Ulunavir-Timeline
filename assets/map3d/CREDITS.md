@@ -10,3 +10,4 @@
 | Harita renkleri, sınırlar, yer adları | Phoenix (Inkarnate çizimi) | — |
 
 Gemiler, taş köprüler, tarlalar, Luminaraeth uçan adaları, gökyüzü, bulutlar, okyanus ve efektler kod içinde üretilir. Modeller sadeleştirildi (gltf-transform) ve tek dosyada paketlendi.
+| Yöresel evler, elf yapıları, deniz feneri/gözetleme kuleleri, iskeleler, uçan adalar (`models.bin` içindeki `ph_*`, `elf_*`, `lighthouse`, `watch_big`, `pier`, `dock`, `fisle_*`) | Bu proje için prosedürel olarak üretildi (`procmodels.py`) | Proje içi |
