@@ -40,3 +40,8 @@ Model ve doku kaynakları / lisanslar: `CREDITS.md`.
 - `wat.png`: su türleri (R = tür·64 + kıyı mesafesi; tür 0 deniz / 1 göl / 2 nehir / 3 bataklık), G/B = akış yönü. Nehirler akar, göller durgun, bataklık bulanık.
 - `veg.png`: dağınık ağaç yoğunluğu (R), bitki sınıfı (G), orman (B). Dağınık ağaçlar tarayıcıda bu haritadan üretilir.
 - Luminaraeth: prosedürel uçan adalar, şelaleler ve ışın izlemeli (raymarch) bulut tabakası (`map3d.js` → `buildSpecial`).
+
+## v4 B: diğer kıtalar (`ext/`)
+- `world.json`: kıtalar (sınır kutuları), yerler, yollar, hava gemileri, gece ışık noktaları, uzak zoom kıta adları.
+- `<kıta>_h.png` (yükseklik R/G 16 bit, B = biyom·20), `<kıta>_c.webp` (renk), `<kıta>_v.png` (bitki yoğunluğu/sınıfı), `extw.png` (dünya su haritası, 1 km), `ext_bld.bin` (yapılar).
+- Kaynak: `site-build/map3d/v2/world.py` (CompleteMap_Test yalnızca kıyı şekli ve kaba biyom ipucu olarak kullanıldı; arazi ve renkler üretildi).
