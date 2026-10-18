@@ -1810,7 +1810,7 @@ void main(){
   rockC *= .78 + .4 * vn(vP.xz * .9) + .03 * sin(vP.y * 9.0 + vn(vP.xz * .4) * 4.0);      // varied tones + strata
   float wR = smoothstep(.22, .48, sl + (vn(vP.xz * 2.1) - .5) * .12) * mix(1.0, .7, wSnowB);
   alb = mix(alb, rockC, wR * .85);
-  float wS = max(wSnowB, smoothstep(-.15, .15, hk - snowH - vn(vP.xz * .3) * .5)) * smoothstep(.55, .3, sl) * .85;
+  float wS = max(wSnowB, smoothstep(-.15, .15, hk - snowH - vn(vP.xz * .3) * .5)) * smoothstep(.46, .24, sl + (vn(vP.xz * 1.7) - .5) * .1) * .88;     // D2: snow slides off steep walls -> dark rock aretes
   alb = mix(alb, vec3(.60, .64, .71), wS);
   if (dk > 0.0){        // ground detail textures (same set as Horaghfus): grass / meadow / sand / rock (triplanar) / snow
     vec2 w = vP.xz;
