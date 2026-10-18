@@ -815,6 +815,22 @@ function buildTrees(buf){
       }
     }
   }
+  {   // E2: even 50% thinning where the main-continent forest is dense (1 km cells, 3x3 smoothed density); sparse cells keep every tree
+    const CW = WK | 0, CH = HK | 0, cc = new Float32Array(CW * CH), sm = new Float32Array(CW * CH);
+    for (let i = 0; i < n; i++){ const ci = Math.min(CW - 1, Math.max(0, TR.x[i] | 0)), cj = Math.min(CH - 1, Math.max(0, TR.z[i] | 0)); cc[cj * CW + ci]++; }
+    for (let j = 0; j < CH; j++) for (let i = 0; i < CW; i++){ let s = 0, w = 0; for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++){ const ii = i + a, jj = j + b; if (ii < 0 || jj < 0 || ii >= CW || jj >= CH) continue; s += cc[jj * CW + ii]; w++; } sm[j * CW + i] = s / w; }
+    const nz = []; for (let k = 0; k < sm.length; k += 7) if (sm[k] > 1) nz.push(sm[k]); nz.sort((a, b) => a - b);
+    const T1 = nz.length ? nz[(nz.length * .45) | 0] : 1e9, T2 = nz.length ? nz[(nz.length * .7) | 0] : 1e9;
+    let w = 0;
+    for (let i = 0; i < n; i++){
+      const d = sm[Math.min(CH - 1, Math.max(0, TR.z[i] | 0)) * CW + Math.min(CW - 1, Math.max(0, TR.x[i] | 0))];
+      const keep = d <= T1 ? 1 : d >= T2 ? .5 : 1 - .5 * (d - T1) / Math.max(T2 - T1, 1e-3);
+      if (keep < 1 && hash(((TR.x[i] * 4096) | 0) * 7919 + ((TR.z[i] * 4096) | 0)) >= keep) continue;
+      if (w !== i){ TR.x[w] = TR.x[i]; TR.z[w] = TR.z[i]; TR.y[w] = TR.y[i]; TR.s[w] = TR.s[i]; TR.h[w] = TR.h[i]; TR.t[w] = TR.t[i]; TR.r[w] = TR.r[i]; }
+      w++;
+    }
+    TR.thin = [n, w, T1, T2]; n = w;
+  }
   {
     let sd = 1717; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     for (const c of EXT.conts) for (let cj = 0; cj < c.H; cj++) for (let ci = 0; ci < c.W; ci++){
@@ -1409,7 +1425,7 @@ export function close(){
   setTimeout(() => { if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
 }
 window.__ulvMap3D = {open, close, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
-  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), stats: () => renderer ? {tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
+  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), stats: () => renderer ? {thin: TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
   prof: () => { const out = []; scene.traverseVisible((o) => { const g = o.geometry; if (!g || !(o.isMesh || o.isPoints)) return; let n = g.index ? g.index.count : g.attributes.position.count; n = Math.min(n, g.drawRange.count); let t = o.isPoints ? n : n / 3; const ic = o.isInstancedMesh ? o.count : g.isInstancedBufferGeometry ? g.instanceCount : 1; out.push([o.type + ':' + (o.material && o.material.type) + ':ro' + o.renderOrder + (o.castShadow ? ':S' : '') + ':' + (o.name || ''), Math.round(t), ic === Infinity ? -1 : ic, Math.round(t * (ic === Infinity ? 1 : ic))]); }); out.sort((a, b) => b[3] - a[3]); return {n: out.length, sh: renderer.shadowMap.enabled, top: out.slice(0, 18)}; }};
 
 // ------------------------------------------------------------ v3: farm fields (crisp meshes draped on the terrain)
