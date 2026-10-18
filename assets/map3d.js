@@ -24,7 +24,7 @@ const SUN = new THREE.Vector3(-0.78, 0.52, 0.2).normalize();
 const U = {time: {value: 0}, sun: {value: SUN}, hover: {value: new THREE.Vector4(0, 0, 0, 0)}, borderVis: {value: 1}, camPos: {value: new THREE.Vector3()},
   fogCol: {value: new THREE.Color(0.58, 0.70, 0.84)}, fogK: {value: 0.0012}, hazeK: {value: 1}, sunCol: {value: new THREE.Color(1.0, 0.93, 0.82).multiplyScalar(2.1)},
   skyCol: {value: new THREE.Color(0.42, 0.55, 0.75)}, gndCol: {value: new THREE.Color(0.30, 0.27, 0.22)}, ex: {value: 3.0}, camD: {value: 1000},
-  shMap: {value: null}, shMat: {value: new THREE.Matrix4()}, shOn: {value: 0}, nearT: {value: NEAR_T}, pxK: {value: 600}, swampC: {value: new THREE.Vector3(0, 0, 0)}, fineK: {value: 0}, nightK: {value: 0}};
+  shMap: {value: null}, shMat: {value: new THREE.Matrix4()}, shOn: {value: 0}, nearT: {value: NEAR_T}, pxK: {value: 600}, swampC: {value: new THREE.Vector3(0, 0, 0)}, fineK: {value: 0}, nightK: {value: 0}, bakeK: {value: 1}, skyZen: {value: new THREE.Color(.11, .27, .55)}, plP: {value: [0, 1, 2, 3, 4, 5, 6, 7].map(() => new THREE.Vector4(0, -99, 0, 0))}};
 const cam = {x: 512, z: 400, d: 1000, yaw: 0, tilt: 0};
 const goal = {x: 512, z: 400, d: 1000, yaw: 0, tilt: 0};
 let flying = 0;
@@ -73,8 +73,13 @@ vec3 atmo(vec3 col, vec3 P, vec3 C){
   float dist = length(P - C);
   float f = 1.0 - exp(-dist * fogK);
   float mist = exp(-max(P.y, 0.0) * 1.1) * (1.0 - exp(-dist * fogK * 2.2)) * hazeK * .55;
-  return mix(col, fogCol, clamp(f + mist, 0.0, 1.0));
-}`;
+  vec2 ob = max(vec2(-150.0, -170.0) - P.xz, P.xz - vec2(2310.0, 2290.0)); float edge = smoothstep(0.0, 260.0, max(ob.x, ob.y));
+  return mix(col, fogCol, clamp(f + mist + edge, 0.0, 1.0));
+}
+uniform vec4 plP[8];
+vec3 nightLit(vec3 P, vec3 N){ vec3 s = vec3(0.0);
+  for (int i = 0; i < 8; i++){ vec3 d = plP[i].xyz - P; float l2 = dot(d, d); s += vec3(1.0, .62, .3) * plP[i].w * max(dot(N, d * inversesqrt(l2 + 1e-6)), 0.0) * .012 / (l2 + .004) * smoothstep(2.6, .4, l2); }
+  return s; }`;
 
 // ------------------------------------------------------------ DOM
 function makeDom(){
@@ -152,7 +157,7 @@ async function build(){
   MAT.leaf = leafBms.map((b, i) => { const t = tex(b, true, 4); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; });
   MAT.flat = MAT.leaf[6]; MAT.flat.minFilter = THREE.NearestMipmapNearestFilter; MAT.flat.magFilter = THREE.NearestFilter;
   buildSky(); buildTerrain(); if (EXT.W) buildExtTerrain(); buildOcean(); buildRoads(); buildBuildings(bldBuf); buildBridges(); buildShips(); buildSpecial(); buildTrees(treesBuf);
-  buildSmoke(); buildClouds(); buildWind(); buildFields(); buildVeg(); buildBergs(); buildMist(); buildLabels();
+  buildSmoke(); buildClouds(); buildCirrus(); buildWind(); buildFields(); buildVeg(); buildBergs(); buildMist(); buildLabels(); buildNightLights();
   built = true;
 }
 function mergeYerler(Y){
@@ -188,15 +193,20 @@ const MAT = {};
 
 // ------------------------------------------------------------ sky
 function buildSky(){
-  const m = new THREE.ShaderMaterial({depthWrite: false, side: THREE.BackSide, fog: false, uniforms: {sun: U.sun, fogCol: U.fogCol, time: U.time},
+  const m = new THREE.ShaderMaterial({depthWrite: false, side: THREE.BackSide, fog: false, uniforms: {sun: U.sun, fogCol: U.fogCol, time: U.time, nightK: U.nightK, zen: U.skyZen, sunCol: U.sunCol},
     vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }',
-    fragmentShader: `uniform vec3 sun, fogCol; uniform float time; varying vec3 vD;
+    fragmentShader: `uniform vec3 sun, fogCol, zen, sunCol; uniform float time, nightK; varying vec3 vD;
       void main(){ vec3 d = normalize(vD); float y = d.y;
-        vec3 zen = vec3(.11, .27, .55), hor = fogCol;
+        vec3 hor = fogCol;
         vec3 c = mix(hor, zen, pow(clamp(y, 0.0, 1.0), .55));
         c = mix(c, hor * .92, smoothstep(0.0, -.15, y));
         float s = max(dot(d, sun), 0.0);
-        c += vec3(1.0, .82, .6) * (pow(s, 8.0) * .25 + pow(s, 64.0) * .5) + vec3(1.0, .95, .85) * smoothstep(.9995, .99975, s) * 6.0;
+        float lowS = 1.0 - smoothstep(.0, .35, sun.y);
+        c += vec3(1.0, .5, .22) * pow(s, 3.0) * lowS * smoothstep(-.25, .15, y) * (1.0 - smoothstep(.45, .0, sun.y + .12)) * .9 * (1.0 - nightK);   // sunrise / sunset glow
+        c += vec3(1.0, .82, .6) * (pow(s, 8.0) * .25 + pow(s, 64.0) * .5) * (1.0 - nightK) + vec3(1.0, .95, .85) * smoothstep(.9995, .99975, s) * 6.0 * (1.0 - nightK);
+        if (nightK > .01){ vec3 q = floor(d * 420.0); float st = fract(sin(dot(q, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+          c += vec3(.9, .93, 1.0) * smoothstep(.9975, 1.0, st) * smoothstep(.02, .25, y) * nightK * (.6 + .4 * sin(time * 3.0 + st * 99.0));
+          c += vec3(.9, .92, 1.0) * smoothstep(.9992, .9997, s) * nightK * 2.0; }   // moon disc (light comes from SUN at night)
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`});
@@ -210,7 +220,7 @@ void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vW = wp.xz; vP = wp.xy
 const TERR_F = `
 precision highp sampler2DArray;
 uniform sampler2D colTex, nTex, mTex, facTex, auxTex, shMap; uniform highp sampler2DArray gTex, gNrm;
-uniform vec4 tileXf, hover; uniform vec3 sun, camPos, sunCol, skyCol, gndCol, volc, swampC; uniform float borderVis, time, ex, shOn, camD;
+uniform vec4 tileXf, hover; uniform vec3 sun, camPos, sunCol, skyCol, gndCol, volc, swampC; uniform float borderVis, time, ex, shOn, camD, bakeK;
 varying vec2 vW; varying vec3 vP; varying vec4 vSh;
 ${NOISE}
 ${ATMO}
@@ -324,12 +334,12 @@ void main(){
   // --- light
   vec3 N = normalize(n + dn);
   float dif = max(dot(N, sun), 0.0);
-  float sh = mix(1.0, A.a, smoothstep(0.0, .05, hk + .02));
+  float sh = mix(1.0, A.a, smoothstep(0.0, .05, hk + .02) * bakeK);
   sh = min(sh, shadowAt());
   float cs = smoothstep(.52, .8, fbm(vW * .011 + vec2(time * .005, time * .0018)));
   vec3 amb = mix(gndCol, skyCol, N.y * .5 + .5);
   float ao = 1.0 - smoothstep(.25, .7, slope) * .2;
-  vec3 col = alb * (amb * .62 * ao + sunCol * dif * sh * (1.0 - .42 * cs));
+  vec3 col = alb * (amb * .62 * ao + sunCol * dif * sh * (1.0 - .42 * cs)) + alb * nightLit(vP, N);
   // stream water shimmer in the bed
   if (M.g > .45){ float wc = smoothstep(.45, .85, M.g); vec3 wcol = mix(lin(vec3(.18, .32, .38)), skyCol * .8, .4) + sunCol * pow(max(dot(reflect(-sun, vec3(0.0, 1.0, 0.0)), normalize(camPos - vP)), 0.0), 40.0) * .4;
     col = mix(col, wcol, wc * .85); }
@@ -364,12 +374,12 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
 }`;
-const chunks = [];
-function chunkGeo(cx, cy){
-  const S = SEG, N = S + 1, pos = new Float32Array(N * N * 3), idx = new Uint32Array(S * S * 6);
+const chunks = []; let TLOD = 1;
+function chunkGeo(cx, cy, step = 1){
+  const S = SEG / step, N = S + 1, pos = new Float32Array(N * N * 3), idx = new Uint32Array(S * S * 6);
   const i0 = cx * CH * 2, j0 = cy * CH * 2;
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++){
-    const k = (j * N + i) * 3, gi = i0 + i, gj = j0 + j; pos[k] = gi * .5; pos[k + 1] = VH[Math.min(gj, HH) * VW + Math.min(gi, VW - 1)]; pos[k + 2] = gj * .5;
+    const k = (j * N + i) * 3, gi = i0 + i * step, gj = j0 + j * step; pos[k] = gi * .5; pos[k + 1] = VH[Math.min(gj, HH) * VW + Math.min(gi, VW - 1)]; pos[k + 2] = gj * .5;
   }
   let o = 0; for (let j = 0; j < S; j++) for (let i = 0; i < S; i++){ const a = j * N + i, b = a + 1, c = a + N, d = c + 1; idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d; }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(new THREE.BufferAttribute(idx, 1));
@@ -388,13 +398,16 @@ function buildTerrain(){
     const m = new THREE.ShaderMaterial({vertexShader: TERR_V, fragmentShader: TERR_F, uniforms: {
       colTex: {value: U.loTex.value}, tileXf: {value: new THREE.Vector4(0, 0, 1 / WK, 1 / HK)}, nTex: U.nTex, mTex: U.mTex, facTex: U.facTex, auxTex: U.auxTex, gTex: U.gTex, gNrm: U.gNrm,
       sun: U.sun, camPos: U.camPos, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, hover: U.hover, borderVis: U.borderVis, time: U.time, ex: U.ex, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol,
-      shMap: U.shMap, shMat: U.shMat, shOn: U.shOn, camD: U.camD, volc: {value: VOLC}, swampC: U.swampC, fineK: U.fineK}});
+      shMap: U.shMap, shMat: U.shMat, shOn: U.shOn, camD: U.camD, volc: {value: VOLC}, swampC: U.swampC, fineK: U.fineK, bakeK: U.bakeK, plP: U.plP}});
     const mesh = new THREE.Mesh(chunkGeo(cx, cy), m); mesh.castShadow = true; mesh.receiveShadow = false; scene.add(mesh);
     chunks.push({cx, cy, mesh, hi: false, c: new THREE.Vector3(cx * CH + CH / 2, 0, cy * CH + CH / 2)});
   }
 }
 function updateChunks(){
   const cp = camera.position;
+  // v4b: zoom-level LOD (all chunks share one level -> no cracks): far views draw 1/4 or 1/16 of the triangles
+  const st = cam.d > 1100 ? 4 : cam.d > 420 ? 2 : 1;
+  if (st !== TLOD){ TLOD = st; for (const c of chunks){ c.geos = c.geos || {1: c.mesh.geometry}; c.mesh.geometry = c.geos[st] || (c.geos[st] = chunkGeo(c.cx, c.cy, st)); } }
   for (const c of chunks){
     const dx = Math.max(Math.abs(cp.x - c.c.x) - CH / 2, 0), dz = Math.max(Math.abs(cp.z - c.c.z) - CH / 2, 0), dist = Math.hypot(dx, dz, cp.y);
     if (dist < 420 && !c.hi){
@@ -407,7 +420,7 @@ function updateChunks(){
 
 // ------------------------------------------------------------ ocean, lakes, rivers (one water plane at sea level)
 const OCEAN_F = `
-uniform sampler2D auxTex, watTex, watFlow, extW; uniform vec3 extXf; uniform vec3 sun, camPos, skyCol, sunCol; uniform float time; varying vec2 vW; varying vec3 vP;
+uniform sampler2D auxTex, watTex, watFlow, extW; uniform vec3 extXf; uniform vec3 sun, camPos, skyCol, sunCol; uniform float time, nightK; varying vec2 vW; varying vec3 vP;
 ${NOISE}
 ${ATMO}
 float waves(vec2 p, float t){
@@ -419,9 +432,11 @@ float flowN(vec2 p, vec2 fl, float t){      // two-phase flow map: ripples carri
   float a = vn((p - o0) * 5.0) * .6 + vn((p - o0) * 13.0 + 3.1) * .4, b = vn((p - o1) * 5.0 + 7.7) * .6 + vn((p - o1) * 13.0 + 1.3) * .4;
   return mix(b, a, w0); }
 vec4 extS(vec2 w){ vec2 u = (w - extXf.xy) * extXf.z; if (extXf.z == 0.0 || u.x < 0.0 || u.y < 0.0 || u.x > 1.0 || u.y > 1.0) return vec4(1.0, 0.0, 0.0, 0.0); return texture2D(extW, u); }
-float tyW(vec2 uv, float k){ vec2 e = vec2(.5 / 2048.0, .5 / 1536.0); float s = 0.0;
-  for (int i = 0; i < 4; i++){ vec2 o = vec2(i == 0 ? -1.0 : i == 1 ? 1.0 : 0.0, i == 2 ? -1.0 : i == 3 ? 1.0 : 0.0) * e * 1.6; s += abs(floor(texture2D(watTex, uv + o).r * 255.0 / 64.0 + .01) - k) < .5 ? .25 : 0.0; }
-  return s; }
+float tyAt(vec2 t, float k){ return abs(floor(texture2D(watTex, (t + .5) / vec2(2048.0, 1536.0)).r * 255.0 / 64.0 + .01) - k) < .5 ? 1.0 : 0.0; }
+float tyW(vec2 uv, float k){      // v4b: bilinear blend of the per-texel water type (no blocky 0.5 km squares), edges warped by noise
+  vec2 w = uv * vec2(2048.0, 1536.0) - .5 + (vec2(vn(uv * 3100.0), vn(uv * 3100.0 + 7.3)) - .5) * 1.1;
+  vec2 i = floor(w), f = smoothstep(0.0, 1.0, fract(w));
+  return mix(mix(tyAt(i, k), tyAt(i + vec2(1.0, 0.0), k), f.x), mix(tyAt(i + vec2(0.0, 1.0), k), tyAt(i + vec2(1.0, 1.0), k), f.x), f.y); }
 void main(){
   vec2 uv = vW / vec2(1024.0, 768.0);
   bool inMap = uv.x > 0.0 && uv.y > 0.0 && uv.x < 1.0 && uv.y < 1.0;
@@ -431,6 +446,9 @@ void main(){
   float dist = length(vP - camPos); float nearF = 1.0 - smoothstep(60.0, 380.0, dist);
   float t = time, e = .2;
   float wL = inMap ? tyW(uv, 1.0) : clamp(E.g * 4.0, 0.0, 1.0), wR = inMap ? tyW(uv, 2.0) : 0.0, wS = inMap ? tyW(uv, 3.0) : 0.0, wSea = clamp(1.0 - wL - wR - wS, 0.0, 1.0);
+  if (inMap && wSea > .01){   // v4b: small enclosed ponds tagged as sea -> calm lake (no surf foam ring / pale cyan)
+    vec2 o = vec2(1.6 / 1024.0, 0.0), o2 = vec2(0.0, 1.6 / 768.0); float b1 = texture2D(auxTex, uv + o).b, b2 = texture2D(auxTex, uv - o).b, b3 = texture2D(auxTex, uv + o2).b, b4 = texture2D(auxTex, uv - o2).b;
+    float op = max(max(b1, b2), max(b3, b4)); op = op * op * 40.0; float pond = (1.0 - smoothstep(.12, .45, op)) * wSea; wL += pond; wSea -= pond; }
   vec2 fl = inMap ? (texture2D(watFlow, uv).gb * 255.0 - 128.0) / 127.0 : vec2(0.0);
   vec3 Vd = normalize(camPos - vP);
   // --- sea: swell + breaking foam on the shore
@@ -447,8 +465,10 @@ void main(){
   vec3 cSea = mix(shallow, mid, smoothstep(0.0, .1, d)); cSea = mix(cSea, deep, smoothstep(.08, .7, d));
   vec3 cLake = mix(vec3(.07, .22, .22), vec3(.02, .08, .11), smoothstep(.0, .06, d));
   vec3 cRiv = mix(vec3(.12, .24, .2), vec3(.05, .15, .17), smoothstep(.0, .04, d)) * (.92 + .16 * r0);
-  vec3 cSw = vec3(.045, .05, .025) * (.85 + .3 * vn(vW * 4.0)) + vec3(.03, .035, .01) * smoothstep(.55, .8, vn(vW * 11.0 + 2.0));
+  vec2 sq = vW * 2.3 + vec2(fbm(vW * .9), fbm(vW * .9 + 4.1)) * 2.5;      // domain-warped murk (no repeating blobs)
+  vec3 cSw = vec3(.045, .05, .026) * (.85 + .3 * fbm(vW * 1.7)) + vec3(.028, .032, .01) * smoothstep(.58, .78, fbm(sq)) * .8;
   vec3 col = cSea * wSea + cLake * wL + cRiv * wR + cSw * wS;
+  col *= 1.0 - nightK * .72;
   vec3 R = reflect(-Vd, n);
   float fres = .04 + .96 * pow(1.0 - max(dot(Vd, n), 0.0), 5.0);
   vec3 sky = mix(fogCol, skyCol * 1.1, clamp(R.y * 1.5, 0.0, 1.0));
@@ -461,7 +481,7 @@ void main(){
   float foam = (crest * smoothstep(.35, .7, vn(vW * 7.0 + vec2(t * .15, 0.0))) * 1.2 + (1.0 - smoothstep(0.02, .1, km)) * (.55 + .45 * vn(vW * 14.0 + t * .5)) + smoothstep(.78, .95, w0) * .18 * smoothstep(.05, .3, d)) * wSea;
   foam += (1.0 - smoothstep(.0, .035, km)) * .25 * wL;
   foam += smoothstep(.72, .9, r0) * (1.0 - smoothstep(.05, .35, km)) * .35 * wR * length(fl);
-  col = mix(col, vec3(.85, .92, .95), clamp(foam * nearF, 0.0, 1.0) * .8);
+  col = mix(col, vec3(.85, .92, .95) * min(vec3(1.2), skyCol * .9 + sunCol * .25), clamp(foam * nearF, 0.0, 1.0) * .8);
   col = atmo(col, vP, camPos);
   float a = mix(mix(.8, .9, wR + wL), 1.0, smoothstep(0.0, .03, d));
   gl_FragColor = vec4(col, a);
@@ -471,7 +491,7 @@ function buildOcean(){
   const g = new THREE.PlaneGeometry(9000, 9000, 1, 1); g.rotateX(-Math.PI / 2); g.translate(512, 0, 384);
   const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false,
     vertexShader: 'varying vec2 vW; varying vec3 vP; void main(){ vec4 wp = modelMatrix * vec4(position,1.0); vW = wp.xz; vP = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
-    fragmentShader: OCEAN_F, uniforms: {auxTex: U.auxTex, watTex: U.watTex, watFlow: U.watFlow, extW: U.extW, extXf: U.extXf, sun: U.sun, camPos: U.camPos, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, time: U.time, skyCol: U.skyCol, sunCol: U.sunCol}});
+    fragmentShader: OCEAN_F, uniforms: {auxTex: U.auxTex, watTex: U.watTex, watFlow: U.watFlow, extW: U.extW, extXf: U.extXf, sun: U.sun, camPos: U.camPos, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, time: U.time, skyCol: U.skyCol, sunCol: U.sunCol, nightK: U.nightK}});
   const o = new THREE.Mesh(g, m); o.renderOrder = 2; scene.add(o);
 }
 
@@ -572,11 +592,17 @@ const MNAMES = () => Object.keys(MODELS);
 function f16(h){ const s = (h & 0x8000) ? -1 : 1, e = (h >> 10) & 31, f = h & 1023; return e === 0 ? s * Math.pow(2, -14) * f / 1024 : e === 31 ? (f ? NaN : s * Infinity) : s * Math.pow(2, e - 15) * (1 + f / 1024); }
 // distance switch inside the shader: detailed instances vanish past NEAR_B, block LOD only past it (no popping of whole tiles)
 function lodPatch(mat, far){
-  mat.onBeforeCompile = (sh) => { sh.uniforms.camPos = U.camPos; sh.uniforms.nearB = {value: NEAR_B};
-    sh.vertexShader = 'uniform vec3 camPos; uniform float nearB;\n' + sh.vertexShader.replace('#include <project_vertex>', `
+  mat.onBeforeCompile = (sh) => { sh.uniforms.camPos = U.camPos; sh.uniforms.nearB = {value: NEAR_B}; sh.uniforms.nightK = U.nightK; sh.uniforms.time = U.time;
+    sh.vertexShader = 'uniform vec3 camPos; uniform float nearB; varying vec3 vIP;\n' + sh.vertexShader.replace('#include <project_vertex>', `
       #include <project_vertex>
-      { vec3 ip = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz; float dd = distance(ip, camPos);
-        bool hide = ${far ? 'dd < nearB || dd > 300.0' : 'dd > nearB && instanceMatrix[1][1] < 0.9'}; if (hide) gl_Position = vec4(2.0, 2.0, 2.0, 1.0); }`); };
+      { vec3 ip = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz; float dd = distance(ip, camPos); vIP = ip;
+        bool hide = ${far ? 'dd < nearB || dd > 300.0' : 'dd > nearB && instanceMatrix[1][1] < 0.9'}; if (hide) gl_Position = vec4(2.0, 2.0, 2.0, 1.0); }`);
+    // v4 B: lit windows at night (window-coloured texels glow; each building switches on/off now and then)
+    sh.fragmentShader = 'uniform float nightK, time; varying vec3 vIP;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      { vec3 dc = diffuseColor.rgb; float hh = fract(sin(dot(floor(vIP * 37.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+        float on = step(.28, fract(hh * 13.7 + floor(time / 23.0 + hh * 9.0) * .618));
+        float win = smoothstep(.035, .012, abs(dc.r - .017) + abs(dc.g - .029) + abs(dc.b - .047)) + step(dc.r * 1.35 + .004, dc.b) * step(dc.r + dc.g + dc.b, .09) * .8;
+        totalEmissiveRadiance += vec3(1.0, .66, .32) * win * on * nightK * ${far ? '.0' : '1.6'}; }`); };
   return mat;
 }
 const BLD = {tiles: new Map(), list: null, smokeSrc: []};
@@ -717,7 +743,7 @@ const LEAFMAT = {leaf_n: 0, leaf_p: 1, leaf_t: 2, bark_n: 3, bark_t: 4, bark_d: 
 const TR = {n: 0, x: null, z: null, y: null, s: null, h: null, t: null, r: null, grid: null, near: [], lastX: 1e9, lastZ: 1e9};
 function treeMaterial(matName){
   const isLeaf = matName.startsWith('leaf');
-  const m = new THREE.MeshLambertMaterial({map: MAT.leaf[LEAFMAT[matName]], alphaTest: isLeaf ? .45 : 0, side: isLeaf ? THREE.DoubleSide : THREE.FrontSide});
+  const m = new THREE.MeshLambertMaterial({map: MAT.leaf[LEAFMAT[matName]], alphaTest: isLeaf ? .3 : 0, alphaToCoverage: isLeaf, side: isLeaf ? THREE.DoubleSide : THREE.FrontSide});
   m.onBeforeCompile = (sh) => {
     sh.uniforms.time = U.time;
     sh.vertexShader = 'uniform float time;\n' + sh.vertexShader.replace('#include <begin_vertex>',
@@ -854,11 +880,14 @@ function buildImpostors(){
   const n = TR.n, base = new THREE.PlaneGeometry(1, 1), TS = 128, tw = Math.ceil(TWW / TS), th = Math.ceil(THH / TS);
   const tc = new Uint32Array(tw * th + 1);
   const tileOf = (i) => Math.min(Math.max(((TR.z[i] - TZ0) / TS) | 0, 0), th - 1) * tw + Math.min(Math.max(((TR.x[i] - TX0) / TS) | 0, 0), tw - 1);
-  for (let i = 0; i < n; i++) tc[tileOf(i) + 1]++;
+  // v4b perf: counting sort by (tile, keep-bucket) so each tile's instances are ordered by their keep hash -> per frame we draw only the prefix that can pass the shader's density test (identical image, far fewer vertices)
+  const NB = 256, bk = new Uint32Array(tw * th * NB + 1), tl = new Uint32Array(n), wv = new Float32Array(n), thMax = new Float32Array(tw * th);
+  for (let i = 0; i < n; i++){ const t = tileOf(i), w = hash(i * 7 + 3); tl[i] = t; wv[i] = w; bk[t * NB + Math.min(NB - 1, w * NB | 0) + 1]++; tc[t + 1]++; if (TR.h[i] > thMax[t]) thMax[t] = TR.h[i]; }
   for (let i = 1; i < tc.length; i++) tc[i] += tc[i - 1];
-  const ip = new Uint16Array(n * 4), id = new Uint8Array(n * 4), fillT = tc.slice();
-  for (let i = 0; i < n; i++){ const o = fillT[tileOf(i)]++;
-    ip[o * 4] = (TR.x[i] - TX0) / TWW * 65535; ip[o * 4 + 1] = (TR.z[i] - TZ0) / THH * 65535; ip[o * 4 + 2] = Math.min(Math.max((TR.y[i] + 1) / 24, 0), 1) * 65535; ip[o * 4 + 3] = hash(i * 7 + 3) * 65535;
+  for (let i = 1; i < bk.length; i++) bk[i] += bk[i - 1];
+  const ip = new Uint16Array(n * 4), id = new Uint8Array(n * 4), fillB = bk.slice();
+  for (let i = 0; i < n; i++){ const o = fillB[tl[i] * NB + Math.min(NB - 1, wv[i] * NB | 0)]++;
+    ip[o * 4] = (TR.x[i] - TX0) / TWW * 65535; ip[o * 4 + 1] = (TR.z[i] - TZ0) / THH * 65535; ip[o * 4 + 2] = Math.min(Math.max((TR.y[i] + 1) / 24, 0), 1) * 65535; ip[o * 4 + 3] = Math.min(1, (Math.min(NB - 1, wv[i] * NB | 0) + 1) / NB) * 65535;
     id[o * 4] = Math.min(255, TR.h[i] * 100); id[o * 4 + 1] = TR.s[i]; id[o * 4 + 2] = TR.t[i]; }
   const tints = TINTS.map((t) => new THREE.Vector3(...t));
   const m = new THREE.ShaderMaterial({uniforms: {impC: U.impC, impM: U.impM, camPos: U.camPos, nearT: U.nearT, pxK: U.pxK, ext: {value: ext}, tints: {value: tints}, sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, time: U.time, auxTex: U.auxTex},
@@ -889,16 +918,17 @@ function buildImpostors(){
       void main(){
         vec4 a = texture2D(impC, vUv), b = texture2D(impC, vUv2); vec4 c = mix(a, b, vView);
         float lm = mix(texture2D(impM, vUv).r, texture2D(impM, vUv2).r, vView);
-        if (c.a < .5 || hh(gl_FragCoord.xy) > vFade) discard;
+        float cov = clamp((c.a - .35) / max(fwidth(c.a), .05) * .5 + .5, 0.0, 1.0) * vFade;   // v4b: alpha-to-coverage (MSAA) instead of hard cut -> no shimmer
+        if (cov < .02) discard;
         vec3 col = c.rgb / max(c.a, .001);
         int ti = int(vTint + .5); vec3 tc = tints[ti];
         if (ti > 0){ float l = dot(col, vec3(.3, .59, .11)); col = mix(col, l * tc * 2.7, lm); }
         vec2 su = vP.xz / vec2(1024.0, 768.0); float sh = (su.x > 0.0 && su.y > 0.0 && su.x < 1.0 && su.y < 1.0) ? texture2D(auxTex, su).a : 1.0;
-        col *= .62 + .38 * sh;
+        col *= (.62 + .38 * sh) * clamp((sunCol * .55 + skyCol * .9) / vec3(1.53, 1.57, 1.63), 0.0, 1.15);
         col = atmo(col, vP, camPos);
-        gl_FragColor = vec4(col, 1.0);
+        gl_FragColor = vec4(col, cov);
         #include <colorspace_fragment>
-      }`});
+      }`, alphaToCoverage: true});
   const grp = new THREE.Group();
   for (let t = 0; t < tw * th; t++){
     const c0 = tc[t], c1 = tc[t + 1]; if (c1 <= c0) continue;
@@ -908,6 +938,10 @@ function buildImpostors(){
     const cx = ((t % tw) + .5) * TS + TX0, cz = ((t / tw | 0) + .5) * TS + TZ0;
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, 4, cz), TS * .75); g.boundingBox = new THREE.Box3(new THREE.Vector3(cx - TS / 2, -2, cz - TS / 2), new THREE.Vector3(cx + TS / 2, 20, cz + TS / 2));
     const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = true; mesh.renderOrder = 1; grp.add(mesh);
+    const hm = Math.min(2.56, thMax[t] + .01), bb = g.boundingBox, b0 = t * NB;
+    mesh.onBeforeRender = (r, sc_, camr) => { const p = camr.position; const dx = Math.max(bb.min.x - p.x, 0, p.x - bb.max.x), dz = Math.max(bb.min.z - p.z, 0, p.z - bb.max.z), dy = Math.max(bb.min.y - p.y, 0, p.y - bb.max.y);
+      const px = hm / Math.max(Math.hypot(dx, dy, dz), .01) * U.pxK.value, keep = Math.min(1, px * px / 3 * 1.03);
+      g.instanceCount = bk[b0 + Math.min(NB, Math.ceil(keep * NB) + 1)] - bk[b0]; };
   }
   scene.add(grp); TR.imp = grp;
 }
@@ -967,9 +1001,9 @@ function updateSmoke(){
 // ------------------------------------------------------------ clouds: lit puff clusters (volumetric look), drifting
 let CLD = null;
 function buildClouds(){
-  const NC = 40, puffs = [];
+  const NC = 120, puffs = [];
   for (let c = 0; c < NC; c++){
-    const cx = -120 + rnd() * 1260, cz = -100 + rnd() * 960, cy = 34 + rnd() * 16, rx = 22 + rnd() * 40, rz = 14 + rnd() * 26, ry = 4 + rnd() * 5, n = 34 + (rnd() * 30 | 0);
+    const cx = -150 + rnd() * 2450, cz = -170 + rnd() * 2450, cy = 30 + rnd() * 22, rx = 22 + rnd() * 40, rz = 14 + rnd() * 26, ry = 4 + rnd() * 5, n = 34 + (rnd() * 30 | 0);
     for (let i = 0; i < n; i++){ const a = rnd() * 6.283, r = Math.sqrt(rnd()); const ox = Math.cos(a) * r * rx, oz = Math.sin(a) * r * rz; const top = Math.sqrt(Math.max(1 - r * r, 0));
       const oy = (rnd() * .95 - .05) * ry * top; puffs.push([cx + ox, cy + oy, cz + oz, (11 + rnd() * 14) * (.55 + .55 * top), oy / ry, c]); }
   }
@@ -978,24 +1012,24 @@ function buildClouds(){
   puffs.forEach((p, i) => { a.set([p[0], p[1], p[2], p[3]], i * 4); b.set([p[4], hash(i * 13 + 5)], i * 2); });
   g.setAttribute('iP', new THREE.InstancedBufferAttribute(a, 4)); g.setAttribute('iL', new THREE.InstancedBufferAttribute(b, 2)); g.instanceCount = n;
   const tx = [0, 1, 2, 3].map((k) => softTex(11 + k));
-  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, uniforms: {m0: {value: tx[0]}, m1: {value: tx[1]}, time: U.time, camPos: U.camPos, sun: U.sun, op: {value: 1}, fogCol: U.fogCol, sunCol: U.sunCol},
+  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, uniforms: {m0: {value: tx[0]}, m1: {value: tx[1]}, time: U.time, camPos: U.camPos, sun: U.sun, op: {value: 1}, fogCol: U.fogCol, sunCol: U.sunCol, skyCol: U.skyCol},
     vertexShader: `attribute vec4 iP; attribute vec2 iL; uniform float time; uniform vec3 camPos, sun; varying vec2 vUv; varying float vL, vA, vS;
       void main(){
         vec3 c = iP.xyz + vec3(time * 1.1, 0.0, time * .35);
-        c.x = mod(c.x + 140.0, 1300.0) - 140.0; c.z = mod(c.z + 120.0, 1000.0) - 120.0;
+        c.x = mod(c.x + 150.0, 2460.0) - 150.0; c.z = mod(c.z + 170.0, 2460.0) - 170.0;
         vec3 R = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]), Up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
         float rot = iL.y * 6.283; vec2 q = mat2(cos(rot), sin(rot), -sin(rot), cos(rot)) * position.xy;
         vec3 p = c + (R * q.x + Up * q.y) * iP.w;
         float d = distance(c, camPos);
-        vA = smoothstep(iP.w * .6, iP.w * 2.4, d) * smoothstep(1900.0, 1000.0, d);
+        vA = smoothstep(iP.w * .6, iP.w * 2.4, d) * smoothstep(3600.0, 1800.0, d);
         vL = clamp(.55 + .45 * iL.x + .25 * dot(normalize(vec3(q.x, q.y, 0.0) + 1e-4), vec2(sun.x, sun.y).xyy), .25, 1.15);
         vS = iL.y; vUv = uv;
         gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
       }`,
-    fragmentShader: `uniform sampler2D m0, m1; uniform float op; uniform vec3 fogCol, sunCol; varying vec2 vUv; varying float vL, vA, vS;
+    fragmentShader: `uniform sampler2D m0, m1; uniform float op; uniform vec3 fogCol, sunCol, skyCol; varying vec2 vUv; varying float vL, vA, vS;
       void main(){ float a = vS > .5 ? texture2D(m0, vUv).a : texture2D(m1, vUv).a;
         vec3 shade = mix(vec3(.5, .56, .68), vec3(1.0, .97, .93), clamp(vL, 0.0, 1.0)) * (.85 + .15 * vL);
-        vec3 col = mix(shade, fogCol, .28);
+        vec3 col = mix(shade * (sunCol * .4 + skyCol * .5 + .02), fogCol, .28);
         gl_FragColor = vec4(col, a * a * vA * op * .9);
         #include <colorspace_fragment>
       }`});
@@ -1211,7 +1245,9 @@ function updateFrame(dt){
   if (FIELDM) FIELDM.uniforms.op.value = Math.min(1, Math.max(0, (260 - d) / 90));
   if (MIST) MIST.material.uniforms.op.value = Math.min(1, Math.max(0, (200 - d) / 80));
   U.borderVis.value = Math.min(1, Math.max(0, (d - 220) / 250)) * .9;
-  U.fogK.value = (.00016 + .0032 * Math.pow(1 - tN, 2.6)) * (d > 1150 ? Math.max(.4, 1150 / d) : 1); scene.fog.density = U.fogK.value;
+  updateDayNight(dt);
+  const pitch = Math.min(Math.max(tiltFor(cam.d) + cam.tilt, .16), 1.45), horiz = 1 - Math.min(1, Math.max(0, (pitch - .25) / .35));   // horizon haze when looking flat
+  U.fogK.value = (.00016 + .0032 * Math.pow(1 - tN, 2.6)) * (d > 1150 ? Math.max(.4, 1150 / d) : 1) * (DNC.fogMul || 1) * (1 + horiz * 1.6); scene.fog.density = U.fogK.value;
   U.hazeK.value = (1 - tN) * .6;
   U.pxK.value = (cv.clientHeight * renderer.getPixelRatio()) / (2 * Math.tan(camera.fov * Math.PI / 360));
   // sun shadows follow the view (texel-snapped to avoid shimmering)
@@ -1255,7 +1291,7 @@ export function close(){
   setTimeout(() => { if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
 }
 window.__ulvMap3D = {open, close, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
-  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), stats: () => renderer ? {calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS};
+  places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), stats: () => renderer ? {tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; }};
 
 // ------------------------------------------------------------ v3: farm fields (crisp meshes draped on the terrain)
 const FIELD_F = `
@@ -1321,46 +1357,67 @@ function buildVeg(){
   VEG.mat = vegMaterial();
   VEG.meshes = VEG.names.map((n) => { if (!MODELS[n]) return null; const part = modelGeo(n, 'n')[0]; const im = new THREE.InstancedMesh(part.g, VEG.mat, 512); im.count = 0; im.frustumCulled = false; im.receiveShadow = true; scene.add(im); return {im, part, cap: 512}; });
 }
+// v4b: world-anchored deterministic placement (fixed cell grids per band -> a plant never moves when the camera moves), 3 bands out to 60 km
+const VEG_BANDS = [[0, 6.5, .09, 1], [6, 22, .28, 2.1], [21, 60, .75, 3.6]];
+function vegBiome(x, z){
+  if (x >= 0 && z >= 0 && x <= WK && z <= HK){ const ai = Math.min(Math.max(z * 2 | 0, 0), HH - 1) * HW + Math.min(Math.max(x * 2 | 0, 0), HW - 1); return AUXP[ai * 4 + 1] < 200 ? -1 : 0; }
+  const c = contAt(x, z); if (!c) return -1;
+  const i = Math.min(Math.max((z - c.z0) / c.R | 0, 0), c.H - 1) * c.W + Math.min(Math.max((x - c.x0) / c.R | 0, 0), c.W - 1);
+  return c.Y[i] < .03 ? -1 : 100 + c.Bi[i];
+}
 function updateVeg(force){
   if (!VEG.meshes) return;
-  const d = cam.d, on = d < 90;
-  if (!on){ VEG.meshes.forEach((M) => { if (M) M.im.count = 0; }); VEG.last = null; return; }
-  const R = Math.min(26, Math.max(3, d * .85)); VEG.R.value = R;
-  const tx = cam.x, tz = cam.z;
-  if (!force && VEG.last && Math.hypot(tx - VEG.last[0], tz - VEG.last[1]) < R * .15 && Math.abs(R - VEG.last[2]) < .5) return;
-  VEG.last = [tx, tz, R];
+  const d = cam.d, on = d < 160;
+  if (!on){ if (VEG.last){ VEG.meshes.forEach((M) => { if (M) M.im.count = 0; }); VEG.last = null; } return; }
+  const R = Math.min(60, Math.max(4, d * 1.6)); VEG.R.value = R;
+  const tx = cam.x, tz = cam.z, nb = VEG_BANDS.filter((b) => b[0] < R).length;
+  VEG.bc = VEG.bc || [];
+  let dirty = !!force || !VEG.last || nb !== VEG.last[2];
+  for (let bi = 0; bi < nb; bi++){ const b = VEG.bc[bi], rout = Math.min(VEG_BANDS[bi][1], R); if (!b || Math.hypot(tx - b.x, tz - b.z) > rout * .12 || Math.abs(rout - b.r) > rout * .1) dirty = true; }
+  if (!dirty) return;
+  VEG.last = [tx, tz, nb, R];
   const per = VEG.names.map(() => []), sw = U.swampC.value;
-  // v4: two rings - dense small plants near the camera, sparser + bigger clumps out to R (visible from much farther away)
-  const R1 = Math.min(R, 7), bands = [[0, R1, .055 + R1 * .006, 1]]; if (R > R1 + .5) bands.push([R1, R, .16 + R * .006, 2.2]);
-  for (const [rin, rout, C, sk] of bands){
+  for (let bi = 0; bi < nb; bi++){
+    const [rin, rb, C, sk] = VEG_BANDS[bi], rout = Math.min(rb, R);
+    const bc = VEG.bc[bi];
+    if (bc && !force && Math.hypot(tx - bc.x, tz - bc.z) <= rout * .12 && Math.abs(rout - bc.r) <= rout * .1){ bc.per.forEach((L, k) => { for (const it of L) per[k].push(it); }); continue; }
+    const myPer = VEG.names.map(() => []); VEG.bc[bi] = {x: tx, z: tz, r: rout, per: myPer};
     const i0 = Math.floor((tx - rout) / C), i1 = Math.ceil((tx + rout) / C), j0 = Math.floor((tz - rout) / C), j1 = Math.ceil((tz + rout) / C);
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++){
-      const h1 = hash(i * 73856093 ^ j * 19349663 ^ (sk > 1 ? 0x5bd1e995 : 0)), x = (i + hash(i * 31 + j * 17 + 5)) * C, z = (j + hash(i * 13 + j * 57 + 9)) * C;
+      const h1 = hash(i * 73856093 ^ j * 19349663 ^ (bi * 0x5bd1e995)), x = (i + hash(i * 31 + j * 17 + 5 + bi)) * C, z = (j + hash(i * 13 + j * 57 + 9 + bi)) * C;
       const dd = Math.sqrt((x - tx) ** 2 + (z - tz) ** 2);
-      if (dd > rout || dd < rin || x < 0 || z < 0 || x > WK || z > HK) continue;
-      const ai = Math.min(Math.max(z * 2 | 0, 0), HH - 1) * HW + Math.min(Math.max(x * 2 | 0, 0), HW - 1);
-      if (AUXP[ai * 4 + 1] < 200) continue;                                   // land only
-      const road = maskAt(x, z, 0), urb = maskAt(x, z, 3), fld = maskAt(x, z, 2);
-      if (road > .25 || urb > .1 || fld > .05) continue;
+      if (dd > rout || dd < rin) continue;
+      const bio = vegBiome(x, z); if (bio < 0) continue;
+      if (bio === 0){ const road = maskAt(x, z, 0), urb = maskAt(x, z, 3), fld = maskAt(x, z, 2); if (road > .25 || urb > .1 || fld > .05) continue; }
       const y = yMesh(x, z), hk = y / EX, sl = Math.abs(yMesh(x + .25, z) - yMesh(x - .25, z)) + Math.abs(yMesh(x, z + .25) - yMesh(x, z - .25));
-      const lat = z / HK, swamp = sw.z > 0 && Math.hypot(x - sw.x, z - sw.y) < sw.z;
       let t = -1, s = 1;
-      if (swamp){ t = h1 < .5 ? 9 : h1 < .62 ? 10 : h1 < .75 ? 7 : h1 < .85 ? 2 : -1; s = .9; }
-      else if (hk > 2.4 || lat < .2 || sl > 1.4){ t = h1 < .35 ? 3 : h1 < .6 ? 4 : -1; s = 1.2; }
-      else {
-        const meadow = hash(Math.floor(x / 1.7) * 7 + Math.floor(z / 1.7) * 131);
-        t = h1 < .42 ? (meadow < .5 ? 0 : 1) : h1 < .56 ? 2 : h1 < .63 ? 4 : h1 < .66 ? 3 : h1 < .7 && lat > .4 ? (meadow < .5 ? 5 : 6) : h1 < .72 ? 7 : h1 < .735 ? 8 : -1;
+      if (bio >= 100){
+        const b = bio - 100;
+        if (b === 5 || b === 6 || b === 10 || b === 3){ t = h1 < .06 ? 3 : h1 < .1 ? 4 : b !== 3 && h1 < .13 ? 2 : -1; s = 1.1; }
+        else if (b === 4 || sl > 1.4){ t = h1 < .35 ? 3 : h1 < .6 ? 4 : -1; s = 1.2; }
+        else if (b === 7){ t = h1 < .2 ? 7 : h1 < .35 ? 8 : h1 < .5 ? 3 : -1; }
+        else { const meadow = hash(Math.floor(x / 1.7) * 7 + Math.floor(z / 1.7) * 131);
+          t = h1 < .4 ? (meadow < .5 ? 0 : 1) : h1 < .56 ? 2 : h1 < .62 ? 4 : h1 < .66 && (b === 12 || b === 0) ? (meadow < .5 ? 5 : 6) : h1 < .69 ? 7 : -1; }
+      } else {
+        const lat = z / HK, swamp = sw.z > 0 && Math.hypot(x - sw.x, z - sw.y) < sw.z;
+        if (swamp){ t = h1 < .5 ? 9 : h1 < .62 ? 10 : h1 < .75 ? 7 : h1 < .85 ? 2 : -1; s = .9; }
+        else if (hk > 2.4 || lat < .2 || sl > 1.4){ t = h1 < .35 ? 3 : h1 < .6 ? 4 : -1; s = 1.2; }
+        else {
+          const meadow = hash(Math.floor(x / 1.7) * 7 + Math.floor(z / 1.7) * 131);
+          t = h1 < .42 ? (meadow < .5 ? 0 : 1) : h1 < .56 ? 2 : h1 < .63 ? 4 : h1 < .66 ? 3 : h1 < .7 && lat > .4 ? (meadow < .5 ? 5 : 6) : h1 < .72 ? 7 : h1 < .735 ? 8 : -1;
+        }
       }
       if (t < 0) continue;
-      per[t].push([x, y, z, h1, s * sk * (1 + .5 * dd / R)]);
+      myPer[t].push([x, y, z, h1, s * sk, i * 7919 + j * 104729 + bi]);
     }
+    myPer.forEach((L, k) => { for (const it of L) per[k].push(it); });
   }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
   const BASE = [.11, .1, .1, .07, .1, .11, .11, .07, .07, .16, .16];
   per.forEach((list, k) => { const M = VEG.meshes[k]; if (!M) return;
     if (list.length > M.cap){ M.im.removeFromParent(); M.im.dispose(); M.cap = Math.ceil(list.length * 1.4); const im = new THREE.InstancedMesh(M.part.g, VEG.mat, M.cap); im.frustumCulled = false; im.receiveShadow = true; scene.add(im); M.im = im; }
-    list.forEach(([x, y, z, h1, s], n) => { const sz = BASE[k] * s * (.6 + .9 * hash(n * 7 + k)); e.set(0, h1 * 40, 0); q.setFromEuler(e); v.set(x, y - .004, z); sc.set(sz, sz * (k < 3 || k === 9 ? 1.4 : 1), sz); m4.compose(v, q, sc); M.im.setMatrixAt(n, m4);
-      c.setRGB(1, 1, 1).offsetHSL((hash(n + k * 3) - .5) * .05, 0, (hash(n * 3 + 1) - .5) * .2); M.im.setColorAt(n, c); });
+    list.forEach(([x, y, z, h1, s, id], n) => { const sz = BASE[k] * s * (.6 + .9 * hash(id * 7 + k)); e.set(0, h1 * 40, 0); q.setFromEuler(e); v.set(x, y - .004, z); sc.set(sz, sz * (k < 3 || k === 9 ? 1.4 : 1), sz); m4.compose(v, q, sc); M.im.setMatrixAt(n, m4);
+      c.setRGB(1, 1, 1).offsetHSL((hash(id + k * 3) - .5) * .05, 0, (hash(id * 3 + 1) - .5) * .2); M.im.setColorAt(n, c); });
     M.im.count = list.length; M.im.instanceMatrix.needsUpdate = true; if (M.im.instanceColor) M.im.instanceColor.needsUpdate = true;
   });
 }
@@ -1594,7 +1651,7 @@ void main(){
   if (abs(bio - 3.0) < .5 || vP.y > 6.8 + vn(vP.xz * .3) * 1.5) alb = mix(alb, vec3(.86, .89, .94), smoothstep(.55, .3, sl) * .85);
   float dif = max(dot(n, sun), 0.0);
   vec3 amb = mix(gndCol, skyCol, n.y * .5 + .5);
-  vec3 col = alb * (sunCol * dif * .62 + amb * .62);
+  vec3 col = alb * (sunCol * dif * .62 + amb * .62) + alb * nightLit(vP, n);
   if (abs(bio - 10.0) < .5){ float l = smoothstep(.6, .74, fbm(vP.xz * .7 + vec2(time * .015, 0.0))); col = col * .55 + vec3(1.0, .32, .04) * l * (1.2 + 1.6 * nightK); }
   col = atmo(col, vP, camPos);
   gl_FragColor = vec4(col, 1.0);
@@ -1625,10 +1682,10 @@ function buildExtTerrain(){
   const NC = 128;
   for (const c of EXT.conts){
     const mat = new THREE.ShaderMaterial({vertexShader: EXT_V, fragmentShader: EXT_F, uniforms: {colT: {value: c.colT}, bioT: {value: c.bioT}, xf: {value: new THREE.Vector4(c.x0, c.z0, 1 / (c.W * c.R), 1 / (c.H * c.R))},
-      sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol, camPos: U.camPos, time: U.time, nightK: U.nightK, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK}});
+      sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol, camPos: U.camPos, time: U.time, nightK: U.nightK, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, plP: U.plP}});
     for (let j0 = 0; j0 < c.H - 1; j0 += NC) for (let i0 = 0; i0 < c.W - 1; i0 += NC){
-      const n = Math.min(NC, c.W - 1 - i0, c.H - 1 - j0); let mx = -99;
-      for (let j = j0; j <= j0 + n; j += 2) for (let i = i0; i <= i0 + n; i += 2) mx = Math.max(mx, c.Y[j * c.W + i]);
+      const n = Math.min(NC, Math.max(c.W - 1 - i0, c.H - 1 - j0)); let mx = -99;     // v4b: square chunk may overhang the grid edge (vertices clamp) -> no holes at the ragged edge
+      for (let j = j0; j <= Math.min(j0 + n, c.H - 1); j += 2) for (let i = i0; i <= Math.min(i0 + n, c.W - 1); i += 2) mx = Math.max(mx, c.Y[j * c.W + i]);
       if (mx < -1.2) continue;
       const lo = new THREE.Mesh(extChunkGeo(c, i0, j0, n, 8), mat); scene.add(lo);
       EXT.chunks.push({c, i0, j0, n, mat, lo, hi: null, mid: null, cx: c.x0 + (i0 + n / 2) * c.R, cz: c.z0 + (j0 + n / 2) * c.R, half: n * c.R / 2});
@@ -1652,4 +1709,131 @@ function updateExt(dt){
   }
   for (const s of EXT.ships){ const a = s.a, t = clock * a.sp + a.ph, x = a.cx + Math.cos(t) * a.r, z = a.cz + Math.sin(t) * a.r;
     s.g.position.set(x, extY(a.cx, a.cz) + a.y * EX * .5 + Math.sin(clock * .7 + a.ph) * .05, z); s.g.rotation.y = -t - Math.PI; }
+}
+
+// ------------------------------------------------------------ v4 B: day / night cycle (2 min day + 2 min night), regional atmosphere, night city lights
+const DAYLEN = 240, SUN0 = SUN.clone();
+const DNC = {p: .08, moon: new THREE.Vector3(), lastPick: 0, lights: [], glow: null, spark: null};
+const REGIONS = [   // x, z, radius, fog tint, fog density mult, sun tint
+  {x: 512, z: 384, r: 650, fog: [1, 1, 1], k: 1, sun: [1, 1, 1]},
+  {x: 1640, z: 330, r: 330, fog: [1.04, 1.02, .92], k: .85, sun: [1.04, 1.0, .9]},          // Elf kıtası: clear, golden
+  {x: 1180, z: 60, r: 220, fog: [.92, 1.0, 1.12], k: 1.25, sun: [.9, .97, 1.1]},            // Buz Adaları: cold
+  {x: 645, z: 1171, r: 190, fog: [.94, .98, 1.02], k: 1.35, sun: [.95, .97, 1.0]},          // Ivar: grey sea mist
+  {x: 745, z: 1870, r: 380, fog: [1.25, .98, .78], k: 1.3, sun: [1.08, .93, .78]},          // Güney: red dust haze
+  {x: 1868, z: 1620, r: 360, fog: [.96, 1.02, .98], k: 1.9, sun: [.96, 1.0, .96]},          // Bilinmeyen: light fog
+];
+const C3 = (a) => new THREE.Color(a[0], a[1], a[2]);
+const KEYS = [   // sun elevation (deg) -> sunCol, skyCol, gndCol, fogCol, zenith
+  [-90, [0, 0, 0], [.035, .05, .1], [.02, .025, .04], [.045, .06, .11], [.006, .012, .035]],
+  [-8, [0, 0, 0], [.05, .065, .13], [.025, .03, .045], [.07, .08, .14], [.01, .02, .06]],
+  [-2, [.25, .1, .06], [.2, .17, .25], [.08, .06, .06], [.4, .3, .32], [.05, .07, .18]],
+  [3, [1.0, .42, .16], [.42, .36, .45], [.2, .15, .12], [.86, .55, .4], [.1, .17, .38]],
+  [10, [1.5, .9, .55], [.44, .48, .62], [.27, .23, .19], [.74, .66, .62], [.11, .24, .5]],
+  [25, [2.0, 1.85, 1.6], [.42, .55, .75], [.3, .27, .22], [.6, .7, .83], [.11, .27, .55]],
+  [90, [2.1, 1.95, 1.72], [.42, .55, .75], [.3, .27, .22], [.58, .7, .84], [.11, .27, .55]]];
+const _c = [new THREE.Color(), new THREE.Color(), new THREE.Color(), new THREE.Color(), new THREE.Color()];
+function keyAt(h){
+  let i = 0; while (i < KEYS.length - 2 && h > KEYS[i + 1][0]) i++;
+  const a = KEYS[i], b = KEYS[i + 1], t = Math.min(1, Math.max(0, (h - a[0]) / (b[0] - a[0]))), s = t * t * (3 - 2 * t);
+  for (let k = 0; k < 5; k++) _c[k].setRGB(a[k + 1][0] + (b[k + 1][0] - a[k + 1][0]) * s, a[k + 1][1] + (b[k + 1][1] - a[k + 1][1]) * s, a[k + 1][2] + (b[k + 1][2] - a[k + 1][2]) * s);
+  return _c;
+}
+function regionMix(x, z){
+  const f = [0, 0, 0], s = [0, 0, 0]; let k = 0, w = 0;
+  for (const R of REGIONS){ const d = Math.hypot(x - R.x, z - R.z); const ww = Math.exp(-((d / R.r) ** 2) * 2) + 1e-4; w += ww; k += R.k * ww; for (let i = 0; i < 3; i++){ f[i] += R.fog[i] * ww; s[i] += R.sun[i] * ww; } }
+  return {f: f.map((v) => v / w), s: s.map((v) => v / w), k: k / w};
+}
+function updateDayNight(dt){
+  DNC.p = (DNC.p + dt / DAYLEN) % 1;
+  const p = DNC.p, day = p < .5, q = day ? p / .5 : (p - .5) / .5;
+  const e = day ? Math.sin(q * Math.PI) * 1.05 : -Math.sin(q * Math.PI) * .7;        // sun elevation (rad)
+  const A = day ? q * Math.PI : Math.PI + q * Math.PI;                                  // east (+x) -> west (-x)
+  const h = e * 180 / Math.PI;
+  const sx = Math.cos(A) * Math.cos(e), sz = .42 * Math.sin(A) * Math.cos(e) + .12, sy = Math.sin(e);
+  const sunD = new THREE.Vector3(sx, sy, sz).normalize();
+  const nightK = Math.min(1, Math.max(0, (2 - h) / 9)); U.nightK.value = nightK;
+  const C = keyAt(h), rg = regionMix(cam.x, cam.z);
+  // moonlight at night (cool, from the opposite arc)
+  DNC.moon.set(-sx, Math.max(.35, -sy * 1.2), -sz + .2).normalize();
+  if (h < -3){ SUN.copy(DNC.moon); U.sunCol.value.setRGB(.075, .095, .16); } else { SUN.copy(sunD); U.sunCol.value.copy(C[0]); }
+  if (h >= -3 && h < 0){ const t = (h + 3) / 3; U.sunCol.value.lerp(new THREE.Color(.075, .095, .16), 1 - t); }
+  U.sunCol.value.r *= rg.s[0]; U.sunCol.value.g *= rg.s[1]; U.sunCol.value.b *= rg.s[2];
+  U.skyCol.value.copy(C[1]); U.gndCol.value.copy(C[2]);
+  U.fogCol.value.copy(C[3]); U.fogCol.value.r *= rg.f[0]; U.fogCol.value.g *= rg.f[1]; U.fogCol.value.b *= rg.f[2];
+  U.skyZen.value.copy(C[4]);
+  U.bakeK.value = Math.min(1, Math.max(0, (SUN.dot(SUN0) - .55) / .35)) * (1 - nightK * .6);
+  DNC.fogMul = rg.k;
+  scene.background.copy(U.fogCol.value); scene.fog.color.copy(U.fogCol.value);
+  sunLight.color.copy(U.sunCol.value).multiplyScalar(1 / 2.1); sunLight.intensity = 2.4 * Math.max(.05, Math.min(1, U.sunCol.value.r / 1.6));
+  hemi.color.copy(U.skyCol.value).multiplyScalar(2.2); hemi.groundColor.copy(U.gndCol.value).multiplyScalar(2.0); hemi.intensity = 1.25 * (1 - .6 * nightK);
+  updateNightLights(dt, nightK);
+}
+// ---- night lights: window glow (shader, in lodPatch), far city glow (points), real point lights near the camera
+function buildNightLights(){
+  // aggregate buildings into 1.2 km cells -> glow blobs (cities seen from far), + one sparkle per house
+  const cell = new Map(), sp = [];
+  for (const b of BLD.list || []){
+    if (/^(rk_|st_|cactus|ruin|pier|flag|wall|tree|fisle|campfire|pyramid|temple|arch)/.test(b.m)) continue;
+    const k = Math.floor(b.x / 1.2) + ',' + Math.floor(b.z / 1.2); const c = cell.get(k) || [0, 0, 0, 0]; c[0] += b.x; c[1] += b.z; c[2] += b.top || b.y; c[3]++; cell.set(k, c);
+    sp.push(b.x, (b.top || b.y) * .5 + b.y * .5 + .03, b.z, hash(Math.round(b.x * 977 + b.z * 131)));
+  }
+  if (EXT.W) for (const [x, z, s] of EXT.W.lights) if (s <= 2){ sp.push(x, yAt(x, z) + .05, z, .99); }   // camps
+  const gp = []; for (const c of cell.values()) if (c[3] >= 2) gp.push(c[0] / c[3], c[2] / c[3] + .25, c[1] / c[3], c[3]);
+  const mk = (arr, glow) => {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr.filter((_, i) => i % 4 < 3), 3)); g.setAttribute('w', new THREE.Float32BufferAttribute(arr.filter((_, i) => i % 4 === 3), 1));
+    const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {nightK: U.nightK, time: U.time, pxK: U.pxK, camPos: U.camPos, fogK: U.fogK},
+      vertexShader: `attribute float w; uniform float nightK, time, pxK, fogK; uniform vec3 camPos; varying float vA; varying float vG;
+        void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = -mv.z;
+          ${glow ? `float sz = (1.0 + sqrt(w) * .5); vA = nightK * min(1.0, .45 + sqrt(w) * .1) * smoothstep(8.0, 40.0, d) * max(exp(-d * fogK * .3), .25);
+            gl_PointSize = clamp(sz * pxK / d, 2.0, 96.0);`
+          : `float on = step(.3, fract(w * 13.7 + floor(time / 23.0 + w * 9.0) * .618)); vA = nightK * on * smoothstep(1.5, 4.0, d) * (1.0 - smoothstep(60.0, 160.0, d)) * (.75 + .25 * sin(time * 2.0 + w * 40.0));
+            gl_PointSize = clamp(.06 * pxK / d, 1.3, 6.0);`}
+          vG = ${glow ? '1.0' : '0.0'}; gl_Position = projectionMatrix * mv; }`,
+      fragmentShader: `varying float vA; varying float vG; void main(){ vec2 c = gl_PointCoord - .5; float r = length(c) * 2.0; if (r > 1.0) discard;
+          float a = vG > .5 ? pow(1.0 - r, 2.2) : smoothstep(1.0, .2, r); vec3 col = mix(vec3(1.0, .62, .28), vec3(1.0, .85, .6), vG > .5 ? (1.0 - r) : .5);
+          gl_FragColor = vec4(col * a * vA * (vG > .5 ? .8 : 1.4), 1.0); }`, depthTest: !glow});
+    const P = new THREE.Points(g, m); P.frustumCulled = false; P.renderOrder = 12; scene.add(P); return P;
+  };
+  DNC.glow = mk(gp, true); DNC.spark = mk(sp, false);
+  for (let i = 0; i < 8; i++){ const L = new THREE.PointLight(0xffb066, 0, 1.6, 2); scene.add(L); DNC.lights.push(L); }
+  DNC.src = BLD.list ? BLD.list.filter((b) => /^(ph_|home_|elf_house|elf_hall|tavern|market|church|lighthouse|watch_big|tower_|castle|blacksmith|barracks)/.test(b.m)) : [];
+}
+function updateNightLights(dt, nk){
+  if (!DNC.glow) return;
+  DNC.glow.visible = DNC.spark.visible = nk > .01;
+  const t = performance.now();
+  if (t - DNC.lastPick > 600){
+    DNC.lastPick = t;
+    const cx = cam.x, cz = cam.z, near = [];
+    if (nk > .05 && cam.d < 30){
+      for (const b of DNC.src){ const d = Math.abs(b.x - cx) + Math.abs(b.z - cz); if (d < 5) near.push([d, b]); }
+      near.sort((a, b) => a[0] - b[0]);
+    }
+    const pick = [];
+    for (const [, b] of near){ if (pick.length >= 8) break; if (pick.every((q) => Math.hypot(q.x - b.x, q.z - b.z) > .35) && hash(Math.round(b.x * 977 + b.z * 131) + Math.floor(clock / 23)) > .25) pick.push(b); }
+    DNC.lights.forEach((L, i) => { const b = pick[i]; if (b){ L.position.set(b.x + .05, (b.top || b.y + .1) * .6 + b.y * .4, b.z + .05); L.userData.on = 1; } else L.userData.on = 0; });
+  }
+  let k = 0;
+  DNC.lights.forEach((L, i) => { const tgt = L.userData.on ? nk * (.9 + .1 * Math.sin(clock * 7 + i)) * .045 : 0; L.intensity += (tgt - L.intensity) * Math.min(1, dt * 4);
+    U.plP.value[i].set(L.position.x, L.position.y, L.position.z, L.intensity / .045 * nk); });
+}
+// ---- high cirrus layer (streaky, thin; seen from below and from above when zoomed far out)
+function buildCirrus(){
+  const g = new THREE.PlaneGeometry(5600, 5600, 1, 1); g.rotateX(-Math.PI / 2); g.translate(1080, 80, 1060);
+  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: {time: U.time, sunCol: U.sunCol, skyCol: U.skyCol, fogCol: U.fogCol, camPos: U.camPos, nightK: U.nightK},
+    vertexShader: 'varying vec3 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+    fragmentShader: `uniform float time, nightK; uniform vec3 sunCol, skyCol, fogCol, camPos; varying vec3 vP;
+      ${NOISE}
+      void main(){
+        vec2 p = vP.xz * .0035 + vec2(time * .0009, time * .0003);
+        vec2 q = vec2(p.x + p.y * .35, p.y * 3.4);
+        float n = fbm(q * 3.0 + fbm(p * 2.0) * 1.6), big = fbm(p * .7 + 5.0);
+        float a = smoothstep(.5, .78, n) * smoothstep(.35, .6, big) * .5;
+        float d = length(vP - camPos);
+        a *= smoothstep(30.0, 140.0, abs(camPos.y - 80.0) + d * .2) * exp(-d * .00035) * (1.0 - smoothstep(400.0, 1600.0, camPos.y) * .75);
+        vec3 col = mix(sunCol * .42 + skyCol * .55, fogCol, .25);
+        gl_FragColor = vec4(col, a * (1.0 - nightK * .5));
+        #include <colorspace_fragment>
+      }`});
+  const mesh = new THREE.Mesh(g, m); mesh.renderOrder = 9; mesh.frustumCulled = false; scene.add(mesh);
 }
