@@ -1794,11 +1794,11 @@ void main(){
   alb *= .86 + .28 * mix(.5, dn, .35 + .65 * near);
   float sl = 1.0 - n.y, hk = vP.y / 3.0;
   vec3 rockC = mix(mix(vec3(.33, .31, .29), vec3(.42, .27, .18), wRed), vec3(.16, .145, .14), wAsh * .8);
-  rockC *= .78 + .4 * vn(vP.xz * .9) + .08 * sin(vP.y * 22.0 + vn(vP.xz * .4) * 6.0);      // varied tones + strata
-  float wR = smoothstep(.22, .48, sl + (vn(vP.xz * 2.1) - .5) * .12) * mix(1.0, .35, wSnowB);
+  rockC *= .78 + .4 * vn(vP.xz * .9) + .03 * sin(vP.y * 9.0 + vn(vP.xz * .4) * 4.0);      // varied tones + strata
+  float wR = smoothstep(.22, .48, sl + (vn(vP.xz * 2.1) - .5) * .12) * mix(1.0, .7, wSnowB);
   alb = mix(alb, rockC, wR * .85);
   float wS = max(wSnowB, smoothstep(-.15, .15, hk - snowH - vn(vP.xz * .3) * .5)) * smoothstep(.55, .3, sl) * .85;
-  alb = mix(alb, vec3(.86, .89, .94), wS);
+  alb = mix(alb, vec3(.60, .64, .71), wS);
   if (dk > 0.0){        // ground detail textures (same set as Horaghfus): grass / meadow / sand / rock (triplanar) / snow
     vec2 w = vP.xz;
     vec3 g = mix(det(0.0, w), det(1.0, w), smoothstep(.35, .75, fbm(w * .35)));
@@ -1812,7 +1812,7 @@ void main(){
   }
   float dif = max(dot(n, sun), 0.0);
   vec3 amb = mix(gndCol, skyCol, n.y * .5 + .5) * (.75 + .25 * n.y);
-  vec3 col = alb * (sunCol * dif * .62 + amb * .62) + alb * nightLit(vP, n);
+  vec3 col = alb * (sunCol * dif * mix(.62, .9, wS) + amb * mix(.62, .4, wS)) + alb * nightLit(vP, n);     // C3l: snow keeps relief contrast
   if (lavaK > .01){       // v4c: lava = glowing cracks in dark crust, pooled in the vent hollows (smooth mask, no biome blocks)
     vec2 q = vP.xz * 1.6 + vec2(fbm(vP.xz * .5), fbm(vP.xz * .5 + 3.3)) * 2.0;
     float cr = (1.0 - smoothstep(.0, .035, abs(vn(q) - .5))) * smoothstep(.35, .6, vn(vP.xz * .8)), pool = smoothstep(.68, .84, fbm(vP.xz * .7 + vec2(time * .01, 0.0)));
