@@ -30,7 +30,7 @@ export async function createGlobe(ctx){
   for (const t of [tC, tN]){ t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); t.wrapS = THREE.RepeatWrapping; track(t); }
   tC.colorSpace = THREE.SRGBColorSpace;
   const SUN = (() => { const s = llVec(J.conts[0].ll[0] + 62, 12); return s.normalize(); })();   // güneş: ilk bakışta Horaghfus gündüz, sağda alacakaranlık
-  const U = {sun: {value: SUN}, time: {value: 0}, cRot: {value: 0}};
+  const U = {sun: {value: SUN}, time: {value: 0}, cRot: {value: 0}, cOn: {value: 1}};
   const spin = new THREE.Group(); scene.add(spin);         // gezegen + bulut + gemiler yavaşça döner (gece/gündüz kayar)
 
   // ---------- uzay gökyüzü (prosedürel yıldızlar + soluk galaksi bandı)
@@ -49,14 +49,14 @@ export async function createGlobe(ctx){
   // ---------- gezegen yüzeyi (gündüz albedo, gece şehir ışıkları + soluk yollar, okyanus parlaması, atmosfer pusu)
   const pm = track(new THREE.ShaderMaterial({uniforms: {...U, tC: {value: tC}, tN: {value: tN}, camP: {value: new THREE.Vector3()}},
     vertexShader: 'varying vec2 vUv; varying vec3 vN, vW, vO; void main(){ vUv = uv; vO = normalize(position); vN = normalize(mat3(modelMatrix) * normal); vec4 w = modelMatrix * vec4(position, 1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
-    fragmentShader: NOISE + `uniform sampler2D tC, tN; uniform vec3 sun, camP; uniform float time, cRot; varying vec2 vUv; varying vec3 vN, vW, vO;
+    fragmentShader: NOISE + `uniform sampler2D tC, tN; uniform vec3 sun, camP; uniform float time, cRot, cOn; varying vec2 vUv; varying vec3 vN, vW, vO;
       void main(){ vec3 n = normalize(vN), v = normalize(camP - vW); vec3 al = texture2D(tC, vUv).rgb; vec4 nt = texture2D(tN, vUv);
         float land = nt.b, nd = dot(n, sun), day = smoothstep(-.12, .22, nd);
         vec3 diff = al * (max(nd, 0.) * vec3(1.05, 1., .94) * 1.25 + .035);
         vec3 hv = normalize(sun + v); float sp = pow(max(dot(n, hv), 0.), 320.) * (1. - land) * step(0., nd) * .28; diff += vec3(1., .92, .8) * sp;
         // bulut gölgesi (aynı bulut alanı, güneşe doğru kaydırılmış)
         vec3 cp = vO; float ca = cos(cRot), sa = sin(cRot); cp = vec3(ca * cp.x - sa * cp.z, cp.y, sa * cp.x + ca * cp.z);
-        float cd = smoothstep(.52, .78, fbm(cp * 3.2 + vec3(0., 0., time * .004)) + .18 * fbm(cp * 11.));
+        float cd = smoothstep(.52, .78, fbm(cp * 3.2 + vec3(0., 0., time * .004)) + .18 * fbm(cp * 11.)) * cOn;
         diff *= 1. - cd * .45 * day;
         float night = 1. - smoothstep(-.18, .08, nd);
         float city = nt.r * nt.r * 3.2 + nt.r * .7, road = nt.g * .22;
@@ -210,7 +210,7 @@ export async function createGlobe(ctx){
   }
   G.frame = (dt) => {
     clock += dt; U.time.value = clock; U.cRot.value = clock * .006;
-    spin.rotation.y = clock * .004;                 // gezegen kendi ekseninde yavaşça
+    spin.rotation.y = clock * .008;                 // gezegen kendi ekseninde yavaşça (t163: 2x)
     const r = 1 - Math.exp(-dt * 6); ORB.lon += (ORB.glon - ORB.lon) * r; ORB.lat += (ORB.glat - ORB.lat) * r; ORB.d = Math.exp(Math.log(ORB.d) + (Math.log(ORB.gd) - Math.log(ORB.d)) * r);
     const a1 = clock * .02 + 1.2, a2 = clock * .009 + 4.0;
     algurd.position.set(Math.cos(a1) * 520, Math.sin(a1) * 90, Math.sin(a1) * 520); algurd.rotation.y = clock * .02;
@@ -223,6 +223,7 @@ export async function createGlobe(ctx){
   G.show = (v) => { G.on = v; G.diving = false; labs.forEach((l) => { l.e.hidden = !v; if (!v) l.e.classList.remove('on'); }); };
   G.stats = () => ({calls: renderer.info.render.calls, tris: renderer.info.render.triangles, d: +ORB.d.toFixed(1), ll: centreLL().map((x) => +x.toFixed(1)), labs: labs.filter((l) => l.e.classList.contains('on')).map((l) => l.e.textContent)});
   G.orb = ORB;
+  G.setClouds = (v) => { cl1.visible = cl2.visible = !!v; U.cOn.value = v ? 1 : 0; };   // t163: bulutlar + bulut gölgeleri
   G.dispose = () => {
     if (G.disposed) return; G.disposed = true; G.on = false;
     cv.removeEventListener('pointerdown', onDown); cv.removeEventListener('pointermove', onMove); cv.removeEventListener('pointerup', onUp); cv.removeEventListener('pointercancel', onUp);

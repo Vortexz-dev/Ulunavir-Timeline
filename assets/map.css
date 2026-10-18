@@ -353,3 +353,4 @@ body.m3d-open{overflow:hidden}
 .m3d-snd svg{width:18px;height:18px}.m3d-snd svg .off{display:none}.m3d-snd.is-off svg .off{display:inline}.m3d-snd.is-off svg .on{display:none}.m3d-snd.is-off{opacity:.75}
 .m3d-sndwrap .mt-volpop{left:auto;right:calc(100% + 10px);transform:translate(10px,-50%) scaleX(.6);transform-origin:right center}
 .m3d-sndwrap .mt-volpop::before{right:auto;left:100%}
+.m3d-btns .m3d-cld{padding:0;width:38px;display:grid;place-items:center}.m3d-cld svg{width:19px;height:19px}.m3d-cld svg .off{display:none}.m3d-cld.is-off svg .off{display:inline}.m3d-cld.is-off{opacity:.75}

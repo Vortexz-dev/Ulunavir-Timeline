@@ -87,7 +87,7 @@ function makeDom(){
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'Horaghfus 3D haritası');
   root.innerHTML = '<canvas class="m3d-cv"></canvas><div class="m3d-labels"></div>' +
     '<div class="m3d-top"><div class="m3d-title"><b>Horaghfus</b><span>3D Harita · beta</span></div>' +
-    '<div class="m3d-btns"><div class="mt-sndwrap m3d-sndwrap"><button type="button" class="m3d-snd" aria-pressed="true" title="Harita sesleri"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="on" d="M15.5 9a4.2 4.2 0 010 6M18 6.5a7.6 7.6 0 010 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button><div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
+    '<div class="m3d-btns"><div class="mt-sndwrap m3d-sndwrap"><button type="button" class="m3d-snd" aria-pressed="true" title="Harita sesleri"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="on" d="M15.5 9a4.2 4.2 0 010 6M18 6.5a7.6 7.6 0 010 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button><div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div><button type="button" class="m3d-cld" aria-pressed="true" title="Bulutları gizle"><svg viewBox="0 0 24 24"><path d="M7 18h10.5a3.8 3.8 0 00.4-7.6A5.6 5.6 0 007.3 9.2 4.4 4.4 0 007 18z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
     '<div class="m3d-hint">Sol tık + sürükle: kaydır · Sağ tık + sürükle: döndür / eğ · Tekerlek: yakınlaş · İsme tıkla: bilgi kartı</div>' +
     '<div class="m3d-scale"><i></i><span></span></div>' +
     '<aside class="m3d-card" hidden><button type="button" class="m3d-cx" aria-label="Kartı kapat">✕</button><div class="m3d-ci"></div></aside>' +
@@ -107,7 +107,7 @@ function makeDom(){
     const z = root.querySelector('.m3d-zoom'); if (z){ z.remove(); return; }
     if (!cardEl.hidden) closeCard(); else close();
   });
-  bindInput(); sndBindUI();   // t161
+  bindInput(); sndBindUI(); cloudBindUI();   // t161, t163
 }
 function progress(p){ const s = loadEl.querySelector('span'); if (s) s.textContent = Math.round(p * 100) + '%'; }
 
@@ -1415,7 +1415,7 @@ export async function open(){
   if (window.__ulvAudioHold) window.__ulvAudioHold(true);
   try {
     if (!built){ if (!building) building = build(); await building; }
-    loadEl.classList.add('done'); resize(); applyCam(); refreshNearTrees(true);
+    loadEl.classList.add('done'); resize(); applyCam(); refreshNearTrees(true); applyClouds();   // t163
     if (!raf){ lastT = 0; raf = requestAnimationFrame(frame); }
     sndOpen();   // t161
     setTimeout(() => hintEl.classList.add('fade'), 7000);
@@ -1750,7 +1750,7 @@ function buildSpecial(){
 }
 function updateSpecial(dt){
   for (const s2 of floats){ s2.position.y = s2.userData.y0 + Math.sin(clock * .5 + s2.userData.ph) * .25; s2.rotation.y += dt * .004; }
-  if (LUMI){ const dd = Math.hypot(camera.position.x - LUMI.lp.x, camera.position.z - LUMI.lp.z); LUMI.cm.uniforms.op.value = Math.min(1, Math.max(0, (700 - dd) / 300)); LUMI.cloud.visible = dd < 700; }
+  if (LUMI){ const dd = Math.hypot(camera.position.x - LUMI.lp.x, camera.position.z - LUMI.lp.z); LUMI.cm.uniforms.op.value = Math.min(1, Math.max(0, (700 - dd) / 300)); LUMI.cloud.visible = dd < 700 && CLOUDS_ON; }
 }
 // ------------------------------------------------------------ v4: tiny FPS counter
 let FPSEL = null, fpsN = 0, fpsT = 0;
@@ -2077,7 +2077,7 @@ function buildCirrus(){
         gl_FragColor = vec4(col, a * (1.0 - nightK * .5));
         #include <colorspace_fragment>
       }`});
-  const mesh = new THREE.Mesh(g, m); mesh.renderOrder = 9; mesh.frustumCulled = false; scene.add(mesh);
+  const mesh = new THREE.Mesh(g, m); mesh.renderOrder = 9; mesh.frustumCulled = false; scene.add(mesh); CIRM = mesh;   // t163
 }
 
 // ------------------------------------------------------------ Step 3: Dünya küresi (tembel yüklenir; düz harita ile küre aynı anda GPU'da tutulmaz)
@@ -2102,7 +2102,7 @@ async function enterGlobe(){
   try {
     if (!GLB.mod) GLB.mod = await import('./map3d_globe.js?v=' + V);
     if (!GLB.g) GLB.g = await GLB.mod.createGlobe({renderer, cv, labelsEl, url, onDive: (t) => exitGlobe(t)});
-    releaseFlat(); GLB.g.resize(root.clientWidth, root.clientHeight); GLB.g.show(true);
+    releaseFlat(); GLB.g.resize(root.clientWidth, root.clientHeight); GLB.g.setClouds(CLOUDS_ON); GLB.g.show(true);
     GLB.g.orb.d = 900; GLB.g.orb.gd = 430;        // bulutların arasından geri çekilir gibi açılış
     GLB.on = true; root.classList.add('m3d-glb');
   } catch (e){ console.warn('globe failed', e); if (GLB.g){ GLB.g.dispose(); GLB.g = null; } }
@@ -2225,3 +2225,16 @@ function sndBindUI(){
   btns.addEventListener('pointerleave', () => { SND.hovB = null; });
   labelsEl.addEventListener('click', (e) => { if (e.target.closest('.m3l')) sndPlay('label'); });
 }
+
+// ------------------------------------------------------------ t163: bulut aç/kapa (düz harita + küre, bulut gölgeleri dahil; simülasyon sürer). Ayar hatırlanır.
+let CLOUDS_ON = (() => { try { return localStorage.getItem('ulv-m3d-clouds') !== '0'; } catch (e){ return true; } })();
+let CIRM = null;
+function applyClouds(){
+  for (const m of DECK.meshes) m.visible = CLOUDS_ON;
+  if (CIRM) CIRM.visible = CLOUDS_ON;
+  if (GLB.g && GLB.g.setClouds) GLB.g.setClouds(CLOUDS_ON);
+  const b = root && root.querySelector('.m3d-cld');
+  if (b){ b.classList.toggle('is-off', !CLOUDS_ON); b.setAttribute('aria-pressed', CLOUDS_ON ? 'true' : 'false'); b.title = CLOUDS_ON ? 'Bulutları gizle' : 'Bulutları göster'; }
+}
+function setClouds(v){ CLOUDS_ON = !!v; try { localStorage.setItem('ulv-m3d-clouds', CLOUDS_ON ? '1' : '0'); } catch (e) {} applyClouds(); }
+function cloudBindUI(){ root.querySelector('.m3d-cld').addEventListener('click', () => setClouds(!CLOUDS_ON)); applyClouds(); }
