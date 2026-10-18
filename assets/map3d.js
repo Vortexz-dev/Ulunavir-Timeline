@@ -147,7 +147,7 @@ async function build(){
   const hp = pixels(hBm); HGT = new Float32Array(HW * HH); const span = meta.hmax - meta.hmin;
   for (let i = 0, j = 0; i < HGT.length; i++, j += 4) HGT[i] = (hp[j] * 256 + hp[j + 1]) / 65535 * span + meta.hmin;
   VW = HW + 1; VH = new Float32Array(VW * (HH + 1));
-  for (let j = 0; j <= HH; j++) for (let i = 0; i <= HW; i++) VH[j * VW + i] = hAt(i * .5, j * .5) * EX;
+  for (let j = 0; j <= HH; j++) for (let i = 0; i <= HW; i++){ let h = hAt(i * .5, j * .5) * EX; if (h > -.012 && h < .012) h = h < 0 ? -.012 : .012; VH[j * VW + i] = h; }   // C3: keep terrain clearly above/below the water plane (no shoreline z-fighting / 'breathing' water)
   const fp = pixels(fBm), ap = pixels(aBm); FAC = new Uint8Array(HW * HH);
   for (let i = 0, j = 0; i < FAC.length; i++, j += 4){ const m = Math.max(fp[j], fp[j + 1], fp[j + 2], ap[j]); if (m > 110) FAC[i] = m === fp[j] ? 1 : m === fp[j + 1] ? 2 : m === fp[j + 2] ? 3 : 4; }
   MASKP = pixelsAt(mBm, 2048, 1536); AUXP = ap; VEGP = pixelsAt(vegBm, 2048, 1536);
@@ -498,7 +498,7 @@ void main(){
 }`;
 function buildOcean(){
   const g = new THREE.PlaneGeometry(9000, 9000, 1, 1); g.rotateX(-Math.PI / 2); g.translate(512, 0, 384);
-  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false,
+  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -.5, polygonOffsetUnits: -1,
     vertexShader: 'varying vec2 vW; varying vec3 vP; void main(){ vec4 wp = modelMatrix * vec4(position,1.0); vW = wp.xz; vP = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
     fragmentShader: OCEAN_F, uniforms: {auxTex: U.auxTex, watTex: U.watTex, watFlow: U.watFlow, extW: U.extW, extXf: U.extXf, sun: U.sun, camPos: U.camPos, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, time: U.time, skyCol: U.skyCol, sunCol: U.sunCol, nightK: U.nightK}});
   const o = new THREE.Mesh(g, m); o.renderOrder = 2; scene.add(o);
@@ -1249,7 +1249,7 @@ function applyCam(){
   camera.position.set(cam.x - Math.sin(cam.yaw) * ch, ty + cy, cam.z + Math.cos(cam.yaw) * ch);
   const minY = Math.max(yAt(camera.position.x, camera.position.z), yAt((camera.position.x + cam.x) / 2, (camera.position.z + cam.z) / 2)) + .45; if (camera.position.y < minY) camera.position.y = minY;
   camera.lookAt(cam.x, ty, cam.z);
-  const hag = camera.position.y - yAt(camera.position.x, camera.position.z); camera.near = Math.min(Math.max(Math.min(cam.d * .02, hag * .35), .02), 25);   // C3: low flat views keep foreground foliage (near plane follows height above ground) camera.far = Math.max(cam.d * 6, 4200); camera.updateProjectionMatrix();
+  const hag = camera.position.y - yAt(camera.position.x, camera.position.z); camera.near = Math.min(Math.max(Math.min(cam.d * .02, hag * .35), .05), 25);   // C3: low flat views keep foreground foliage (near plane follows height above ground) camera.far = Math.max(cam.d * 6, 4200); camera.updateProjectionMatrix();
   camera.updateMatrixWorld(); U.camPos.value.copy(camera.position); U.camD.value = cam.d;
 }
 function flyTo(x, z, d){ goal.x = x; goal.z = z; goal.d = d; flying = 1; }
@@ -1336,7 +1336,7 @@ function frame(now){
   if (flying && !moving) flying = 0;
   applyCam(); updateFrame(dt);
   renderer.render(scene, camera);
-  if (sunLight.castShadow && sunLight.shadow.map){ U.shMap.value = sunLight.shadow.map.texture; U.shOn.value = 1; } else U.shOn.value = 0;
+  if (sunLight.castShadow && sunLight.shadow.map){ U.shMap.value = sunLight.shadow.map.texture; U.shMat.value.copy(sunLight.shadow.matrix); U.shOn.value = 1; } else U.shOn.value = 0;   // C3 fix: shadow matrix was never passed -> terrain never received tree/building shadows
   updateLabels();
   const g1 = groundAt(innerWidth / 2 - 50, innerHeight * .9), g2 = groundAt(innerWidth / 2 + 50, innerHeight * .9);
   if (g1 && g2){ const km100 = Math.hypot(g2.x - g1.x, g2.z - g1.z); const nice = [.5, 1, 2, 5, 10, 20, 50, 100, 200, 500].find((n) => n / km100 * 100 > 60) || 500;
