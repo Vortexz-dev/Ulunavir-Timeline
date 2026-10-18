@@ -65,7 +65,7 @@ window.THEMES = {
       { chapters:['ch05'], orders:[155, 158], mode:'snow' },  // Blood&Duty: karlı Balahnur kışı
       { chapters:['ch06'], not:[163], mode:'snow' },          // Kış: Jephcoats, TimeSkip 2 (Girift Âlem hariç)
       { orders:[176, 176], mode:'snow' },                     // Echoes of the Past: donmuş ev
-      { chapters:['ch08'], not:[192], mode:'burn' }           // Balahnur yanarken (Arrowhul uçuşu hariç)
+      { chapters:['ch08'], not:[192], mode:'burn' }           // Balahnur yanarken (Arowhul uçuşu hariç)
     ]
   },
   rules: [
@@ -128,7 +128,7 @@ window.THEMES = {
     { chapters:['ch07'], title:'murat bey', theme:'forge' },
     { chapters:['ch07'], theme:'night' },
     // ch08 Balahnur'un düşüşü
-    { chapters:['ch08'], title:'arrowhul', theme:'elven' },
+    { chapters:['ch08'], title:'Arowhul', theme:'elven' },
     { chapters:['ch08'], title:'revalor düşmüş', theme:'light' },
     { chapters:['ch08'], title:'saint antonio', theme:'rain' },
     { chapters:['ch08'], title:'porsu|zafer I–II|işçilere|işçileri|hayvan laneti', theme:'forge' },

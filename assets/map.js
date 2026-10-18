@@ -2414,7 +2414,23 @@
     } else fin();
     if (opener && opener.focus) try { opener.focus({preventScroll: true}); } catch(e){}
   }
-  btn.addEventListener('click', function(){ isOpen ? close() : open(); });
+  // t141: harita butonu 2D / 3D seçimini aşağı kaydırır (3D yalnız masaüstü)
+  var M3D_V = 'e1f52972ab';
+  var choice = document.createElement('div'); choice.className = 'map-choice'; choice.setAttribute('role', 'menu');
+  choice.innerHTML = '<button type="button" class="mc-2d" role="menuitem" title="2D harita">2D</button><button type="button" class="mc-3d" role="menuitem" title="3D harita (deneme)">3D</button>';
+  document.body.appendChild(choice);
+  function showChoice(on){ choice.classList.toggle('on', on); btn.setAttribute('aria-expanded', on || isOpen ? 'true' : 'false'); }
+  var m3dMod = null;
+  function open3D(){
+    showChoice(false);
+    (m3dMod || (m3dMod = import(new URL('assets/map3d.js?v=' + M3D_V, document.baseURI).href))).then(function(m){ m.open(); })
+      .catch(function(e){ m3dMod = null; if (window.console) console.warn('3D map load failed', e); open(); });
+  }
+  btn.addEventListener('click', function(ev){ ev.stopPropagation(); if (isOpen){ close(); return; } showChoice(!choice.classList.contains('on')); });
+  choice.querySelector('.mc-2d').addEventListener('click', function(ev){ ev.stopPropagation(); showChoice(false); open(); });
+  choice.querySelector('.mc-3d').addEventListener('click', function(ev){ ev.stopPropagation(); open3D(); });
+  document.addEventListener('click', function(ev){ if (choice.classList.contains('on') && !choice.contains(ev.target)) showChoice(false); });
+  document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && choice.classList.contains('on')) showChoice(false); });
   window.addEventListener('resize', function(){ if (isOpen && loaded) resize(false); });
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) kick(); });
   // warm the cache after the page settles so the first open is instant
