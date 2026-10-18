@@ -324,3 +324,10 @@ body.m3d-open{overflow:hidden}
 .m3d-zoom{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:#05030acc;backdrop-filter:blur(6px);cursor:zoom-out}
 .m3d-zoom img{max-width:92vw;max-height:86vh;border-radius:8px;box-shadow:0 20px 60px #000}
 .m3d-zoom span{position:absolute;bottom:4vh;color:#f0e2c0;font:italic 500 18px Cormorant,serif;text-shadow:0 1px 4px #000}
+/* t141 v3: LoL-style place markers — small high-contrast dot + name beside it */
+.m3l-dot{display:flex;align-items:center;gap:7px;padding:2px 6px 2px 5px;color:#fff;text-shadow:0 0 2px #000,0 1px 2px #000,0 0 6px #000,0 0 12px #000a}
+.m3l-d{flex:none;width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.8),0 0 6px rgba(0,0,0,.7)}
+.m3l-city .m3l-d{width:9px;height:9px;background:#ffe6a8;box-shadow:0 0 0 2px rgba(0,0,0,.85),0 0 0 4px rgba(255,230,168,.35),0 0 8px #000}
+.m3l-nat .m3l-d{background:#d8f0d2}.m3l-lake .m3l-d,.m3l-river .m3l-d{background:#cfeaff}.m3l-poi .m3l-d{background:#ffd98a}
+.m3l-dot.m3l-vil,.m3l-dot.m3l-poi{font-size:14px;font-style:normal;color:#fff}
+.m3l-dot.m3l-nat{font-size:15px}
