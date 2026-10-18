@@ -519,7 +519,9 @@ function ribbon(pts, w, lift, sea){
     const a = dense[Math.max(i - 1, 0)], b = dense[Math.min(i + 1, dense.length - 1)]; let dx = b[0] - a[0], dz = b[1] - a[1]; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
     if (i) acc += Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]);
     const [x, z] = dense[i];
-    const y1 = sea ? .05 : Math.max(yAt(x - dz * w, z + dx * w), yAt(x, z) - .05, .02) + lift, y2 = sea ? .05 : Math.max(yAt(x + dz * w, z - dx * w), yAt(x, z) - .05, .02) + lift;
+    const yR = (px, pz) => { const h = yAt(px, pz); return (px < 0 || pz < 0 || px > WK || pz > HK) && EXT.conts.length ? Math.max(h, extYS(px, pz, 3)) : h; };      // D1
+    const yE = (s) => { let m = .02; for (const f of [0, .5, 1]) for (const g of [-.1, 0, .1]) m = Math.max(m, yR(x + s * dz * w * f + dx * g, z - s * dx * w * f + dz * g)); return m; };
+    const y1 = sea ? .05 : yE(-1) + lift, y2 = sea ? .05 : yE(1) + lift;
     pos.set([x - dz * w, y1, z + dx * w, x + dz * w, y2, z - dx * w], i * 6); uv.set([acc, 0, acc, 1], i * 4);
     if (i) { const o = (i - 1) * 2; idx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3); }
   }
@@ -1767,6 +1769,17 @@ function extY(x, z){
   const fx = Math.min(Math.max((x - c.x0) / c.R - .5, 0), c.W - 1.001), fz = Math.min(Math.max((z - c.z0) / c.R - .5, 0), c.H - 1.001);
   const ix = fx | 0, iz = fz | 0, tx = fx - ix, tz = fz - iz, i = iz * c.W + ix, Y = c.Y;
   const A = Y[i], B = Y[i + 1], C = Y[i + c.W], D_ = Y[i + c.W + 1];     // C3r: same triangle split as the chunk mesh -> roads/objects sit exactly on the surface
+  return (tx + tz <= 1) ? A + (B - A) * tx + (C - A) * tz : D_ + (C - D_) * (1 - tx) + (B - D_) * (1 - tz);
+}
+function extYS(x, z, step){      // D1: height of the step-LOD chunk mesh at (x,z) (same vertex grid + triangle split as extChunkGeo)
+  const c = contAt(x, z); if (!c) return -3;
+  const fx = Math.min(Math.max((x - c.x0) / c.R - .5, 0), c.W - 1.001), fz = Math.min(Math.max((z - c.z0) / c.R - .5, 0), c.H - 1.001);
+  const NC = 128, i0 = Math.floor(fx / NC) * NC, j0 = Math.floor(fz / NC) * NC, n = Math.min(NC, Math.max(c.W - 1 - i0, c.H - 1 - j0));
+  const a = Math.min(Math.floor((fx - i0) / step), Math.ceil(n / step) - 1), b = Math.min(Math.floor((fz - j0) / step), Math.ceil(n / step) - 1);
+  const gx0 = i0 + Math.min(a * step, n), gx1 = i0 + Math.min((a + 1) * step, n), gz0 = j0 + Math.min(b * step, n), gz1 = j0 + Math.min((b + 1) * step, n);
+  const Yg = (i, j) => c.Y[Math.min(j, c.H - 1) * c.W + Math.min(i, c.W - 1)];
+  const tx = Math.min(Math.max((fx - gx0) / Math.max(gx1 - gx0, 1e-6), 0), 1), tz = Math.min(Math.max((fz - gz0) / Math.max(gz1 - gz0, 1e-6), 0), 1);
+  const A = Yg(gx0, gz0), B = Yg(gx1, gz0), C = Yg(gx0, gz1), D_ = Yg(gx1, gz1);
   return (tx + tz <= 1) ? A + (B - A) * tx + (C - A) * tz : D_ + (C - D_) * (1 - tx) + (B - D_) * (1 - tz);
 }
 const EXT_V = `varying vec3 vP; varying vec3 vN; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; vN = normal; gl_Position = projectionMatrix * viewMatrix * w; }`;
