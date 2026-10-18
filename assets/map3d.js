@@ -1005,28 +1005,40 @@ function buildClouds(){
   for (let c = 0; c < NC; c++){
     const cx = -150 + rnd() * 2450, cz = -170 + rnd() * 2450, cy = 30 + rnd() * 22, rx = 22 + rnd() * 40, rz = 14 + rnd() * 26, ry = 4 + rnd() * 5, n = 34 + (rnd() * 30 | 0);
     for (let i = 0; i < n; i++){ const a = rnd() * 6.283, r = Math.sqrt(rnd()); const ox = Math.cos(a) * r * rx, oz = Math.sin(a) * r * rz; const top = Math.sqrt(Math.max(1 - r * r, 0));
-      const oy = (rnd() * .95 - .05) * ry * top; puffs.push([cx + ox, cy + oy, cz + oz, (11 + rnd() * 14) * (.55 + .55 * top), oy / ry, c]); }
+      const oy = (rnd() * .95 - .05) * ry * top; puffs.push([cx + ox, cy + oy, cz + oz, (11 + rnd() * 14) * (.55 + .55 * top), oy / ry, c, 1]); }
+  }
+  // v4b cloud overhaul: + low small cumulus (fair-weather, flat bases, drift faster) + scattered small wisps between the layers
+  for (let c = 0; c < 300; c++){
+    const cx = -150 + rnd() * 2450, cz = -170 + rnd() * 2450, cy = 10 + rnd() * 7, rx = 3 + rnd() * 7, rz = 2.5 + rnd() * 5, ry = 1.6 + rnd() * 2.2, n = 9 + (rnd() * 12 | 0);
+    for (let i = 0; i < n; i++){ const a = rnd() * 6.283, r = Math.sqrt(rnd()), top = Math.sqrt(Math.max(1 - r * r, 0)), oy = rnd() * ry * top;
+      puffs.push([cx + Math.cos(a) * r * rx, cy + oy, cz + Math.sin(a) * r * rz, (2.6 + rnd() * 3.2) * (.6 + .5 * top), oy / ry * 1.4 - .2, c + 1000, 1.7]); }
+  }
+  for (let c = 0; c < 360; c++){
+    const cx = -150 + rnd() * 2450, cz = -170 + rnd() * 2450, cy = 19 + rnd() * 9, n = 2 + (rnd() * 4 | 0);
+    for (let i = 0; i < n; i++) puffs.push([cx + (rnd() - .5) * 6, cy + (rnd() - .5) * 1.2, cz + (rnd() - .5) * 3, 1.6 + rnd() * 2.4, .2 + rnd() * .5, c + 3000, 1.35]);
   }
   const base = new THREE.PlaneGeometry(1, 1), n = puffs.length, g = new THREE.InstancedBufferGeometry(); g.index = base.index; g.setAttribute('position', base.attributes.position); g.setAttribute('uv', base.attributes.uv);
-  const a = new Float32Array(n * 4), b = new Float32Array(n * 2);
-  puffs.forEach((p, i) => { a.set([p[0], p[1], p[2], p[3]], i * 4); b.set([p[4], hash(i * 13 + 5)], i * 2); });
-  g.setAttribute('iP', new THREE.InstancedBufferAttribute(a, 4)); g.setAttribute('iL', new THREE.InstancedBufferAttribute(b, 2)); g.instanceCount = n;
+  const a = new Float32Array(n * 4), b = new Float32Array(n * 3);
+  puffs.forEach((p, i) => { a.set([p[0], p[1], p[2], p[3]], i * 4); b.set([p[4], hash(i * 13 + 5), p[6]], i * 3); });
+  g.setAttribute('iP', new THREE.InstancedBufferAttribute(a, 4)); g.setAttribute('iL', new THREE.InstancedBufferAttribute(b, 3)); g.instanceCount = n;
   const tx = [0, 1, 2, 3].map((k) => softTex(11 + k));
   const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, uniforms: {m0: {value: tx[0]}, m1: {value: tx[1]}, time: U.time, camPos: U.camPos, sun: U.sun, op: {value: 1}, fogCol: U.fogCol, sunCol: U.sunCol, skyCol: U.skyCol},
-    vertexShader: `attribute vec4 iP; attribute vec2 iL; uniform float time; uniform vec3 camPos, sun; varying vec2 vUv; varying float vL, vA, vS;
+    vertexShader: `attribute vec4 iP; attribute vec3 iL; uniform float time; uniform vec3 camPos, sun; varying vec2 vUv; varying float vL, vA, vS, vUp;
       void main(){
-        vec3 c = iP.xyz + vec3(time * 1.1, 0.0, time * .35);
+        vec3 c = iP.xyz + vec3(time * 1.1, 0.0, time * .35) * iL.z;
         c.x = mod(c.x + 150.0, 2460.0) - 150.0; c.z = mod(c.z + 170.0, 2460.0) - 170.0;
         vec3 R = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]), Up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
         float rot = iL.y * 6.283; vec2 q = mat2(cos(rot), sin(rot), -sin(rot), cos(rot)) * position.xy;
         vec3 p = c + (R * q.x + Up * q.y) * iP.w;
         float d = distance(c, camPos);
         vA = smoothstep(iP.w * .6, iP.w * 2.4, d) * smoothstep(3600.0, 1800.0, d);
-        vL = clamp(.55 + .45 * iL.x + .25 * dot(normalize(vec3(q.x, q.y, 0.0) + 1e-4), vec2(sun.x, sun.y).xyy), .25, 1.15);
+        vUp = smoothstep(-2.0, 12.0, camPos.y - c.y);          // seen from above: sunlit tops, softer & brighter; from below: grey flat bases
+        vL = clamp(.55 + .45 * iL.x + .25 * dot(normalize(vec3(q.x, q.y, 0.0) + 1e-4), vec2(sun.x, sun.y).xyy) + vUp * .25, .25, 1.2);
+        vA *= mix(1.0, .8, vUp) * (iL.z > 1.5 ? smoothstep(2600.0, 900.0, d) : 1.0);
         vS = iL.y; vUv = uv;
         gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
       }`,
-    fragmentShader: `uniform sampler2D m0, m1; uniform float op; uniform vec3 fogCol, sunCol, skyCol; varying vec2 vUv; varying float vL, vA, vS;
+    fragmentShader: `uniform sampler2D m0, m1; uniform float op; uniform vec3 fogCol, sunCol, skyCol; varying vec2 vUv; varying float vL, vA, vS, vUp;
       void main(){ float a = vS > .5 ? texture2D(m0, vUv).a : texture2D(m1, vUv).a;
         vec3 shade = mix(vec3(.5, .56, .68), vec3(1.0, .97, .93), clamp(vL, 0.0, 1.0)) * (.85 + .15 * vL);
         vec3 col = mix(shade * (sunCol * .4 + skyCol * .5 + .02), fogCol, .28);

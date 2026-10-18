@@ -2415,7 +2415,7 @@
     if (opener && opener.focus) try { opener.focus({preventScroll: true}); } catch(e){}
   }
   // t141: harita butonu 2D / 3D seçimini aşağı kaydırır (3D yalnız masaüstü)
-  var M3D_V = 'c2073fd952';
+  var M3D_V = '4a76ed061b';
   var choice = document.createElement('div'); choice.className = 'map-choice'; choice.setAttribute('role', 'menu');
   choice.innerHTML = '<button type="button" class="mc-2d" role="menuitem" title="2D harita">2D</button><button type="button" class="mc-3d" role="menuitem" title="3D harita (deneme)">3D</button>';
   document.body.appendChild(choice);
