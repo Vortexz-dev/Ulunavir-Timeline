@@ -499,7 +499,7 @@ void main(){
 }`;
 function buildOcean(){
   const g = new THREE.PlaneGeometry(9000, 9000, 1, 1); g.rotateX(-Math.PI / 2); g.translate(512, 0, 384);
-  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false,
+  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 8,     // E4
     vertexShader: 'varying vec2 vW; varying vec3 vP; void main(){ vec4 wp = modelMatrix * vec4(position,1.0); vW = wp.xz; vP = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
     fragmentShader: OCEAN_F, uniforms: {auxTex: U.auxTex, watTex: U.watTex, watFlow: U.watFlow, extW: U.extW, extXf: U.extXf, sun: U.sun, camPos: U.camPos, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, time: U.time, skyCol: U.skyCol, sunCol: U.sunCol, nightK: U.nightK}});
   const o = new THREE.Mesh(g, m); o.renderOrder = 2; scene.add(o);
