@@ -405,7 +405,7 @@ function buildTerrain(){
       colTex: {value: U.loTex.value}, tileXf: {value: new THREE.Vector4(0, 0, 1 / WK, 1 / HK)}, nTex: U.nTex, mTex: U.mTex, facTex: U.facTex, auxTex: U.auxTex, gTex: U.gTex, gNrm: U.gNrm,
       sun: U.sun, camPos: U.camPos, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, hover: U.hover, borderVis: U.borderVis, time: U.time, ex: U.ex, sunCol: U.sunCol, skyCol: U.skyCol, gndCol: U.gndCol,
       shMap: U.shMap, shMat: U.shMat, shOn: U.shOn, camD: U.camD, volc: {value: VOLC}, swampC: U.swampC, fineK: U.fineK, bakeK: U.bakeK, plP: U.plP, plN: U.plN}});
-    const mesh = new THREE.Mesh(chunkGeo(cx, cy), m); mesh.castShadow = true; mesh.receiveShadow = false; scene.add(mesh);
+    const mesh = new THREE.Mesh(chunkGeo(cx, cy), m); mesh.castShadow = false; mesh.receiveShadow = false; scene.add(mesh);   // C3p: terrain self-shadow is baked; skipping it in the shadow pass saves tris/frame
     chunks.push({cx, cy, mesh, hi: false, c: new THREE.Vector3(cx * CH + CH / 2, 0, cy * CH + CH / 2)});
   }
 }
@@ -498,7 +498,7 @@ void main(){
 }`;
 function buildOcean(){
   const g = new THREE.PlaneGeometry(9000, 9000, 1, 1); g.rotateX(-Math.PI / 2); g.translate(512, 0, 384);
-  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -.5, polygonOffsetUnits: -1,
+  const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false,
     vertexShader: 'varying vec2 vW; varying vec3 vP; void main(){ vec4 wp = modelMatrix * vec4(position,1.0); vW = wp.xz; vP = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }',
     fragmentShader: OCEAN_F, uniforms: {auxTex: U.auxTex, watTex: U.watTex, watFlow: U.watFlow, extW: U.extW, extXf: U.extXf, sun: U.sun, camPos: U.camPos, fogCol: U.fogCol, fogK: U.fogK, hazeK: U.hazeK, time: U.time, skyCol: U.skyCol, sunCol: U.sunCol, nightK: U.nightK}});
   const o = new THREE.Mesh(g, m); o.renderOrder = 2; scene.add(o);
@@ -1249,7 +1249,7 @@ function applyCam(){
   camera.position.set(cam.x - Math.sin(cam.yaw) * ch, ty + cy, cam.z + Math.cos(cam.yaw) * ch);
   const minY = Math.max(yAt(camera.position.x, camera.position.z), yAt((camera.position.x + cam.x) / 2, (camera.position.z + cam.z) / 2)) + .45; if (camera.position.y < minY) camera.position.y = minY;
   camera.lookAt(cam.x, ty, cam.z);
-  const hag = camera.position.y - yAt(camera.position.x, camera.position.z); camera.near = Math.min(Math.max(Math.min(cam.d * .02, hag * .35), .05), 25);   // C3: low flat views keep foreground foliage (near plane follows height above ground) camera.far = Math.max(cam.d * 6, 4200); camera.updateProjectionMatrix();
+  const hag = camera.position.y - yAt(camera.position.x, camera.position.z); camera.near = Math.min(Math.max(Math.min(cam.d * .02, hag * .35), .05), 25); camera.far = Math.max(cam.d * 6, 4200); camera.updateProjectionMatrix();   // C3: low flat views keep foreground foliage (near plane follows height above ground)
   camera.updateMatrixWorld(); U.camPos.value.copy(camera.position); U.camD.value = cam.d;
 }
 function flyTo(x, z, d){ goal.x = x; goal.z = z; goal.d = d; flying = 1; }
@@ -1816,7 +1816,8 @@ void main(){
   if (lavaK > .01){       // v4c: lava = glowing cracks in dark crust, pooled in the vent hollows (smooth mask, no biome blocks)
     vec2 q = vP.xz * 1.6 + vec2(fbm(vP.xz * .5), fbm(vP.xz * .5 + 3.3)) * 2.0;
     float cr = (1.0 - smoothstep(.0, .035, abs(vn(q) - .5))) * smoothstep(.35, .6, vn(vP.xz * .8)), pool = smoothstep(.68, .84, fbm(vP.xz * .7 + vec2(time * .01, 0.0)));
-    float l = max(cr * .85, pool) * lavaK * (.75 + .25 * sin(time * 1.7 + vP.x * 3.0));
+    float cr2 = (1.0 - smoothstep(.0, .06, abs(vn(q * 4.3 + 7.1) - .5))) * smoothstep(.4, .65, vn(vP.xz * 2.3)) * dk;     // C3o: fine crack network up close
+    float l = max(max(cr * .85, cr2 * .55), pool) * lavaK * (.75 + .25 * sin(time * 1.7 + vP.x * 3.0));
     vec3 crust = mix(vec3(.05, .045, .045), vec3(.17, .15, .14), smoothstep(.3, .8, fbm(vP.xz * 2.2))) * (sunCol * dif * .7 + amb * .6);
     col = mix(col, crust, lavaK * .9) + vec3(1.0, .33, .04) * l * (.7 + 2.0 * nightK) + vec3(.8, .18, .02) * lavaK * pool * .05 * (1.0 + 2.0 * nightK); }
   col = atmo(col, vP, camPos);
