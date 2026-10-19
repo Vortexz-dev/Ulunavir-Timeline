@@ -354,3 +354,11 @@ body.m3d-open{overflow:hidden}
 .m3d-sndwrap .mt-volpop{left:auto;right:calc(100% + 10px);transform:translate(10px,-50%) scaleX(.6);transform-origin:right center}
 .m3d-sndwrap .mt-volpop::before{right:auto;left:100%}
 .m3d-btns .m3d-cld{padding:0;width:38px;display:grid;place-items:center}.m3d-cld svg{width:19px;height:19px}.m3d-cld svg .off{display:none}.m3d-cld.is-off svg .off{display:inline}.m3d-cld.is-off{opacity:.75}
+/* t167 A12 first-person */
+.m3d-btns .m3d-fp{padding:0;width:38px;display:grid;place-items:center}.m3d-fp svg{width:17px;height:17px}
+.m3d-fp-ghost{position:fixed;left:0;top:0;width:28px;height:28px;pointer-events:none;opacity:0;z-index:80;color:#f0d79c;filter:drop-shadow(0 2px 4px #000)}
+.m3d-fp-ghost.on{opacity:.95}.m3d-fp-ghost svg{width:28px;height:28px}
+.m3d-fp-on .m3d-scale,.m3d-fp-on .m3d-hint{display:none}
+.m3d-fp-hint{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);padding:8px 16px;border-radius:16px;background:#0d0912c8;color:#e8d8b0;font:500 14px/1.2 Cormorant,serif;opacity:0;transition:opacity .5s;pointer-events:none;z-index:5}
+.m3d-fp-hint.on{opacity:1}
+.m3d-fp-on{cursor:none}
