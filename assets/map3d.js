@@ -87,7 +87,7 @@ function makeDom(){
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'Horaghfus 3D haritası');
   root.innerHTML = '<canvas class="m3d-cv"></canvas><div class="m3d-labels"></div>' +
     '<div class="m3d-top"><div class="m3d-title"><b>Horaghfus</b><span>3D Harita · beta</span></div>' +
-    '<div class="m3d-spin" hidden><label>Dönüş <input type="range" class="m3d-spinr" min="1" max="8" step="1" value="1"><output class="m3d-spinv">1×</output></label></div><div class="m3d-btns"><div class="mt-sndwrap m3d-sndwrap"><button type="button" class="m3d-snd" aria-pressed="true" title="Harita sesleri"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="on" d="M15.5 9a4.2 4.2 0 010 6M18 6.5a7.6 7.6 0 010 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button><div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div><button type="button" class="m3d-cld" aria-pressed="true" title="Bulutları gizle"><svg viewBox="0 0 24 24"><path d="M7 18h10.5a3.8 3.8 0 00.4-7.6A5.6 5.6 0 007.3 9.2 4.4 4.4 0 007 18z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="m3d-lab" aria-pressed="true" title="Etiketleri gizle"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
+    '<div class="m3d-compass" aria-hidden="true"><i></i><b>K</b></div><div class="m3d-spin" hidden><label>Dönüş <input type="range" class="m3d-spinr" min="1" max="8" step="1" value="1"><output class="m3d-spinv">1×</output></label></div><div class="m3d-btns"><div class="mt-sndwrap m3d-sndwrap"><button type="button" class="m3d-snd" aria-pressed="true" title="Harita sesleri"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="on" d="M15.5 9a4.2 4.2 0 010 6M18 6.5a7.6 7.6 0 010 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button><div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div><button type="button" class="m3d-cld" aria-pressed="true" title="Bulutları gizle"><svg viewBox="0 0 24 24"><path d="M7 18h10.5a3.8 3.8 0 00.4-7.6A5.6 5.6 0 007.3 9.2 4.4 4.4 0 007 18z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="m3d-lab" aria-pressed="true" title="Etiketleri gizle"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
     '<div class="m3d-hint">Sol tık + sürükle: kaydır · Sağ tık + sürükle: döndür / eğ · Tekerlek: yakınlaş · İsme tıkla: bilgi kartı</div>' +
     '<div class="m3d-scale"><i></i><span></span></div>' +
     '<aside class="m3d-card" hidden><button type="button" class="m3d-cx" aria-label="Kartı kapat">✕</button><div class="m3d-ci"></div></aside>' +
@@ -180,7 +180,7 @@ async function build(){
   MAT.leaf = leafBms.map((b, i) => { const t = tex(b, true, 4); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; });
   MAT.flat = MAT.leaf[6]; MAT.flat.minFilter = THREE.NearestMipmapNearestFilter; MAT.flat.magFilter = THREE.NearestFilter;
   MAT.rock = MAT.leaf[7]; MAT.rockSn = MAT.leaf[8]; MAT.rockDk = MAT.leaf[9];
-  buildSky(); buildTerrain(); if (EXT.W) buildExtTerrain(); buildOcean(); buildRoads(); buildBuildings(bldBuf); buildBridges(); buildShips(); buildSpecial(); buildTrees(treesBuf);
+  buildSky(); buildMoons(); buildTerrain(); if (EXT.W) buildExtTerrain(); buildOcean(); buildRoads(); buildBuildings(bldBuf); buildBridges(); buildShips(); buildSpecial(); buildTrees(treesBuf);
   buildSmoke(); buildClouds(); buildCirrus(); buildWind(); buildFields(); buildVeg(); buildRocks(); buildBergs(); buildMist(); buildLabels(); buildNightLights();
   built = true;
 }
@@ -230,7 +230,13 @@ function buildSky(){
         c += vec3(1.0, .82, .6) * (pow(s, 8.0) * .25 + pow(s, 64.0) * .5) * (1.0 - nightK) + vec3(1.0, .95, .85) * smoothstep(.9995, .99975, s) * 6.0 * (1.0 - nightK);
         if (nightK > .01){ vec3 q = floor(d * 420.0); float st = fract(sin(dot(q, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
           c += vec3(.9, .93, 1.0) * smoothstep(.9975, 1.0, st) * smoothstep(.02, .25, y) * nightK * (.6 + .4 * sin(time * 3.0 + st * 99.0));
-          c += vec3(.9, .92, 1.0) * smoothstep(.9992, .9997, s) * nightK * 2.0; }   // moon disc (light comes from SUN at night)
+          // Ailremar: small cool disc at sun/moon light dir
+          c += vec3(.72, .76, .85) * smoothstep(.99955, .9998, s) * nightK * .7;
+          // Algurd: larger red moon, offset sky direction (always visible at night when looking up)
+          vec3 alg = normalize(vec3(-sun.z, max(.35, -sun.y * .6 + .25), sun.x));
+          float sa = max(dot(d, alg), 0.0);
+          c += vec3(.95, .28, .12) * smoothstep(.9982, .9995, sa) * nightK * 2.4;
+          c += vec3(.7, .12, .05) * pow(sa, 80.0) * nightK * 1.1; }
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`});
@@ -1486,7 +1492,7 @@ export function close(){
   setTimeout(() => { if (!isOpen) root.hidden = true; }, 380);
   setTimeout(() => { if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
 }
-window.__ulvMap3D = {open, close, rockCheck, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
+window.__ulvMap3D = {open, close, rockCheck, moons: () => DNC.algurd && ({a: DNC.algurd.position.toArray(), b: DNC.ailremar.position.toArray(), as: DNC.algurd.scale.x, bs: DNC.ailremar.scale.x, av: DNC.algurd.visible, bv: DNC.ailremar.visible}), fpY: () => FP.on ? FP.y : null, fpH: () => FP_H, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
   places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), globe: (v) => v ? enterGlobe() : exitGlobe(null), fp: (x,z) => fpEnter(x,z), fpExit, glook: (ll, d) => GLB.g && (ll.length === 3 ? GLB.g.lookDir(ll, d) : GLB.g.lookAt(ll, d)), snd: () => ({gest: !!SND.gest, ctx: SND.ctx && SND.ctx.state, lvl: sndLevel(), mapOn: SND.mapOn, drone: !!SND.drone, droneG: SND.droneG ? +SND.droneG.gain.value.toFixed(3) : 0, bufs: Object.keys(SND.buf), map: sndA() && sndA().state(), probe: built && !GLB.on ? sndProbe() : null}), stats: () => renderer ? {flatN: FLATN, glb: GLB.on && GLB.g ? GLB.g.stats() : null, thin: TR && TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
   prof: () => { const out = []; scene.traverseVisible((o) => { const g = o.geometry; if (!g || !(o.isMesh || o.isPoints)) return; let n = g.index ? g.index.count : g.attributes.position.count; n = Math.min(n, g.drawRange.count); let t = o.isPoints ? n : n / 3; const ic = o.isInstancedMesh ? o.count : g.isInstancedBufferGeometry ? g.instanceCount : 1; out.push([o.type + ':' + (o.material && o.material.type) + ':ro' + o.renderOrder + (o.castShadow ? ':S' : '') + ':' + (o.name || ''), Math.round(t), ic === Infinity ? -1 : ic, Math.round(t * (ic === Infinity ? 1 : ic))]); }); out.sort((a, b) => b[3] - a[3]); return {n: out.length, sh: renderer.shadowMap.enabled, top: out.slice(0, 18)}; }};
 
@@ -2188,8 +2194,8 @@ function updateDayNight(dt){
   if (h < -3){
     SUN.copy(DNC.moon);
     // cool Ailremar + very faint Algurd red
-    U.sunCol.value.setRGB(.07, .09, .15);
-    U.sunCol.value.r += nightK * .035; U.sunCol.value.g += nightK * .008;
+    U.sunCol.value.setRGB(.09, .07, .11);
+    U.sunCol.value.r += nightK * .09; U.sunCol.value.g += nightK * .02; U.sunCol.value.b += nightK * .025;  // t169: Algurd red wash
   } else { SUN.copy(sunD); U.sunCol.value.copy(C[0]); }
   if (h >= -3 && h < 0){ const t = (h + 3) / 3; U.sunCol.value.lerp(new THREE.Color(.07, .09, .15), 1 - t); }
   U.sunCol.value.r *= rg.s[0]; U.sunCol.value.g *= rg.s[1]; U.sunCol.value.b *= rg.s[2];
@@ -2283,36 +2289,38 @@ function buildCirrus(){
 
 // ------------------------------------------------------------ t168: flat-map moons (Algurd big/red/close, Ailremar small/far/slow)
 function buildMoons(){
+  // t169: MUST be called from init — Algurd red textured globe-moon, Ailremar smaller cool moon
   const noise = `float n3(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
     float fbm(vec3 p){ float a = .5, s = 0.; for (int i = 0; i < 5; i++){ s += a * n3(p); p = p * 2.03 + 17.1; a *= .5; } return s; }`;
-  const mk = (r, c1, c2) => {
+  const mk = (r, c1, c2, emit) => {
     const m = new THREE.ShaderMaterial({
-      uniforms: {sun: U.sun, time: U.time, c1: {value: new THREE.Color(...c1)}, c2: {value: new THREE.Color(...c2)}},
+      uniforms: {sun: U.sun, time: U.time, nightK: U.nightK, emit: {value: emit}, c1: {value: new THREE.Color(...c1)}, c2: {value: new THREE.Color(...c2)}},
       vertexShader: 'varying vec3 vO, vN; void main(){ vO = normalize(position); vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: noise + `uniform vec3 sun, c1, c2; uniform float time; varying vec3 vO, vN;
+      fragmentShader: noise + `uniform vec3 sun, c1, c2; uniform float time, nightK, emit; varying vec3 vO, vN;
         void main(){ float nd = max(dot(normalize(vN), sun), 0.0); float t = fbm(vO * 5.0 + time * .01) * .7 + smoothstep(.6, .72, n3(vO * 9.0)) * .35;
-          vec3 c = mix(c1, c2, clamp(t, 0.0, 1.0)) * (nd * 1.2 + .04); gl_FragColor = vec4(c, 1.0); #include <colorspace_fragment> }`});
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 24), m); mesh.frustumCulled = false; scene.add(mesh); return mesh;
+          vec3 c = mix(c1, c2, clamp(t, 0.0, 1.0));
+          c *= nd * 1.05 + .18 + emit * (.55 + nightK * 1.2);   // self-lit at night so Algurd reads as red moon
+          gl_FragColor = vec4(c, 1.0); #include <colorspace_fragment> }`});
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 24), m); mesh.frustumCulled = false; mesh.renderOrder = -2; scene.add(mesh); return mesh;
   };
-  // sizes are world units far from camera — billboard-ish distance kept in update
-  DNC.algurd = mk(1, [.55, .12, .07], [.9, .35, .2]);
-  DNC.ailremar = mk(.55, [.18, .19, .22], [.42, .42, .46]);
-  DNC.algurd.renderOrder = DNC.ailremar.renderOrder = -2;
+  DNC.algurd = mk(1, [.62, .1, .05], [.95, .4, .18], 1.0);
+  DNC.ailremar = mk(.45, [.16, .17, .2], [.38, .4, .45], .25);
 }
 function updateMoons(){
   if (!DNC.algurd) return;
   const t = clock, cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
-  // Algurd closer/faster; Ailremar farther/slower (relative to sky dome)
-  const a1 = t * .09, a2 = t * .045 + 1.7;
-  const distA = 420, distB = 780;
-  const place = (m, ang, dist, yAmp) => {
-    const dir = new THREE.Vector3(Math.cos(ang), .25 + Math.sin(ang) * yAmp, Math.sin(ang)).normalize();
+  const a1 = t * .11, a2 = t * .042 + 1.7;   // Algurd faster
+  const distA = 220, distB = 820;          // Algurd closer
+  const place = (m, ang, dist, yAmp, scl) => {
+    const dir = new THREE.Vector3(Math.cos(ang), .32 + Math.sin(ang) * yAmp, Math.sin(ang)).normalize();
+    // keep above horizon for ground views
+    if (dir.y < .22) dir.y = .22; dir.normalize();  // keep clearly above horizon
     m.position.set(cx + dir.x * dist, cy + dir.y * dist, cz + dir.z * dist);
-    const s = dist * 0.022; m.scale.setScalar(s); m.rotation.y = t * .02;
+    m.scale.setScalar(dist * scl); m.rotation.y = t * .02;
     m.visible = !GLB.on;
   };
-  place(DNC.algurd, a1, distA, .35);
-  place(DNC.ailremar, a2, distB, .45);
+  place(DNC.algurd, a1, distA, .15, 0.085);  // t169: much larger on screen    // apparent size ~ current white moon
+  place(DNC.ailremar, a2, distB, .4, 0.014);   // smaller / farther
 }
 
 // ------------------------------------------------------------ Step 3: Dünya küresi (tembel yüklenir; düz harita ile küre aynı anda GPU'da tutulmaz)
@@ -2504,7 +2512,7 @@ function spinBindUI(){
 
 // ------------------------------------------------------------ t167/t168: Street View tarzı birinci şahıs
 const FP = {on: false, dragging: false, vy: 0, bob: 0, breath: 0, keys: {}, yaw: 0, pitch: -.12, x: 0, y: 0, z: 0, saved: null, ghost: null, hint: null, exitBtn: null};
-const FP_H = .034, FP_SPD = .055, FP_SPRINT = .13, FP_JUMP = .085, FP_G = .22;   // t168: slightly taller eye, stronger jump
+const FP_H = .068, FP_SPD = .055, FP_SPRINT = .13, FP_JUMP = .085, FP_G = .22;   // t168: slightly taller eye, stronger jump
 function fpBtn(){
   const b = document.createElement('button'); b.type = 'button'; b.className = 'm3d-fp'; b.title = 'Birinci şahıs (sürükle ve bırak)';
   b.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="2.3" fill="currentColor"/><path d="M8.5 9.2h7l-.6 5.2-1.6 7.1h-1.7l-1.4-5.2h-.4l-1.4 5.2H6.7L5.1 14.4z" fill="currentColor"/></svg>';
@@ -2535,7 +2543,7 @@ function fpStartDrag(e){
   window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
 }
 function fpEnter(x, z){
-  FP.saved = {...cam, goal: {...goal}}; FP.on = true; FP.x = x; FP.z = z; FP.y = yMesh(x, z) + FP_H; FP.vy = 0; FP.yaw = cam.yaw; FP.pitch = -.08; FP.bob = 0; FP.breath = 0;
+  FP.saved = {...cam, goal: {...goal}}; FP.on = true; { const el = root.querySelector('.m3d-compass'); if (el) el.classList.add('on'); } FP.x = x; FP.z = z; FP.y = yMesh(x, z) + FP_H; FP.vy = 0; FP.yaw = cam.yaw; FP.pitch = -.08; FP.bob = 0; FP.breath = 0;
   root.classList.add('m3d-fp-on'); closeCard();
   fpExitBtn().classList.add('on');
   cv.requestPointerLock && cv.requestPointerLock();
@@ -2543,7 +2551,7 @@ function fpEnter(x, z){
   FP.hint.classList.add('on'); setTimeout(() => FP.hint && FP.hint.classList.remove('on'), 5000);
 }
 function fpExit(){
-  if (!FP.on) return; FP.on = false; root.classList.remove('m3d-fp-on');
+  if (!FP.on) return; FP.on = false; { const el = root.querySelector('.m3d-compass'); if (el) el.classList.remove('on'); }; root.classList.remove('m3d-fp-on');
   if (FP.exitBtn) FP.exitBtn.classList.remove('on');
   if (document.pointerLockElement) document.exitPointerLock();
   if (FP.saved){ Object.assign(cam, FP.saved); Object.assign(goal, FP.saved.goal || FP.saved); flying = 0; }
@@ -2601,6 +2609,9 @@ function fpUpdate(dt){
   const bobX = moving && onG ? Math.sin(FP.bob * .5) * .0014 : Math.sin(FP.breath * .7) * .00035;
   camera.near = .006; camera.far = Math.max(900, cam.d * 4); camera.fov = 62; camera.updateProjectionMatrix();
   camera.position.set(FP.x + bobX * Math.cos(FP.yaw), FP.y + bobY, FP.z);
+  // t169 compass
+  { const el = root.querySelector('.m3d-compass i'); if (el && FP.on) el.style.transform = 'translateX(-50%) rotate(' + ((-FP.yaw * 180 / Math.PI) % 360) + 'deg)'; }
+
   const lx = FP.x - Math.sin(FP.yaw) * Math.cos(FP.pitch), ly = FP.y + Math.sin(FP.pitch), lz = FP.z + Math.cos(FP.yaw) * Math.cos(FP.pitch);
   camera.lookAt(lx, ly, lz); camera.up.set(0, 1, 0);
   cam.x = goal.x = FP.x; cam.z = goal.z = FP.z; cam.d = goal.d = .55; cam.yaw = goal.yaw = FP.yaw; cam.tilt = goal.tilt = FP.pitch;

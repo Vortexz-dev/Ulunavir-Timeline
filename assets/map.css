@@ -371,7 +371,13 @@ body.m3d-open{overflow:hidden}
 .m3d-btns .m3d-lab{padding:0;width:38px;display:grid;place-items:center}.m3d-lab svg{width:17px;height:17px}
 .m3d-lab.is-off .off,.m3d-cld.is-off .off{opacity:1}.m3d-lab:not(.is-off) .off{opacity:0}
 .m3d-nolab .m3d-labels{display:none!important}
-.m3d-spin{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;padding:6px 12px;border-radius:16px;background:#0d0912c8;border:1px solid #e2b45a55;color:#e8d8b0;font:600 12px/1 Cormorant,serif}
+.m3d-spin{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:20;padding:6px 12px;border-radius:16px;background:#0d0912e6;border:1px solid #e2b45a55;color:#e8d8b0;font:600 12px/1 Cormorant,serif;pointer-events:auto}
 .m3d-spin label{display:flex;align-items:center;gap:8px}
 .m3d-spin input[type=range]{width:120px;accent-color:#e2b45a}
 .m3d-spin output{min-width:2ch}
+
+/* t169 FP compass */
+.m3d-compass{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:22;width:56px;height:56px;border-radius:50%;background:#0d0912cc;border:1px solid #e2b45a88;pointer-events:none;display:none;box-shadow:0 4px 16px #000a}
+.m3d-compass.on{display:block}
+.m3d-compass i{position:absolute;left:50%;top:6px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:16px solid #c44;transform:translateX(-50%);transform-origin:50% 22px}
+.m3d-compass b{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);font:700 9px/1 Cinzel,serif;color:#e8d8b0;letter-spacing:.08em}
