@@ -25,8 +25,8 @@
   3
  ],
  "tileKm": 256,
- "trees": 1354016,
- "buildings": 27914,
+ "trees": 1325477,
+ "buildings": 21067,
  "continent": "Horaghfus",
  "note": "Diğer kıtalar eklenince her kıta kendi meta + offset ile yüklenecek."
 }

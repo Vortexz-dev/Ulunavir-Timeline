@@ -1655,12 +1655,12 @@ function updateRocks(force){
   per.forEach((list, k) => { const M = ROCKS.meshes[k]; if (!M) return;
     if (list.length > M.cap){ M.im.removeFromParent(); M.im.dispose(); M.cap = Math.ceil(list.length * 1.4); const im = new THREE.InstancedMesh(M.part.g, M.mat || ROCKS.mat, M.cap); im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; scene.add(im); M.im = im; }
     list.forEach(([x, y, z, h1, blight, snow], n) => {
-      // footprint: sample 5 points, sink to minimum so nothing floats on slopes / LOD
-      const offs = [[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]];
+      // footprint: sample 9 points (wider), sink past mesh half-height so LOD/slope never floats
+      const offs = [[0,0],[.22,0],[-.22,0],[0,.22],[0,-.22],[.16,.16],[-.16,.16],[.16,-.16],[-.16,-.16]];
       let yMin = 1e9; for (const [ox, oz] of offs) yMin = Math.min(yMin, yMesh(x + ox, z + oz));
       const nrm = slopeN(x, z); q.setFromUnitVectors(_up, nrm); q.multiply(_qy.setFromAxisAngle(_up, h1 * 6.28));
-      const bb = M.bb, hgt = (bb[4] - bb[1]) || 1, scl = (.5 + h1 * .95) * (k === 5 || k === 6 ? 1.45 : 1);
-      const sink = hgt * scl * (.48 + .22 * hash((x * 100 | 0) * 13 + (z * 100 | 0)));
+      const bb = M.bb, hgt = Math.max((bb[4] - bb[1]) || 1, (bb[3] - bb[0]) || 1, (bb[5] - bb[2]) || 1), scl = (.5 + h1 * .95) * (k === 5 || k === 6 ? 1.45 : 1);
+      const sink = hgt * scl * (.62 + .28 * hash((x * 100 | 0) * 13 + (z * 100 | 0))) + .035;  // t168 B: bury deeper
       v.set(x, yMin - sink, z); sc.set(scl, scl, scl); m4.compose(v, q, sc); M.im.setMatrixAt(n, m4);
       c.setRGB(1, 1, 1).offsetHSL(0, 0, (hash((x * 70 | 0) + k) - .5) * .1);   // texture carries colour; slight luminance jitter
       M.im.setColorAt(n, c);
