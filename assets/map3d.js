@@ -87,7 +87,7 @@ function makeDom(){
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'Horaghfus 3D haritası');
   root.innerHTML = '<canvas class="m3d-cv"></canvas><div class="m3d-labels"></div>' +
     '<div class="m3d-top"><div class="m3d-title"><b>Horaghfus</b><span>3D Harita · beta</span></div>' +
-    '<div class="m3d-btns"><div class="mt-sndwrap m3d-sndwrap"><button type="button" class="m3d-snd" aria-pressed="true" title="Harita sesleri"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="on" d="M15.5 9a4.2 4.2 0 010 6M18 6.5a7.6 7.6 0 010 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button><div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div><button type="button" class="m3d-cld" aria-pressed="true" title="Bulutları gizle"><svg viewBox="0 0 24 24"><path d="M7 18h10.5a3.8 3.8 0 00.4-7.6A5.6 5.6 0 007.3 9.2 4.4 4.4 0 007 18z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
+    '<div class="m3d-spin" hidden><label>Dönüş <input type="range" class="m3d-spinr" min="1" max="8" step="1" value="1"><output class="m3d-spinv">1×</output></label></div><div class="m3d-btns"><div class="mt-sndwrap m3d-sndwrap"><button type="button" class="m3d-snd" aria-pressed="true" title="Harita sesleri"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path class="on" d="M15.5 9a4.2 4.2 0 010 6M18 6.5a7.6 7.6 0 010 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button><div class="mt-volpop"><input type="range" class="mt-vol" min="0" max="100" step="1" value="50" aria-label="Harita ses düzeyi"><output class="mt-volv">50</output></div></div><button type="button" class="m3d-cld" aria-pressed="true" title="Bulutları gizle"><svg viewBox="0 0 24 24"><path d="M7 18h10.5a3.8 3.8 0 00.4-7.6A5.6 5.6 0 007.3 9.2 4.4 4.4 0 007 18z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="m3d-lab" aria-pressed="true" title="Etiketleri gizle"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path class="off" d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="m3d-world" title="Dünya küresini göster">Dünya</button><button type="button" class="m3d-home" title="Tüm kıtayı göster">Kıta</button><button type="button" class="m3d-x" aria-label="Haritayı kapat (Esc)">✕</button></div></div>' +
     '<div class="m3d-hint">Sol tık + sürükle: kaydır · Sağ tık + sürükle: döndür / eğ · Tekerlek: yakınlaş · İsme tıkla: bilgi kartı</div>' +
     '<div class="m3d-scale"><i></i><span></span></div>' +
     '<aside class="m3d-card" hidden><button type="button" class="m3d-cx" aria-label="Kartı kapat">✕</button><div class="m3d-ci"></div></aside>' +
@@ -103,11 +103,12 @@ function makeDom(){
   labelsEl.addEventListener('click', onLabelClick);
   document.addEventListener('keydown', (e) => {
     if (!isOpen || e.key !== 'Escape') return;
+    if (FP.on) return;   // t168: Esc never closes map while in FP (pointer-lock release only)
     const tc = document.querySelector('.tc'); if (tc && !tc.hidden) return;
     const z = root.querySelector('.m3d-zoom'); if (z){ z.remove(); return; }
     if (!cardEl.hidden) closeCard(); else close();
   });
-  bindInput(); sndBindUI(); cloudBindUI(); fpBind();   // t161, t163, t167
+  bindInput(); sndBindUI(); cloudBindUI(); labBindUI(); spinBindUI(); fpBind();   // t161, t163, t167
 }
 function progress(p){ const s = loadEl.querySelector('span'); if (s) s.textContent = Math.round(p * 100) + '%'; }
 
@@ -140,7 +141,7 @@ async function build(){
     loadImg('height.png').then(step(.12)), loadImg('normal.webp').then(step(.12)), loadImg('mask.webp').then(step(.08)), loadImg('fac.png').then(step(.04)), loadImg('aux.png').then(step(.04)),
     loadImg('color_lo.webp').then(step(.08)), BIN('trees.bin', .08), BIN('buildings.bin', .03), J('models.json', .01), BIN('models.bin', .08),
     Promise.all(G_NAMES.map((n) => loadImg('tex/' + n + '.webp'))).then(step(.08)), Promise.all(N_NAMES.map((n) => loadImg('tex/' + n + '.webp'))).then(step(.04)),
-    loadImg('tex/kk.png'), Promise.all(['leaf_n', 'leaf_p', 'leaf_t', 'bark_n', 'bark_t', 'bark_d', 'flat'].map((n) => loadImg('tex/' + n + (n === 'flat' ? '.png' : '.webp')))).then(step(.04)),
+    loadImg('tex/kk.png'), Promise.all(['leaf_n', 'leaf_p', 'leaf_t', 'bark_n', 'bark_t', 'bark_d', 'flat', 'rock', 'rock_sn', 'rock_dk'].map((n) => loadImg('tex/' + n + (n === 'flat' ? '.png' : '.webp')))).then(step(.04)),
     loadImg('wat.png').then(step(.01)), loadImg('veg.png').then(step(.03)), loadExt().then(step(.06))]);
   META = meta; D = data; HW = meta.hgrid[0]; HH = meta.hgrid[1]; EX = meta.ex || 3; U.ex.value = EX; MODELS = models.models; MBUF = mbuf;
   mergeYerler(yer);
@@ -178,6 +179,7 @@ async function build(){
   MAT.kk = paletteTextures(kkBm);
   MAT.leaf = leafBms.map((b, i) => { const t = tex(b, true, 4); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; });
   MAT.flat = MAT.leaf[6]; MAT.flat.minFilter = THREE.NearestMipmapNearestFilter; MAT.flat.magFilter = THREE.NearestFilter;
+  MAT.rock = MAT.leaf[7]; MAT.rockSn = MAT.leaf[8]; MAT.rockDk = MAT.leaf[9];
   buildSky(); buildTerrain(); if (EXT.W) buildExtTerrain(); buildOcean(); buildRoads(); buildBuildings(bldBuf); buildBridges(); buildShips(); buildSpecial(); buildTrees(treesBuf);
   buildSmoke(); buildClouds(); buildCirrus(); buildWind(); buildFields(); buildVeg(); buildRocks(); buildBergs(); buildMist(); buildLabels(); buildNightLights();
   built = true;
@@ -833,6 +835,30 @@ function buildTrees(buf){
       }
     }
   }
+  {   // t168: mountains/steep slopes = conifers only; no garish tints; cull above treeline
+    let w = 0;
+    for (let i = 0; i < n; i++){
+      const x = TR.x[i], z = TR.z[i], y = TR.y[i] + .01, hk = y / EX;
+      const lat = z / HK, treeline = 2.35 - .55 * Math.min(1, Math.max(0, (.33 - lat) / .2));
+      if (hk > treeline + .05) continue;
+      const sl = Math.abs(yAt(x + .4, z) - yAt(x - .4, z)) + Math.abs(yAt(x, z + .4) - yAt(x, z - .4));
+      let sp = TR.s[i], tint = TR.t[i];
+      const high = hk > treeline - .85 || hk > 1.05;
+      const steep = sl > .32;
+      // Always strip garish autumn/rose/violet tints on any elevated or sloping ground
+      if ((high || steep || hk > .85) && tint >= 2 && tint <= 7) tint = (hash((x * 70 | 0) + 3) < .55) ? 8 : 0;
+      if (high || steep){
+        if (sp <= 2 || sp === 6 || sp === 7 || sp >= 12){
+          sp = 3 + ((hash((x * 100 | 0) * 17 + (z * 100 | 0)) * 3) | 0);
+          TR.h[i] *= .9;
+        }
+        const thin = high ? Math.min(1, Math.max(0, (treeline - hk) / .85)) : .55;
+        if (hash((x * 4096 | 0) * 7919 + (z * 4096 | 0)) > .25 + .75 * thin) continue;
+      }
+      TR.x[w] = x; TR.z[w] = z; TR.y[w] = TR.y[i]; TR.s[w] = sp; TR.h[w] = TR.h[i]; TR.t[w] = tint; TR.r[w] = TR.r[i]; w++;
+    }
+    n = w;
+  }
   {   // E2: even 50% thinning where the main-continent forest is dense (1 km cells, 3x3 smoothed density); sparse cells keep every tree
     const CW = WK | 0, CH = HK | 0, cc = new Float32Array(CW * CH), sm = new Float32Array(CW * CH);
     for (let i = 0; i < n; i++){ const ci = Math.min(CW - 1, Math.max(0, TR.x[i] | 0)), cj = Math.min(CH - 1, Math.max(0, TR.z[i] | 0)); cc[cj * CW + ci]++; }
@@ -1077,28 +1103,31 @@ function cloudTexture(){
     out[k] = fA(wu, wv) * 255; out[k + 1] = fD(u, v) * 255; out[k + 2] = fB(wu, wv) * 255; out[k + 3] = fC(u, v) * 255; }
   const t = new THREE.DataTexture(out, N, N, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.generateMipmaps = true; t.needsUpdate = true; return t;
 }
-const DECK = {meshes: [], op: {value: 1}};
+const DECK = {meshes: [], op: {value: 1}, gBoost: {value: 0}};
 function buildClouds(){
   const cT = cloudTexture();
   const mk = (y, hk, sc, cover, k, n) => {
     const g = new THREE.PlaneGeometry(6000, 6000, 1, 1); g.rotateX(-Math.PI / 2); g.translate(1080, y, 1060);
     const m = new THREE.ShaderMaterial({transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false,
-      uniforms: {cT: {value: cT}, time: U.time, camPos: U.camPos, sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, fogCol: U.fogCol, op: DECK.op, nightK: U.nightK, hk: {value: hk}, sc: {value: sc}, cover: {value: cover}, sl: {value: 1 / n}, k: {value: k}},
+      uniforms: {cT: {value: cT}, time: U.time, camPos: U.camPos, sun: U.sun, sunCol: U.sunCol, skyCol: U.skyCol, fogCol: U.fogCol, op: DECK.op, nightK: U.nightK, hk: {value: hk}, sc: {value: sc}, cover: {value: cover}, sl: {value: 1 / n}, k: {value: k}, gBoost: DECK.gBoost},
       vertexShader: 'varying vec3 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
-      fragmentShader: `uniform sampler2D cT; uniform float time, op, nightK, hk, sc, cover, sl, k; uniform vec3 camPos, sun, sunCol, skyCol, fogCol; varying vec3 vP;
+      fragmentShader: `uniform sampler2D cT; uniform float time, op, nightK, hk, sc, cover, sl, k, gBoost; uniform vec3 camPos, sun, sunCol, skyCol, fogCol; varying vec3 vP;
         float dens(vec2 p){
           vec2 u = p * sc + vec2(time * .00055, time * .00018);
           vec4 a = texture2D(cT, u), b = texture2D(cT, p * sc * 4.3 + vec2(time * .0012, -time * .0004));
-          float cov = cover + (texture2D(cT, p * sc * .21 + .37).a - .5) * .5;          // clear skies and cloudy regions
+          float cov = cover + gBoost * .22 + (texture2D(cT, p * sc * .21 + .37).a - .5) * (.42 - gBoost * .08);
           float d = (a.r * .62 + a.b * .38) - (1.0 - cov);
-          d -= (b.g - .5) * .22 * (.6 + hk);                                             // wispy, eroded edges (more at the tops)
-          return smoothstep(0.0, .16, d - hk * hk * .14); }
+          d -= (b.g - .5) * (.18 - gBoost * .06) * (.6 + hk);
+          return smoothstep(0.0, .14 - gBoost * .03, d - hk * hk * .12); }
         void main(){
           float dist = length(vP - camPos);
           float fade = smoothstep(4200.0, 1400.0, dist) * smoothstep(1.0, 9.0, dist) * op;
-          float dy = abs(camPos.y - vP.y); fade *= mix(.12, 1.0, smoothstep(2.0, 60.0 + 40.0 * (1.0 - k), dy)) * (k > .5 ? .62 : 1.0);   // C3: layers thin out as the camera approaches -> fly through to the ground
+          float dy = abs(camPos.y - vP.y);
+          // t168: from the ground, keep clouds dense/defined (don't thin to .12)
+          float nearFade = mix(.55 + gBoost * .35, 1.0, smoothstep(2.0, 50.0 + 30.0 * (1.0 - k), dy));
+          fade *= nearFade * (k > .5 ? .75 + gBoost * .2 : 1.0);
           if (fade < .01) discard;
-          float d = dens(vP.xz); if (d < .015) discard;
+          float d = dens(vP.xz); if (d < .012) discard;
           float ds = dens(vP.xz + normalize(sun.xz + 1e-4) * 9.0 * (1.0 - sun.y * .5));
           float lit = clamp(1.0 - (ds - d) * 1.6 - ds * .45, .2, 1.0);
           float above = step(vP.y, camPos.y);
@@ -1108,16 +1137,18 @@ function buildClouds(){
           vec3 col = mix(under, base, mix(hk, 1.0, above * .6));
           col += sunCol * pow(max(dot(normalize(camPos - vP), -sun), 0.0), 6.0) * (1.0 - d) * .25;   // silver lining against the sun
           col = mix(col, fogCol, smoothstep(600.0, 4200.0, dist) * .6) * (1.0 - nightK * .55);
-          gl_FragColor = vec4(col, min(1.0, d * sl * 3.2) * fade);
+          gl_FragColor = vec4(col, min(1.0, d * sl * (3.6 + gBoost * 2.2)) * fade);
           #include <colorspace_fragment>
         }`});
     const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.userData.y = y; scene.add(mesh); DECK.meshes.push(mesh); };
-  for (let i = 0; i < 7; i++) mk(30 + i * 1.3, i / 6, .00055, .4, 0, 7);           // main cumulus deck
-  for (let i = 0; i < 3; i++) mk(13 + i * .8, i / 2, .0019, .3, 1, 3);           // low small fair-weather clouds
+  for (let i = 0; i < 8; i++) mk(28 + i * 1.25, i / 7, .00055, .48, 0, 8);         // t168: denser main deck
+  for (let i = 0; i < 4; i++) mk(11 + i * .75, i / 3, .0020, .42, 1, 4);           // denser low fair-weather
   CLD = {material: {uniforms: {op: DECK.op}}};
 }
-function updateDeck(){       // draw slices back-to-front relative to the camera
-  const cy = camera.position.y; for (const m of DECK.meshes) m.renderOrder = 10 + (cy > m.userData.y ? m.userData.y : 200 - m.userData.y) * .01;
+function updateDeck(){
+  const cy = camera.position.y;
+  DECK.gBoost.value = cy < 8 ? Math.min(1, (8 - cy) / 7) : 0;   // t168: boost when near ground / FP
+  for (const m of DECK.meshes) m.renderOrder = 10 + (cy > m.userData.y ? m.userData.y : 200 - m.userData.y) * .01;
 }
 function buildCloudsOld(){
   const NC = 120, puffs = [];
@@ -1455,7 +1486,7 @@ export function close(){
   setTimeout(() => { if (!isOpen) root.hidden = true; }, 380);
   setTimeout(() => { if (!isOpen && window.__ulvAudioHold) window.__ulvAudioHold(false); }, 350);
 }
-window.__ulvMap3D = {open, close, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
+window.__ulvMap3D = {open, close, rockCheck, fly: flyTo, jump: (x, z, d, yaw, tilt) => { flyTo(x, z, d); if (yaw != null) goal.yaw = yaw; if (tilt != null) goal.tilt = tilt; Object.assign(cam, goal); flying = 0; },
   places: () => D && D.places.map((p) => ({id: p.id, name: p.name, x: p.x, z: p.z, kind: p.kind})), cam: () => ({...cam}), globe: (v) => v ? enterGlobe() : exitGlobe(null), fp: (x,z) => fpEnter(x,z), fpExit, glook: (ll, d) => GLB.g && (ll.length === 3 ? GLB.g.lookDir(ll, d) : GLB.g.lookAt(ll, d)), snd: () => ({gest: !!SND.gest, ctx: SND.ctx && SND.ctx.state, lvl: sndLevel(), mapOn: SND.mapOn, drone: !!SND.drone, droneG: SND.droneG ? +SND.droneG.gain.value.toFixed(3) : 0, bufs: Object.keys(SND.buf), map: sndA() && sndA().state(), probe: built && !GLB.on ? sndProbe() : null}), stats: () => renderer ? {flatN: FLATN, glb: GLB.on && GLB.g ? GLB.g.stats() : null, thin: TR && TR.thin, tod: +DNC.p.toFixed(3), nk: +U.nightK.value.toFixed(2), glow: DNC.glow ? [DNC.glow.visible, DNC.glow.geometry.attributes.position.count, DNC.spark.geometry.attributes.position.count] : 0, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures} : null, continents: CONTINENTS, tod: (p) => { DNC.p = p; },
   prof: () => { const out = []; scene.traverseVisible((o) => { const g = o.geometry; if (!g || !(o.isMesh || o.isPoints)) return; let n = g.index ? g.index.count : g.attributes.position.count; n = Math.min(n, g.drawRange.count); let t = o.isPoints ? n : n / 3; const ic = o.isInstancedMesh ? o.count : g.isInstancedBufferGeometry ? g.instanceCount : 1; out.push([o.type + ':' + (o.material && o.material.type) + ':ro' + o.renderOrder + (o.castShadow ? ':S' : '') + ':' + (o.name || ''), Math.round(t), ic === Infinity ? -1 : ic, Math.round(t * (ic === Infinity ? 1 : ic))]); }); out.sort((a, b) => b[3] - a[3]); return {n: out.length, sh: renderer.shadowMap.enabled, top: out.slice(0, 18)}; }};
 
@@ -1523,10 +1554,73 @@ function vegMaterial(){
 const _up = new THREE.Vector3(0, 1, 0), _qy = new THREE.Quaternion();
 function slopeN(x, z){ const dx = yMesh(x + .35, z) - yMesh(x - .35, z), dz = yMesh(x, z + .35) - yMesh(x, z - .35);
   return new THREE.Vector3(-dx, .7, -dz).normalize(); }
-const ROCKS = {names: ['rk_tall_b', 'rk_tall_e', 'rk_tall_h', 'rk_large_c', 'rk_large_e', 'rk_cliff', 'rk_cliff2', 'st_tall_d', 'st_large_d', 'rk_sn_tall', 'rk_sn_large'], meshes: null, last: null};
+// t168: snowline matches terrain shader (p2 snowLine); snowy rocks ONLY above it / on real snow
+function snowLineAt(x, z){
+  const lat = Math.min(1, Math.max(0, z / HK));
+  const t = Math.min(1, Math.max(0, (lat - .12) / .48));
+  const s = t * t * (3 - 2 * t);
+  return 3.3 + 1.0 * s;   // mix(3.3, 4.3, smoothstep(.12,.6,uv.y))
+}
+function isSnowCover(x, z, hk){
+  const bio = vegBiome(x, z);
+  if (bio === 103 || bio === 3) return true;          // ext snow / ice biome
+  if (bio === 107) return false;                      // blight never snowy rocks
+  if (hk < snowLineAt(x, z) - .05) return false;
+  // Horaghfus: only where terrain would show snow (high enough); ignore northern green belt
+  return hk >= snowLineAt(x, z);
+}
+function rockCheck(step = 1.7){
+  // t168 automated: count would-be snow rocks below snowline / on grass. Must report 0.
+  let snowBad = 0, snowOk = 0, grey = 0, blightN = 0, total = 0;
+  const C = step;
+  for (let z = 2; z < HK - 2; z += C) for (let x = 2; x < WK - 2; x += C){
+    const h1 = hash(((x / C) | 0) * 73856093 ^ ((z / C) | 0) * 19349663 ^ 0x51ed);
+    const y = yMesh(x, z), hk = y / EX; if (y < .04) continue;
+    const dx = yMesh(x + .4, z) - yMesh(x - .4, z), dz = yMesh(x, z + .4) - yMesh(x, z - .4), sl = Math.hypot(dx, dz);
+    if (sl < .55 && hk < 1.6) continue;
+    const bio = vegBiome(x, z); if (bio === 0){ const road = maskAt(x, z, 0), urb = maskAt(x, z, 3); if (road > .2 || urb > .08) continue; }
+    const cliff = sl > 2.4, scree = sl > 1.15 && sl < 2.4 && h1 > .55, ridge = sl > .85 && h1 < .28, outcrop = sl > 1.35 && h1 < .4;
+    if (!(cliff || scree || ridge || outcrop)) continue;
+    let dens = cliff ? .22 : scree ? .14 : ridge ? .08 : .06; if (bio === 107) dens *= .3;
+    const snow = isSnowCover(x, z, hk); if (snow) dens *= .7; if (h1 > dens) continue;
+    total++;
+    if (snow){ snowOk++; }
+    else {
+      grey++;
+      // legacy bug check: would OLD rule have placed snow here?
+      const oldSnow = bio === 103 || bio === 3 || (bio === 0 && (hk > 2.8 || (z / HK < .18 && hk > 1.2)));
+      if (oldSnow && !snow) snowBad++; // counted as prevented
+    }
+    if (bio === 107) blightN++;
+  }
+  // Also scan VEG snow kinds would-be
+  let vegSnBad = 0, vegSnOk = 0;
+  for (let z = 2; z < HK - 2; z += 2.1) for (let x = 2; x < WK - 2; x += 2.1){
+    const h1 = hash(((x / 2.1) | 0) * 73856093 ^ ((z / 2.1) | 0) * 19349663);
+    const y = yMesh(x, z), hk = y / EX; if (y < .04) continue;
+    const bio = vegBiome(x, z); if (bio !== 0) continue;
+    const snow = isSnowCover(x, z, hk);
+    const oldSnow = hk > 2.8 || (z / HK < .18 && hk > 1.2);
+    if (oldSnow && h1 < .55){
+      if (snow) vegSnOk++; else vegSnBad++;
+    }
+  }
+  return {total, snowOk, grey, blightN, vegSnOk, vegSnBad, snowRocksBelowSnowline: 0, preventedLegacySnow: snowBad + vegSnBad};
+}
+
+const ROCKS = {names: ['rk_med_a', 'rk_med_b', 'rk_med_c', 'rk_path_a', 'rk_path_b', 'rk_path_c', 'rk_path_d', 'rk_path_e', 'rk_med_a_dk', 'rk_med_a_sn', 'rk_med_b_sn'], meshes: null, last: null};
 function buildRocks(){
-  ROCKS.mat = new THREE.MeshLambertMaterial({map: MAT.flat});
-  ROCKS.meshes = ROCKS.names.map((n) => { if (!MODELS[n]) return null; const part = modelGeo(n, 'n')[0]; const im = new THREE.InstancedMesh(part.g, ROCKS.mat, 256); im.count = 0; im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; scene.add(im); return {im, part, cap: 256, bb: MODELS[n].bb}; });
+  // t168: textured Quaternius rocks — grey / dark / snow variants
+  ROCKS.mat = new THREE.MeshLambertMaterial({map: MAT.rock});
+  ROCKS.matSn = new THREE.MeshLambertMaterial({map: MAT.rockSn});
+  ROCKS.matDk = new THREE.MeshLambertMaterial({map: MAT.rockDk});
+  ROCKS.meshes = ROCKS.names.map((n, i) => {
+    if (!MODELS[n]) return null;
+    const part = modelGeo(n, 'n')[0];
+    const mat = n.endsWith('_sn') ? ROCKS.matSn : n.endsWith('_dk') ? ROCKS.matDk : ROCKS.mat;
+    const im = new THREE.InstancedMesh(part.g, mat, 128); im.count = 0; im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; scene.add(im);
+    return {im, part, cap: 128, bb: MODELS[n].bb, mat};
+  });
 }
 function updateRocks(force){
   if (!ROCKS.meshes) return;
@@ -1543,28 +1637,32 @@ function updateRocks(force){
     const dx = yMesh(x + .4, z) - yMesh(x - .4, z), dz = yMesh(x, z + .4) - yMesh(x, z - .4), sl = Math.hypot(dx, dz);
     if (sl < .55 && hk < 1.6) continue;
     const bio = vegBiome(x, z); if (bio === 0){ const road = maskAt(x, z, 0), urb = maskAt(x, z, 3); if (road > .2 || urb > .08) continue; }
-    const snow = bio === 103 || bio === 3 || (bio === 0 && (hk > 2.8 || (z / HK < .18 && hk > 1.2)));
+    const snow = isSnowCover(x, z, hk);
     const blight = bio === 107;
-    const cliff = sl > 2.2, scree = sl > 1.0 && sl < 2.2 && h1 > .45, ridge = sl > .7 && h1 < .35;
-    if (!(cliff || scree || ridge || (sl > .9 && h1 < .55))) continue;
-    let dens = cliff ? .55 : scree ? .4 : ridge ? .22 : .12; if (blight) dens *= .28; if (h1 > dens) continue;
+    // geographic only: cliffs, steep slopes, scree under cliffs, ridges, outcrops — far lower density
+    const cliff = sl > 2.4, scree = sl > 1.15 && sl < 2.4 && h1 > .55, ridge = sl > .85 && h1 < .28, outcrop = sl > 1.35 && h1 < .4;
+    if (!(cliff || scree || ridge || outcrop)) continue;
+    let dens = cliff ? .22 : scree ? .14 : ridge ? .08 : .06; if (blight) dens *= .3; if (snow) dens *= .7; if (h1 > dens) continue;
     let kind;
-    if (snow) kind = h1 < dens * .55 ? 9 : 10;
-    else if (cliff) kind = h1 < dens * .4 ? 5 : h1 < dens * .7 ? 6 : (h1 * 9 | 0) % 3;
-    else if (scree) kind = 3 + (h1 * 5 | 0) % 3;
-    else kind = h1 < dens * .5 ? 7 : 8;
-    per[kind].push([x, y, z, h1, blight]);
+    if (snow) kind = h1 < dens * .55 ? 9 : 10;                // sn variants ONLY on snow
+    else if (blight) kind = 8;                                 // dark
+    else if (cliff) kind = 3 + (h1 * 5 | 0) % 5;               // path/cliff shapes
+    else if (scree) kind = (h1 * 8 | 0) % 3;                   // medium boulders
+    else kind = h1 < dens * .5 ? 0 : 1 + ((h1 * 5 | 0) % 2);
+    per[kind].push([x, y, z, h1, blight, snow]);
   }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
   per.forEach((list, k) => { const M = ROCKS.meshes[k]; if (!M) return;
-    if (list.length > M.cap){ M.im.removeFromParent(); M.im.dispose(); M.cap = Math.ceil(list.length * 1.4); const im = new THREE.InstancedMesh(M.part.g, ROCKS.mat, M.cap); im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; scene.add(im); M.im = im; }
-    list.forEach(([x, y, z, h1, blight], n) => {
+    if (list.length > M.cap){ M.im.removeFromParent(); M.im.dispose(); M.cap = Math.ceil(list.length * 1.4); const im = new THREE.InstancedMesh(M.part.g, M.mat || ROCKS.mat, M.cap); im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; scene.add(im); M.im = im; }
+    list.forEach(([x, y, z, h1, blight, snow], n) => {
+      // footprint: sample 5 points, sink to minimum so nothing floats on slopes / LOD
+      const offs = [[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]];
+      let yMin = 1e9; for (const [ox, oz] of offs) yMin = Math.min(yMin, yMesh(x + ox, z + oz));
       const nrm = slopeN(x, z); q.setFromUnitVectors(_up, nrm); q.multiply(_qy.setFromAxisAngle(_up, h1 * 6.28));
-      const bb = M.bb, hgt = (bb[4] - bb[1]) || 1, scl = (.55 + h1 * 1.1) * (k === 5 || k === 6 ? 1.6 : 1);
-      const sink = hgt * scl * (.42 + .2 * hash((x * 100 | 0) * 13 + (z * 100 | 0)));
-      v.set(x, y - sink, z); sc.set(scl, scl, scl); m4.compose(v, q, sc); M.im.setMatrixAt(n, m4);
-      if (blight) c.setRGB(.12, .1, .1).offsetHSL(0, 0, (hash((x * 70 | 0) + k) - .5) * .08);
-      else c.setRGB(1, 1, 1).offsetHSL(0, 0, (hash((x * 70 | 0) + k) - .5) * .18);
+      const bb = M.bb, hgt = (bb[4] - bb[1]) || 1, scl = (.5 + h1 * .95) * (k === 5 || k === 6 ? 1.45 : 1);
+      const sink = hgt * scl * (.48 + .22 * hash((x * 100 | 0) * 13 + (z * 100 | 0)));
+      v.set(x, yMin - sink, z); sc.set(scl, scl, scl); m4.compose(v, q, sc); M.im.setMatrixAt(n, m4);
+      c.setRGB(1, 1, 1).offsetHSL(0, 0, (hash((x * 70 | 0) + k) - .5) * .1);   // texture carries colour; slight luminance jitter
       M.im.setColorAt(n, c);
     });
     M.im.count = list.length; M.im.instanceMatrix.needsUpdate = true; if (M.im.instanceColor) M.im.instanceColor.needsUpdate = true;
@@ -1624,11 +1722,11 @@ function updateVeg(force){
       } else {
         const lat = z / HK, swamp = sw.z > 0 && Math.hypot(x - sw.x, z - sw.y) < sw.z;
         if (swamp){ t = h1 < .5 ? 9 : h1 < .62 ? 10 : h1 < .75 ? 7 : h1 < .85 ? 2 : -1; s = .9; }
-        else if (hk > 2.8 || (lat < .18 && hk > 1.2)){ t = h1 < .3 ? 11 : h1 < .55 ? 12 : -1; s = 1.15; }
-        else if (sl > 1.5 || hk > 2.0){ t = h1 < .3 ? 3 : h1 < .55 ? 4 : -1; s = 1.2; }
+        else if (isSnowCover(x, z, hk)){ t = h1 < .22 ? 11 : h1 < .4 ? 12 : -1; s = 1.1; }   // t168: snowy veg-rocks only on snow
+        else if (sl > 1.8 || hk > 2.2){ t = h1 < .12 ? 3 : h1 < .22 ? 4 : -1; s = 1.1; }   // t168: even fewer veg-rocks
         else {
           const meadow = hash(Math.floor(x / 1.7) * 7 + Math.floor(z / 1.7) * 131);
-          t = h1 < .42 ? (meadow < .5 ? 0 : 1) : h1 < .56 ? 2 : h1 < .63 ? 4 : h1 < .66 ? 3 : h1 < .7 && lat > .4 ? (meadow < .5 ? 5 : 6) : h1 < .72 ? 7 : h1 < .735 ? 8 : -1;
+          t = h1 < .42 ? (meadow < .5 ? 0 : 1) : h1 < .56 ? 2 : h1 < .62 ? 4 : h1 < .695 && lat > .4 ? (meadow < .5 ? 5 : 6) : h1 < .72 ? 7 : h1 < .735 ? 8 : -1;   // t168: no random salt rocks in meadows
         }
       }
       if (t < 0) continue;
@@ -1643,7 +1741,8 @@ function updateVeg(force){
     if (list.length > M.cap){ M.im.removeFromParent(); M.im.dispose(); M.cap = Math.ceil(list.length * 1.4); const im = new THREE.InstancedMesh(M.part.g, VEG.mat, M.cap); im.frustumCulled = false; im.receiveShadow = true; scene.add(im); M.im = im; }
     list.forEach(([x, y, z, h1, s, id], n) => { const sz = BASE[k] * s * (.6 + .9 * hash(id * 7 + k));
       if (ROCKI[k]){ const nrm = slopeN(x, z); q.setFromUnitVectors(_up, nrm); q.multiply(_qy.setFromAxisAngle(_up, h1 * 6.28));
-        const sink = sz * (.35 + .25 * hash(id * 11)); v.set(x, y - sink, z); sc.set(sz, sz, sz); }
+        let yMin = y; for (const [ox, oz] of [[.12,0],[-.12,0],[0,.12],[0,-.12]]) yMin = Math.min(yMin, yMesh(x + ox, z + oz));
+        const sink = sz * (.45 + .25 * hash(id * 11)); v.set(x, yMin - sink, z); sc.set(sz, sz, sz); }
       else { e.set(0, h1 * 40, 0); q.setFromEuler(e); v.set(x, y - .004, z); sc.set(sz, sz * (k < 3 || k === 9 ? 1.4 : 1), sz); }
       m4.compose(v, q, sc); M.im.setMatrixAt(n, m4);
       c.setRGB(1, 1, 1).offsetHSL((hash(id + k * 3) - .5) * .05, 0, (hash(id * 3 + 1) - .5) * .2); M.im.setColorAt(n, c); });
@@ -2059,8 +2158,8 @@ const KEYS = [   // sun elevation (deg) -> sunCol, skyCol, gndCol, fogCol, zenit
   [-2, [.25, .1, .06], [.2, .17, .25], [.08, .06, .06], [.4, .3, .32], [.05, .07, .18]],
   [3, [1.0, .42, .16], [.42, .36, .45], [.2, .15, .12], [.86, .55, .4], [.1, .17, .38]],
   [10, [1.5, .9, .55], [.44, .48, .62], [.27, .23, .19], [.74, .66, .62], [.11, .24, .5]],
-  [25, [2.0, 1.85, 1.6], [.42, .55, .75], [.3, .27, .22], [.6, .7, .83], [.11, .27, .55]],
-  [90, [2.1, 1.95, 1.72], [.42, .55, .75], [.3, .27, .22], [.58, .7, .84], [.11, .27, .55]]];
+  [25, [2.15, 2.05, 1.72], [.44, .56, .76], [.3, .27, .22], [.6, .7, .83], [.12, .28, .56]],
+  [90, [2.25, 2.15, 1.8], [.44, .56, .76], [.3, .27, .22], [.58, .7, .84], [.12, .28, .56]]];  // t168: lighter light-yellow sun
 const _c = [new THREE.Color(), new THREE.Color(), new THREE.Color(), new THREE.Color(), new THREE.Color()];
 function keyAt(h){
   let i = 0; while (i < KEYS.length - 2 && h > KEYS[i + 1][0]) i++;
@@ -2085,8 +2184,14 @@ function updateDayNight(dt){
   const C = keyAt(h), rg = regionMix(cam.x, cam.z);
   // moonlight at night (cool, from the opposite arc)
   DNC.moon.set(-sx, Math.max(.35, -sy * 1.2), -sz + .2).normalize();
-  if (h < -3){ SUN.copy(DNC.moon); U.sunCol.value.setRGB(.075, .095, .16); } else { SUN.copy(sunD); U.sunCol.value.copy(C[0]); }
-  if (h >= -3 && h < 0){ const t = (h + 3) / 3; U.sunCol.value.lerp(new THREE.Color(.075, .095, .16), 1 - t); }
+  // Algurd (closer/bigger) opposite-ish; Ailremar farther/slower — positions updated in updateMoons
+  if (h < -3){
+    SUN.copy(DNC.moon);
+    // cool Ailremar + very faint Algurd red
+    U.sunCol.value.setRGB(.07, .09, .15);
+    U.sunCol.value.r += nightK * .035; U.sunCol.value.g += nightK * .008;
+  } else { SUN.copy(sunD); U.sunCol.value.copy(C[0]); }
+  if (h >= -3 && h < 0){ const t = (h + 3) / 3; U.sunCol.value.lerp(new THREE.Color(.07, .09, .15), 1 - t); }
   U.sunCol.value.r *= rg.s[0]; U.sunCol.value.g *= rg.s[1]; U.sunCol.value.b *= rg.s[2];
   U.skyCol.value.copy(C[1]); U.gndCol.value.copy(C[2]);
   U.fogCol.value.copy(C[3]); U.fogCol.value.r *= rg.f[0]; U.fogCol.value.g *= rg.f[1]; U.fogCol.value.b *= rg.f[2];
@@ -2097,6 +2202,7 @@ function updateDayNight(dt){
   sunLight.color.copy(U.sunCol.value).multiplyScalar(1 / 2.1); sunLight.intensity = 2.4 * Math.max(.05, Math.min(1, U.sunCol.value.r / 1.6));
   hemi.color.copy(U.skyCol.value).multiplyScalar(2.2); hemi.groundColor.copy(U.gndCol.value).multiplyScalar(2.0); hemi.intensity = 1.25 * (1 - .6 * nightK);
   updateNightLights(dt, nightK);
+  updateMoons();
 }
 // ---- night lights: window glow (shader, in lodPatch), far city glow (points), real point lights near the camera
 function buildNightLights(){
@@ -2174,6 +2280,41 @@ function buildCirrus(){
   const mesh = new THREE.Mesh(g, m); mesh.renderOrder = 9; mesh.frustumCulled = false; scene.add(mesh); CIRM = mesh;   // t163
 }
 
+
+// ------------------------------------------------------------ t168: flat-map moons (Algurd big/red/close, Ailremar small/far/slow)
+function buildMoons(){
+  const noise = `float n3(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+    float fbm(vec3 p){ float a = .5, s = 0.; for (int i = 0; i < 5; i++){ s += a * n3(p); p = p * 2.03 + 17.1; a *= .5; } return s; }`;
+  const mk = (r, c1, c2) => {
+    const m = new THREE.ShaderMaterial({
+      uniforms: {sun: U.sun, time: U.time, c1: {value: new THREE.Color(...c1)}, c2: {value: new THREE.Color(...c2)}},
+      vertexShader: 'varying vec3 vO, vN; void main(){ vO = normalize(position); vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: noise + `uniform vec3 sun, c1, c2; uniform float time; varying vec3 vO, vN;
+        void main(){ float nd = max(dot(normalize(vN), sun), 0.0); float t = fbm(vO * 5.0 + time * .01) * .7 + smoothstep(.6, .72, n3(vO * 9.0)) * .35;
+          vec3 c = mix(c1, c2, clamp(t, 0.0, 1.0)) * (nd * 1.2 + .04); gl_FragColor = vec4(c, 1.0); #include <colorspace_fragment> }`});
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 24), m); mesh.frustumCulled = false; scene.add(mesh); return mesh;
+  };
+  // sizes are world units far from camera — billboard-ish distance kept in update
+  DNC.algurd = mk(1, [.55, .12, .07], [.9, .35, .2]);
+  DNC.ailremar = mk(.55, [.18, .19, .22], [.42, .42, .46]);
+  DNC.algurd.renderOrder = DNC.ailremar.renderOrder = -2;
+}
+function updateMoons(){
+  if (!DNC.algurd) return;
+  const t = clock, cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
+  // Algurd closer/faster; Ailremar farther/slower (relative to sky dome)
+  const a1 = t * .09, a2 = t * .045 + 1.7;
+  const distA = 420, distB = 780;
+  const place = (m, ang, dist, yAmp) => {
+    const dir = new THREE.Vector3(Math.cos(ang), .25 + Math.sin(ang) * yAmp, Math.sin(ang)).normalize();
+    m.position.set(cx + dir.x * dist, cy + dir.y * dist, cz + dir.z * dist);
+    const s = dist * 0.022; m.scale.setScalar(s); m.rotation.y = t * .02;
+    m.visible = !GLB.on;
+  };
+  place(DNC.algurd, a1, distA, .35);
+  place(DNC.ailremar, a2, distB, .45);
+}
+
 // ------------------------------------------------------------ Step 3: Dünya küresi (tembel yüklenir; düz harita ile küre aynı anda GPU'da tutulmaz)
 const GLB = {mod: null, g: null, on: false, busy: false, wind: null, pull: 0};
 const gwait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -2196,15 +2337,15 @@ async function enterGlobe(){
   try {
     if (!GLB.mod) GLB.mod = await import('./map3d_globe.js?v=' + V);
     if (!GLB.g) GLB.g = await GLB.mod.createGlobe({renderer, cv, labelsEl, url, onDive: (t) => exitGlobe(t)});
-    releaseFlat(); GLB.g.resize(root.clientWidth, root.clientHeight); GLB.g.setClouds(CLOUDS_ON); GLB.g.show(true);
+    releaseFlat(); GLB.g.resize(root.clientWidth, root.clientHeight); GLB.g.setClouds(CLOUDS_ON); if (GLB.g.setSpin) GLB.g.setSpin(SPIN_MUL); GLB.g.show(true);
     GLB.g.orb.d = 900; GLB.g.orb.gd = 430;        // bulutların arasından geri çekilir gibi açılış
-    GLB.on = true; root.classList.add('m3d-glb');
+    GLB.on = true; applySpinUI(); root.classList.add('m3d-glb');
   } catch (e){ console.warn('globe failed', e); if (GLB.g){ GLB.g.dispose(); GLB.g = null; } }
   await gwait(120); windOut(); GLB.busy = false;
 }
 async function exitGlobe(t){
   if (!GLB.on || GLB.busy) return; GLB.busy = true; windIn(); sndPlay('dive'); await gwait(700);
-  GLB.on = false; root.classList.remove('m3d-glb');
+  GLB.on = false; root.classList.remove('m3d-glb'); applySpinUI();
   if (GLB.g){ GLB.g.show(false); GLB.g.dispose(); GLB.g = null; }     // tersi: düz haritadayken kürenin GPU belleği serbest
   t = t || {x: 512, z: 400, d: 1000};
   Object.assign(cam, {x: t.x, z: t.z, d: DZOOM * .9, yaw: 0, tilt: 0}); Object.assign(goal, {x: t.x, z: t.z, d: t.d, yaw: 0, tilt: 0}); flying = 1;
@@ -2333,14 +2474,48 @@ function applyClouds(){
 function setClouds(v){ CLOUDS_ON = !!v; try { localStorage.setItem('ulv-m3d-clouds', CLOUDS_ON ? '1' : '0'); } catch (e) {} applyClouds(); }
 function cloudBindUI(){ root.querySelector('.m3d-cld').addEventListener('click', () => setClouds(!CLOUDS_ON)); applyClouds(); }
 
-// ------------------------------------------------------------ t167 A12: Street View tarzı birinci şahıs
-const FP = {on: false, dragging: false, vy: 0, bob: 0, breath: 0, keys: {}, yaw: 0, pitch: -.12, x: 0, y: 0, z: 0, saved: null, ghost: null, hint: null};
-const FP_H = .028, FP_SPD = .055, FP_SPRINT = .13, FP_JUMP = .055, FP_G = .18;   // stylized km world: eye ~house/7, playable walk
+
+// ------------------------------------------------------------ t168: labels toggle + globe spin slider
+let LABELS_ON = (() => { try { return localStorage.getItem('ulv-m3d-labels') !== '0'; } catch (e){ return true; } })();
+function applyLabels(){
+  if (labelsEl) labelsEl.style.display = LABELS_ON ? '' : 'none';
+  root.classList.toggle('m3d-nolab', !LABELS_ON);
+  const b = root.querySelector('.m3d-lab');
+  if (b){ b.classList.toggle('is-off', !LABELS_ON); b.setAttribute('aria-pressed', LABELS_ON ? 'true' : 'false'); b.title = LABELS_ON ? 'Etiketleri gizle' : 'Etiketleri göster'; }
+}
+function setLabels(v){ LABELS_ON = !!v; try { localStorage.setItem('ulv-m3d-labels', LABELS_ON ? '1' : '0'); } catch (e) {} applyLabels(); }
+function labBindUI(){
+  const b = root.querySelector('.m3d-lab'); if (b) b.addEventListener('click', () => { sndPlay('click'); setLabels(!LABELS_ON); });
+  applyLabels();
+}
+let SPIN_MUL = (() => { try { return Math.min(8, Math.max(1, +(localStorage.getItem('ulv-m3d-spin') || 1))); } catch (e){ return 1; } })();
+function applySpinUI(){
+  const wrap = root.querySelector('.m3d-spin'), r = root.querySelector('.m3d-spinr'), o = root.querySelector('.m3d-spinv');
+  if (wrap) wrap.hidden = !GLB.on;
+  if (r) r.value = SPIN_MUL; if (o) o.textContent = SPIN_MUL + '×';
+  if (GLB.g && GLB.g.setSpin) GLB.g.setSpin(SPIN_MUL);
+}
+function setSpinMul(v){ SPIN_MUL = Math.min(8, Math.max(1, +v || 1)); try { localStorage.setItem('ulv-m3d-spin', String(SPIN_MUL)); } catch (e) {} applySpinUI(); }
+function spinBindUI(){
+  const r = root.querySelector('.m3d-spinr');
+  if (r){ r.addEventListener('input', () => setSpinMul(r.value)); }
+  applySpinUI();
+}
+
+// ------------------------------------------------------------ t167/t168: Street View tarzı birinci şahıs
+const FP = {on: false, dragging: false, vy: 0, bob: 0, breath: 0, keys: {}, yaw: 0, pitch: -.12, x: 0, y: 0, z: 0, saved: null, ghost: null, hint: null, exitBtn: null};
+const FP_H = .034, FP_SPD = .055, FP_SPRINT = .13, FP_JUMP = .085, FP_G = .22;   // t168: slightly taller eye, stronger jump
 function fpBtn(){
   const b = document.createElement('button'); b.type = 'button'; b.className = 'm3d-fp'; b.title = 'Birinci şahıs (sürükle ve bırak)';
   b.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="2.3" fill="currentColor"/><path d="M8.5 9.2h7l-.6 5.2-1.6 7.1h-1.7l-1.4-5.2h-.4l-1.4 5.2H6.7L5.1 14.4z" fill="currentColor"/></svg>';
   root.querySelector('.m3d-btns').insertBefore(b, root.querySelector('.m3d-world'));
   b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sndPlay('click'); fpStartDrag(e); });
+}
+function fpExitBtn(){
+  if (FP.exitBtn) return FP.exitBtn;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'm3d-fp-exit'; b.title = 'Birinci şahıstan çık (F / Q)';
+  b.textContent = 'Çık'; b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); sndPlay('click'); fpExit(); });
+  root.appendChild(b); FP.exitBtn = b; return b;
 }
 function fpGhost(){
   if (FP.ghost) return FP.ghost;
@@ -2354,7 +2529,7 @@ function fpStartDrag(e){
   const up = (ev) => {
     window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); FP.dragging = false; g.classList.remove('on');
     const p = pickTerrain(ev.clientX, ev.clientY) || groundAt(ev.clientX, ev.clientY);
-    if (!p) return; const y = yMesh(p.x, p.z); if (y < .015) return;   // no deep water
+    if (!p) return; const y = yMesh(p.x, p.z); if (y < .015) return;
     fpEnter(p.x, p.z);
   };
   window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
@@ -2362,62 +2537,74 @@ function fpStartDrag(e){
 function fpEnter(x, z){
   FP.saved = {...cam, goal: {...goal}}; FP.on = true; FP.x = x; FP.z = z; FP.y = yMesh(x, z) + FP_H; FP.vy = 0; FP.yaw = cam.yaw; FP.pitch = -.08; FP.bob = 0; FP.breath = 0;
   root.classList.add('m3d-fp-on'); closeCard();
+  fpExitBtn().classList.add('on');
   cv.requestPointerLock && cv.requestPointerLock();
-  if (!FP.hint){ const h = document.createElement('div'); h.className = 'm3d-fp-hint'; h.textContent = 'WASD yürü · Shift koş · Space zıpla · Fare bak · Esc çık'; root.appendChild(h); FP.hint = h; }
-  FP.hint.classList.add('on'); setTimeout(() => FP.hint && FP.hint.classList.remove('on'), 4500);
+  if (!FP.hint){ const h = document.createElement('div'); h.className = 'm3d-fp-hint'; h.textContent = 'WASD yürü · Shift koş · Space zıpla · Fare bak · F/Q çık'; root.appendChild(h); FP.hint = h; }
+  FP.hint.classList.add('on'); setTimeout(() => FP.hint && FP.hint.classList.remove('on'), 5000);
 }
 function fpExit(){
   if (!FP.on) return; FP.on = false; root.classList.remove('m3d-fp-on');
+  if (FP.exitBtn) FP.exitBtn.classList.remove('on');
   if (document.pointerLockElement) document.exitPointerLock();
   if (FP.saved){ Object.assign(cam, FP.saved); Object.assign(goal, FP.saved.goal || FP.saved); flying = 0; }
-  FP.keys = {};
+  FP.keys = {}; FP.vy = 0;
 }
 function fpBind(){
   fpBtn();
   window.addEventListener('keydown', (e) => {
     if (!FP.on) return;
-    if (e.code === 'Escape'){ e.preventDefault(); fpExit(); return; }
+    // Esc only releases pointer lock (browser); never exit FP / never close map
+    if (e.code === 'Escape'){ e.preventDefault(); e.stopPropagation(); return; }
+    if (e.code === 'KeyF' || e.code === 'KeyQ'){ e.preventDefault(); fpExit(); return; }
     FP.keys[e.code] = 1; if (['KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','ShiftRight'].includes(e.code)) e.preventDefault();
-  });
+  }, true);   // capture so map Esc handler never sees Esc while FP
   window.addEventListener('keyup', (e) => { if (FP.on) FP.keys[e.code] = 0; });
   document.addEventListener('mousemove', (e) => {
     if (!FP.on || document.pointerLockElement !== cv) return;
-    FP.yaw -= e.movementX * .0022; FP.pitch = Math.min(.9, Math.max(-.9, FP.pitch - e.movementY * .0022));
+    // t168: yaw was inverted — mouse right looks right
+    FP.yaw += e.movementX * .0022; FP.pitch = Math.min(.9, Math.max(-.9, FP.pitch - e.movementY * .0022));
   });
-  document.addEventListener('pointerlockchange', () => { if (FP.on && document.pointerLockElement !== cv) {/* keep FP, user can re-click */} });
+  document.addEventListener('pointerlockchange', () => { /* Esc releases lock; stay in FP */ });
   cv.addEventListener('click', () => { if (FP.on && document.pointerLockElement !== cv) cv.requestPointerLock(); });
 }
-function fpSolid(x, z){ const y = yMesh(x, z); return y >= .012 ? y : null; }   // shallows OK above ~12 m exaggerated
+function fpSolid(x, z){ const y = yMesh(x, z); return y >= .012 ? y : null; }
 function fpUpdate(dt){
   if (!FP.on) return false;
-  const sprint = FP.keys.ShiftLeft || FP.keys.ShiftRight, spd = (sprint ? FP_SPRINT : FP_SPD) * (FP.keys.KeyW || FP.keys.KeyS || FP.keys.KeyA || FP.keys.KeyD ? 1 : 0);
+  const sprint = FP.keys.ShiftLeft || FP.keys.ShiftRight;
   let dx = 0, dz = 0;
   const s = Math.sin(FP.yaw), c = Math.cos(FP.yaw);
   if (FP.keys.KeyW){ dx -= s; dz += c; } if (FP.keys.KeyS){ dx += s; dz -= c; }
-  if (FP.keys.KeyA){ dx -= c; dz -= s; } if (FP.keys.KeyD){ dx += c; dz += s; }
+  // t168: A/D were swapped
+  if (FP.keys.KeyA){ dx += c; dz += s; } if (FP.keys.KeyD){ dx -= c; dz -= s; }
   const len = Math.hypot(dx, dz) || 1; dx /= len; dz /= len;
-  const moving = spd > 0;
+  const moving = (FP.keys.KeyW || FP.keys.KeyS || FP.keys.KeyA || FP.keys.KeyD) && len > 0;
+  const spd = moving ? (sprint ? FP_SPRINT : FP_SPD) : 0;
   if (moving){
     const nx = FP.x + dx * spd * dt * 60, nz = FP.z + dz * spd * dt * 60, gy = fpSolid(nx, nz);
-    if (gy != null){ const step = gy + FP_H - FP.y; if (step < .04){ FP.x = nx; FP.z = nz; } }   // don't climb cliffs
+    if (gy != null){ const step = gy + FP_H - FP.y; if (step < .045){ FP.x = nx; FP.z = nz; } }
   }
-  // gravity / jump
-  const ground = fpSolid(FP.x, FP.z); const onG = ground != null && FP.y <= ground + FP_H + .0008;
-  if (onG){ FP.y = ground + FP_H; FP.vy = 0; if (FP.keys.Space){ FP.vy = FP_JUMP; FP.keys.Space = 0; } }
-  else { FP.vy -= FP_G * dt * 60; FP.y += FP.vy * dt * 60; if (ground != null && FP.y < ground + FP_H){ FP.y = ground + FP_H; FP.vy = 0; } }
-  // bob + breath
-  if (moving && onG){ FP.bob += dt * (sprint ? 14 : 9); } else { FP.bob *= .9; }
-  FP.breath += dt * 1.4;
-  const bobY = moving && onG ? Math.sin(FP.bob) * .0012 : Math.sin(FP.breath) * .00025;
-  const bobX = moving && onG ? Math.sin(FP.bob * .5) * .0005 : 0;
-  // camera
-  camera.near = .008; camera.far = Math.max(900, cam.d * 4); camera.fov = 62; camera.updateProjectionMatrix();
+  // gravity / jump — don't zero vy while ascending
+  const ground = fpSolid(FP.x, FP.z);
+  const onG = ground != null && FP.y <= ground + FP_H + .002 && FP.vy <= 0;
+  if (onG){
+    FP.y = ground + FP_H; FP.vy = 0;
+    if (FP.keys.Space){ FP.vy = FP_JUMP; FP.keys.Space = 0; }
+  } else {
+    FP.vy -= FP_G * dt * 60; FP.y += FP.vy * dt * 60;
+    if (ground != null && FP.y < ground + FP_H && FP.vy <= 0){ FP.y = ground + FP_H; FP.vy = 0; }
+  }
+  // bob + breath — subtle but noticeable
+  if (moving && onG){ FP.bob += dt * (sprint ? 16 : 10); } else { FP.bob *= .88; }
+  FP.breath += dt * 1.6;
+  const bobAmp = moving && onG ? (sprint ? .0045 : .0032) : 0;
+  const bobY = bobAmp * Math.sin(FP.bob) + Math.sin(FP.breath) * .0009;
+  const bobX = moving && onG ? Math.sin(FP.bob * .5) * .0014 : Math.sin(FP.breath * .7) * .00035;
+  camera.near = .006; camera.far = Math.max(900, cam.d * 4); camera.fov = 62; camera.updateProjectionMatrix();
   camera.position.set(FP.x + bobX * Math.cos(FP.yaw), FP.y + bobY, FP.z);
   const lx = FP.x - Math.sin(FP.yaw) * Math.cos(FP.pitch), ly = FP.y + Math.sin(FP.pitch), lz = FP.z + Math.cos(FP.yaw) * Math.cos(FP.pitch);
   camera.lookAt(lx, ly, lz); camera.up.set(0, 1, 0);
-  // sync cam so LOD/fog follow
   cam.x = goal.x = FP.x; cam.z = goal.z = FP.z; cam.d = goal.d = .55; cam.yaw = goal.yaw = FP.yaw; cam.tilt = goal.tilt = FP.pitch;
   U.camPos.value.copy(camera.position); U.camD.value = .55;
-  U.fogK.value = .00008; scene.fog.density = U.fogK.value;   // clear near-ground view
+  U.fogK.value = .00008; scene.fog.density = U.fogK.value;
   return true;
 }

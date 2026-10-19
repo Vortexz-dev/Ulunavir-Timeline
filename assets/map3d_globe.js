@@ -141,7 +141,7 @@ export async function createGlobe(ctx){
   const sunP = SUN.clone().multiplyScalar(14000);
   const sunSp = new THREE.Mesh(track(new THREE.PlaneGeometry(1, 1)), track(new THREE.ShaderMaterial({transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: 'varying vec2 vU; void main(){ vU = uv - .5; vec4 mv = modelViewMatrix * vec4(0., 0., 0., 1.); mv.xy += position.xy * 2600.; gl_Position = projectionMatrix * mv; }',
-    fragmentShader: 'varying vec2 vU; void main(){ float r = length(vU) * 2.; float c = (smoothstep(.09, .07, r) * 3. + exp(-r * 9.) * 1.3 + exp(-r * 3.) * .25) * smoothstep(1., .6, r); gl_FragColor = vec4(vec3(1., .9, .72) * c, 1.); }'})));
+    fragmentShader: 'varying vec2 vU; void main(){ float r = length(vU) * 2.; float c = (smoothstep(.09, .07, r) * 3. + exp(-r * 9.) * 1.3 + exp(-r * 3.) * .25) * smoothstep(1., .6, r); gl_FragColor = vec4(vec3(1., .95, .78) * c, 1.); }'})));  // t168: lighter Thysuun
   sunSp.position.copy(sunP); sunSp.frustumCulled = false; scene.add(sunSp);
 
   // ---------- etiketler (konum noktalarıyla aynı stil)
@@ -177,6 +177,7 @@ export async function createGlobe(ctx){
     return {k: best, x, z, d: best === 'horaghfus' ? 1000 : 520};
   }
   G.flatAt = flatAt; G.centreLL = centreLL;
+  G.setSpin = (m) => { G.spinMul = Math.min(8, Math.max(1, +m || 1)); };
   G.lookDir = (v, d) => { const q = new THREE.Vector3(...v).applyAxisAngle(_w.set(0, 1, 0), -spin.rotation.y); G.lookAt(vecLL(q), d); };
   G.lookAt = (ll, d) => { ORB.glon = ORB.lon = ll[0]; ORB.glat = ORB.lat = ll[1]; if (d) ORB.d = ORB.gd = d; };
 
@@ -210,7 +211,7 @@ export async function createGlobe(ctx){
   }
   G.frame = (dt) => {
     clock += dt; U.time.value = clock; U.cRot.value = clock * .006;
-    spin.rotation.y = clock * .008;                 // gezegen kendi ekseninde yavaşça (t163: 2x)
+    spin.rotation.y = clock * .008 * (G.spinMul || 1);   // t168: 1x–8x slider                 // gezegen kendi ekseninde yavaşça (t163: 2x)
     const r = 1 - Math.exp(-dt * 6); ORB.lon += (ORB.glon - ORB.lon) * r; ORB.lat += (ORB.glat - ORB.lat) * r; ORB.d = Math.exp(Math.log(ORB.d) + (Math.log(ORB.gd) - Math.log(ORB.d)) * r);
     const a1 = clock * .02 + 1.2, a2 = clock * .009 + 4.0;
     algurd.position.set(Math.cos(a1) * 520, Math.sin(a1) * 90, Math.sin(a1) * 520); algurd.rotation.y = clock * .02;
