@@ -91,13 +91,13 @@ window.THEMES = {
     // ch03 Serylda'nın sesi, festival, sefer hazırlığı
     { chapters:['ch03'], title:'pox sanctum', theme:'light' },
     { chapters:['ch03'], title:'kapsül laneti', theme:'sand' },
-    { chapters:['ch03'], title:'aetherion', theme:'forge' },
+    { chapters:['ch03'], title:'aeth?e?rion', theme:'forge' },
     { chapters:['ch03'], title:'goblin', theme:'fire' },
     { chapters:['ch03'], theme:'festival' },
     // ch04 Güney seferi
     { chapters:['ch04'], title:'antik kule', theme:'war' },
     { chapters:['ch04'], title:'trader', theme:'fire' },
-    { chapters:['ch04'], title:'pirdeviz', theme:'ancient' },
+    { chapters:['ch04'], title:'pirdevi[sz]', theme:'ancient' },
     { chapters:['ch04'], title:'omzu kuma|sedonia|haydut', theme:'sand' },
     { chapters:['ch04'], title:'imparatoriçe', theme:'light' },
     { chapters:['ch04'], theme:'sky' },

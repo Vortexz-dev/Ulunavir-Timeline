@@ -545,7 +545,7 @@
     if (d < 1){ var h = Math.max(1, Math.round(d * 24)); return h + ' saat'; }   // speeds are per day of travel
     return (d < 10 ? (Math.round(d * 10) / 10).toString().replace('.', ',') : Math.round(d)) + ' gün';
   }
-  // flying steam airship (Aetherion Magnus class): straight line, ~AIR_KMH cruising, AIR_HPD flight hours per day (estimate; no figure in the archive)
+  // flying steam airship (Aethrion Magnus class): straight line, ~AIR_KMH cruising, AIR_HPD flight hours per day (estimate; no figure in the archive)
   function fmtAir(k){ var v = CFG.airshipKmh || 60, hpd = CFG.airshipHoursPerDay || 18, h = k / v; if (h < 1) return Math.max(5, Math.round(h * 12) * 5) + ' dk'; if (h <= hpd) return (h < 10 ? (Math.round(h * 2) / 2).toString().replace('.', ',') : Math.round(h)) + ' saat'; return fmtDays(h / hpd); }
   function segLen(a, b){ return Math.hypot(b.x - a.x, b.y - a.y); }
   function totalPx(){ var t = 0; for (var i = 1; i < route.length; i++) t += segLen(route[i - 1], route[i]); return t; }
@@ -652,7 +652,7 @@
       '<dl class="pl-t"><dt>Yaya</dt><dd>' + t(CFG.walkKmPerDay || 30) + '</dd><dt>Atlı</dt><dd>' + t(CFG.horseKmPerDay || 60) + '</dd><dt>Araba · kervan</dt><dd>' + t(CFG.cartKmPerDay || 25) + '</dd>' +
       '<dt>Hava gemisi</dt><dd>' + fmtAir(ak) + ' <small>(düz uçuş ' + fmtKm(ak) + ')</small></dd></dl>' +
       (notes.length ? '<ul class="pl-notes">' + notes.map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>' : '') +
-      '<p class="pl-fine">Hızlar tahmini: yaya ' + (CFG.walkKmPerDay || 30) + ', atlı ' + (CFG.horseKmPerDay || 60) + ', kervan ' + (CFG.cartKmPerDay || 25) + ' km/gün' + (sk ? ', gemi ' + seaDay + ' km/gün' : '') + '; Aetherion Magnus tipi buharlı hava gemisi ~' + (CFG.airshipKmh || 60) + ' km/sa, günde ~' + (CFG.airshipHoursPerDay || 18) + ' saat uçuş.</p>';
+      '<p class="pl-fine">Hızlar tahmini: yaya ' + (CFG.walkKmPerDay || 30) + ', atlı ' + (CFG.horseKmPerDay || 60) + ', kervan ' + (CFG.cartKmPerDay || 25) + ' km/gün' + (sk ? ', gemi ' + seaDay + ' km/gün' : '') + '; Aethrion Magnus tipi buharlı hava gemisi ~' + (CFG.airshipKmh || 60) + ' km/sa, günde ~' + (CFG.airshipHoursPerDay || 18) + ' saat uçuş.</p>';
     drawPlan(); fitPlan();
   }
   function fitPlan(){

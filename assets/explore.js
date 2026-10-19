@@ -1,5 +1,5 @@
 /* Etiket Ağı (3D tag network + list mode) and Genel Arama (site-wide search).
-   Also exposes window.__ulvNav (card / tag / era / place navigation) used by Kâtip Pirdeviz's links. */
+   Also exposes window.__ulvNav (card / tag / era / place navigation) used by Kâtip Pirdevis's links. */
 (function(){
 'use strict';
 var D = window.TIMELINE || {events:[], chapters:[]}, INFO = window.TAGINFO || {};

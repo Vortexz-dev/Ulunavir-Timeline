@@ -1,13 +1,13 @@
-/* Kâtip Pirdeviz — chronicle chatbot (UI + client-side retrieval).
+/* Kâtip Pirdevis — chronicle chatbot (UI + client-side retrieval).
    The browser ranks the published corpus (assets/katip/kb.json) with BM25 + entity matching and sends only the
    question, a short history and the ids of the best chunks to the worker; the worker fetches those chunks itself. */
 (function(){
 'use strict';
 var API = 'https://katip-pirdeviz.ulunavir.workers.dev/chat';
 var KB_URL = 'assets/katip/kb.json';
-var AV = 'assets/katip/pirdeviz.webp';
+var AV = 'assets/katip/pirdevis.webp';
 var STORE = 'ulv-katip', MAXQ = 1500, CTX_CHARS = 14000, MAX_IDS = 12, SEND_TURNS = 6;
-var GREET = 'Demek kumlarıma bir ölümlü daha ulaştı. Ben **Kâtip Pirdeviz**; güneyin mühürlü piramidinde ölümü aştım ve bildiğim her şeyi kum tanelerine yazıp bir çöl ettim. Kadim Çağ’dan bugüne ne yaşandıysa sor evlat; kumlarda yazılı olanı söylerim, yazılı olmayanı uydurmam.';
+var GREET = 'Demek kumlarıma bir ölümlü daha ulaştı. Ben **Kâtip Pirdevis**; güneyin mühürlü piramidinde ölümü aştım ve bildiğim her şeyi kum tanelerine yazıp bir çöl ettim. Kadim Çağ’dan bugüne ne yaşandıysa sor evlat; kumlarda yazılı olanı söylerim, yazılı olmayanı uydurmam.';
 
 // ---------------------------------------------------------------- retrieval
 var FOLD = {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','â':'a','î':'i','û':'u','é':'e','ë':'e','ä':'a'};
@@ -128,14 +128,14 @@ function save(){ try { localStorage.setItem(STORE, JSON.stringify({msgs: st.msgs
 var lite = function(){ return document.body.classList.contains('fx-lite') || matchMedia('(prefers-reduced-motion: reduce)').matches; };
 var btn = document.createElement('button');
 btn.className = 'kp-btn'; btn.type = 'button'; btn.setAttribute('aria-expanded','false'); btn.setAttribute('aria-controls','kpPanel');
-btn.setAttribute('aria-label','Kâtip Pirdeviz ile konuş'); btn.title = 'Kâtip Pirdeviz — kumlara yazılanı sor';
+btn.setAttribute('aria-label','Kâtip Pirdevis ile konuş'); btn.title = 'Kâtip Pirdevis — kumlara yazılanı sor';
 btn.innerHTML = '<img src="' + AV + '" alt="" width="44" height="44" decoding="async"><i class="kp-ring" aria-hidden="true"></i>';
 var panel = document.createElement('section');
 panel.className = 'kp-panel'; panel.id = 'kpPanel'; panel.hidden = true;
-panel.setAttribute('role','dialog'); panel.setAttribute('aria-label','Kâtip Pirdeviz sohbeti');
+panel.setAttribute('role','dialog'); panel.setAttribute('aria-label','Kâtip Pirdevis sohbeti');
 panel.innerHTML =
   '<header class="kp-head"><img class="kp-hav" src="' + AV + '" alt="" width="34" height="34">' +
-  '<div class="kp-ht"><b>Kâtip Pirdeviz</b><span>Güney çölünün ölümsüz kâtibi</span></div>' +
+  '<div class="kp-ht"><b>Kâtip Pirdevis</b><span>Güney çölünün ölümsüz kâtibi</span></div>' +
   '<button type="button" class="kp-new" title="Yeni sayfa (sohbeti temizle)" aria-label="Yeni sayfa"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z M14 3v5h5 M12 11v6 M9 14h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>' +
   '<button type="button" class="kp-min" title="Küçült" aria-label="Küçült"><svg viewBox="0 0 24 24"><path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></header>' +
   '<div class="kp-log" aria-live="polite"></div>' +
